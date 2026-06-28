@@ -1,0 +1,31 @@
+import React from "react";
+import BreadcrumbComp from "@/app/(dashboard)/dashboard/layout/shared/breadcrumb/breadcrumb-comp";
+
+import EditInvoicePage from "@/components/dashboard/apps/invoice/edit-invoice/index";
+import { InvoiceProvider } from "@/app/context/invoice-context/index";
+import { Card } from "@/components/ui/card";
+import type { Metadata } from "next";
+export const metadata: Metadata = {
+  title: "Invoice Edit App",
+};
+const BCrumb = [
+  {
+    to: "/",
+    title: "Home",
+  },
+  {
+    title: "Invoice Edit",
+  },
+];
+function EditPage() {
+  return (
+    <InvoiceProvider>
+      <BreadcrumbComp title="Invoice Edit" items={BCrumb} />
+      <Card className="p-6">
+        <EditInvoicePage />
+      </Card>
+    </InvoiceProvider>
+  );
+}
+
+export default EditPage;

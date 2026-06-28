@@ -1,0 +1,488 @@
+---
+alwaysApply: false
+---
+
+# AVIATONLY Cursor Instructions
+
+## Product Context
+
+AVIATONLY is a South African aviation marketplace for buying and selling aircraft. The product adapts the WeBuyCars-style model to a highly regulated, low-volume, high-value aircraft market.
+
+The platform must make private aircraft sales feel transparent, structured, verified, and safe. It should reduce buyer anxiety by forcing high-quality aircraft data, guided media, document uploads, inspection milestones, escrow visibility, and clear listing statuses.
+
+Primary market: South Africa first, with future SADC expansion.
+
+Core positioning:
+
+- Aircraft listings should be trusted, data-rich, and inspection-backed.
+- Sellers should be guided through a structured aircraft intake flow instead of uploading generic photos.
+- Buyers should see enough technical, legal, and operational detail to take action.
+- The platform should support both fixed-price listings and timed auctions.
+- The platform may later integrate finance, insurance, escrow, AMO inspection, and SACAA paperwork workflows.
+
+## Development Style
+
+Build this as a production-grade marketplace, not a brochure site.
+
+Prefer:
+
+- Clear domain models.
+- Explicit state machines for listings, offers, auctions, inspections, documents, escrow, and transfer workflows.
+- Server-side validation for all important business rules.
+- Strong typing throughout.
+- Simple, readable code over clever abstractions.
+- Small, composable components.
+- Mobile-first UX, especially for seller upload flows.
+- Secure-by-default handling of aircraft documents, user identity, and financial workflow data.
+
+Avoid:
+
+- Generic marketplace assumptions that ignore aviation-specific fields.
+- Vague statuses like `pending` without a domain-specific meaning.
+- Upload flows that allow random unstructured aircraft photos.
+- Storing sensitive documents publicly.
+- Client-only validation for critical fields.
+- Premature automation of regulated processes without manual review gates.
+
+## Recommended Stack
+
+Unless the repository already defines a different stack, assume:
+
+- Frontend: Next.js with App Router, React, TypeScript.
+- Styling: Tailwind CSS.
+- Backend: Next.js server actions or API routes initially.
+- Database: PostgreSQL.
+- ORM: Prisma.
+- Auth: NextAuth/Auth.js, Clerk, or Supabase Auth depending on project setup.
+- Object storage: S3-compatible storage for images and documents.
+- Image processing: server-side image compression/resizing/metadata stripping.
+- Payments/escrow: do not fake regulated escrow. Model the workflow and integrate with a compliant provider later.
+
+## Core Public Routes
+
+Implement the site around these routes:
+
+```text
+/                                  Homepage
+/buy                               Aircraft catalog and auction grid
+/buy/[registration]                Aircraft detail page
+/sell                              Seller onboarding landing page
+/dashboard                         Authenticated user dashboard
+/dashboard/seller/upload           Multi-step aircraft listing intake wizard
+/dashboard/escrow-tracker          Deal/escrow milestone tracker
+```
+
+## Homepage Requirements
+
+The homepage should explain the value proposition clearly:
+
+- Sell your aircraft through a structured, verified process.
+- Browse fixed-price aircraft and live auctions.
+- Listings include technical specs, guided photos, logbook information, and verification status.
+- AVIATONLY helps reduce uncertainty around aircraft condition, paperwork, and transaction progress.
+
+Primary CTAs:
+
+- `Sell Your Aircraft`
+- `Browse Aircraft`
+- `View Live Auctions`
+
+## Buy Catalog Requirements
+
+The `/buy` page should support:
+
+- Fixed-price listings.
+- Live auctions.
+- Filtering by make, model, year, registration type, price, province/region, aircraft category, total time, and engine time.
+- Sorting by newest, price, auction ending soon, total time, and year.
+- Listing cards with registration, aircraft title, price/current bid, location, main image, status, total time, engine time, and verification badge.
+
+## Aircraft Detail Page Requirements
+
+The `/buy/[registration]` page should include:
+
+- High-resolution aircraft photo gallery.
+- Aircraft summary: year, make, model, registration, registration type, location, asking price/current bid.
+- Technical specs tabs:
+  - Airframe
+  - Engine
+  - Propeller
+  - Avionics
+  - Interior
+  - Exterior
+  - Logbooks/Documents
+- Auction panel when applicable:
+  - Current bid
+  - Bid increment
+  - Countdown timer
+  - Bid button
+- Fixed-price panel when applicable:
+  - Asking price
+  - Make offer button
+  - Contact/enquire button
+- Finance calculator placeholder.
+- Inspection/verification status.
+- Document availability summary without exposing private documents unless access is explicitly granted.
+
+## Seller Upload Wizard
+
+Build `/dashboard/seller/upload` as a multi-step wizard. Persist draft state continuously so the seller does not lose work.
+
+Recommended steps:
+
+1. Basic aircraft details.
+2. Airframe, engine, propeller, and avionics details.
+3. Guided photo upload.
+4. Logbook and legal document upload.
+5. Pricing, sale type, and review.
+6. Submit for valuation/review.
+
+### Step 1: Basic Details
+
+Required fields:
+
+- Registration number.
+- Registration type:
+  - `ZU` for non-type-certified/experimental aircraft.
+  - `ZS` for type-certified aircraft.
+- Make.
+- Model.
+- Year.
+- Aircraft category.
+- Location/airfield.
+- Province/region.
+
+### Step 2: Technical Details
+
+Required fields where applicable:
+
+- Total Time on Airframe (TTAF).
+- Engine make/model.
+- Engine hours.
+- Time Since Overhaul (TSO).
+- Propeller make/model.
+- Propeller hours.
+- Avionics suite.
+- Maintenance status.
+- Last MPI date.
+- Known defects or damage history.
+
+### Step 3: Guided Photo Upload
+
+Do not build this as a generic image upload field. The seller must upload specific required angles.
+
+Required photo slots:
+
+- Exterior 45-degree front profile.
+- Direct tail-on view.
+- Leading edge of wings.
+- Undercarriage/nose gear/tailwheel.
+- Brake lines.
+- Propeller tips and leading edges.
+- Engine/cowling/powerplant area.
+- Exhaust stacks.
+- Oil filter/firewall region.
+- Cockpit instrument panel powered on.
+- Seats and seatbelt tags.
+- Interior condition.
+
+For each slot:
+
+- Show the required angle name.
+- Show a short instruction.
+- Allow upload from camera or file picker.
+- Display upload status.
+- Allow replacement.
+- Compress and resize server-side.
+- Strip EXIF metadata.
+- Preserve enough image quality for panel gauges and defects.
+
+### Step 4: Document Vault
+
+Aircraft documents are sensitive. Treat them as private by default.
+
+Required document slots:
+
+- Last MPI stamp.
+- Latest logbook entry.
+- Airframe logbook summary pages.
+- Engine logbook summary pages.
+- Propeller logbook summary pages.
+- Certificate of Airworthiness or Authority to Fly.
+- Certificate of Registration.
+- Weight and balance data sheet.
+- AD/SB compliance status sheet where applicable.
+
+Storage requirements:
+
+- Store documents in private object storage.
+- Never expose direct public URLs.
+- Use short-lived signed URLs only after authorization checks.
+- Track who uploaded the file, when, and for which listing.
+- Support manual review status per document.
+
+### Step 5: Pricing and Sale Type
+
+Support:
+
+- Fixed-price listing.
+- Timed auction.
+- Internal valuation estimate.
+- Reserve price for auctions.
+- Asking price for fixed listings.
+- Optional featured listing package later.
+
+### Step 6: Submit
+
+Submission should:
+
+- Change the listing from draft to submitted/review state.
+- Notify internal operations via a placeholder notification service.
+- Show the seller a confirmation screen.
+- Tell the seller that AVIATONLY will review the data and schedule inspection/verification if needed.
+
+## Listing Status Model
+
+Use explicit domain statuses. Suggested listing lifecycle:
+
+```ts
+type ListingStatus =
+  | "DRAFT"
+  | "SUBMITTED"
+  | "UNDER_REVIEW"
+  | "NEEDS_CHANGES"
+  | "VALUATION_READY"
+  | "INSPECTION_PENDING"
+  | "INSPECTION_PASSED"
+  | "INSPECTION_FAILED"
+  | "LIVE_FIXED_PRICE"
+  | "LIVE_AUCTION"
+  | "UNDER_OFFER"
+  | "DEPOSIT_PENDING"
+  | "UNDER_CONTRACT"
+  | "SACAA_TRANSFER_PENDING"
+  | "SOLD"
+  | "WITHDRAWN"
+  | "EXPIRED";
+```
+
+## Deal / Escrow Workflow
+
+Do not claim the platform itself is a regulated escrow provider unless the implementation has a real compliant escrow integration.
+
+Model the escrow/deal workflow as a tracked transaction process:
+
+```text
+Lead received
+→ Automated pre-valuation
+→ Independent AMO/platform inspection
+→ Listing live as fixed-price or auction
+→ Buyer offer/bid accepted
+→ Deposit pending
+→ Deal locked / under contract
+→ Verification window
+→ SACAA documentation lodged
+→ Transfer confirmed
+→ Funds released / sale closed
+```
+
+Buyer-facing milestone examples:
+
+- EFT/deposit received and verified.
+- Awaiting logbook handover.
+- CA 47-A4 signed and sent to SACAA.
+- Registration transferred / access granted.
+
+Seller-facing milestone examples:
+
+- Awaiting clearance guaranteed by platform/provider.
+- Logbooks received and verified by inspector.
+- CA 47-A4 signed and sent to SACAA.
+- Funds disbursed minus platform commission.
+
+## Financial Model
+
+The initial business model is success-based commission.
+
+Default commission assumption:
+
+- 2.5% excluding VAT on final transaction price.
+
+Do not hard-code this throughout the codebase. Store commission rules centrally so they can change later.
+
+Example:
+
+```ts
+const DEFAULT_PLATFORM_COMMISSION_RATE = 0.025;
+const SOUTH_AFRICA_VAT_RATE = 0.15;
+```
+
+## Legal and Compliance Notes
+
+This platform operates in a regulated aviation and financial environment. Keep compliance boundaries clear.
+
+Important concepts to model:
+
+- FICA/KYC checks for buyer and seller.
+- Proof of identity.
+- Proof of residence.
+- Company/trust documents where applicable.
+- Aircraft mortgage/encumbrance checks.
+- SACAA Aircraft Registry transfer process.
+- CA 47-A4 Change of Ownership paperwork.
+- Certificate of Registration handover.
+- Export/SADC transaction handling.
+- SARS/VAT/export documentation where applicable.
+
+Use labels such as `requiresManualReview`, `verificationPending`, and `complianceHold` rather than pretending all regulatory steps are automated.
+
+## Advertising and Growth Features
+
+The platform should eventually support automated advertising feeds and retargeting.
+
+Future features:
+
+- Nightly XML/JSON product feed for Meta/Google Merchant-style catalog ads.
+- Product ID should use aircraft registration.
+- Product title format: `Year Make Model`.
+- Product description should include total time, avionics summary, and call to action.
+- Meta Pixel / Google Tag Manager events:
+  - `ViewContent`
+  - `Search`
+  - `Lead`
+  - `SubmitAircraft`
+  - `StartBid`
+  - `MakeOffer`
+- WhatsApp/SMS notification integration through Twilio or SendGrid.
+- Internal Slack/CRM notification on seller submission.
+
+Do not add invasive tracking without explicit configuration and consent handling.
+
+## Suggested Data Model
+
+Use this as a starting point. Adapt to the repo’s actual ORM/schema.
+
+Core entities:
+
+- User
+- AircraftListing
+- AircraftTechnicalSpec
+- AircraftPhoto
+- AircraftDocument
+- ListingValuation
+- Inspection
+- Auction
+- Bid
+- Offer
+- Deal
+- DealMilestone
+- ComplianceCheck
+- NotificationEvent
+
+Important relationships:
+
+- A user can own many listings.
+- A listing has one technical spec record.
+- A listing has many photos.
+- A listing has many documents.
+- A listing can have one auction.
+- A listing can have many offers.
+- A listing can have one active deal.
+- A deal has many milestones.
+- A listing/deal can have many compliance checks.
+
+## UX Principles
+
+The product should feel premium, trustworthy, and aviation-specific.
+
+Design principles:
+
+- Dark, premium interface is acceptable, but keep readability high.
+- Use aviation language correctly.
+- Make statuses obvious.
+- Use progress indicators for upload and deal flows.
+- Reduce uncertainty with checklists.
+- Give sellers specific instructions.
+- Give buyers confidence without exposing private documents too early.
+- Avoid clutter on aircraft detail pages.
+
+## Copy Tone
+
+Use direct, professional aviation-marketplace language.
+
+Good examples:
+
+- `Upload the latest MPI stamp`
+- `Show the cockpit panel powered on`
+- `Certificate of Registration required`
+- `Submit aircraft for valuation`
+- `Inspection pending`
+- `Logbooks received and under review`
+
+Avoid vague phrases:
+
+- `Upload stuff`
+- `Pending`
+- `Processing`
+- `Good condition`
+- `Verified` unless the verification source is clear.
+
+## Testing Expectations
+
+Add tests for:
+
+- Listing status transitions.
+- Auction bid validation.
+- Offer submission.
+- Commission calculation.
+- Required seller wizard fields.
+- Document authorization.
+- Signed URL access control.
+- Photo slot requirements.
+- Deal milestone progression.
+
+## Security Expectations
+
+Sensitive areas:
+
+- User identity.
+- Aircraft ownership documents.
+- Logbooks.
+- Payment/deal information.
+- Admin review screens.
+
+Requirements:
+
+- Use server-side authorization checks.
+- Never trust client-provided ownership IDs.
+- Keep private files private.
+- Use signed URLs with short expiry.
+- Log important workflow events.
+- Validate file type and size.
+- Reject executable uploads.
+- Keep admin-only fields protected.
+
+## MVP Scope
+
+For the first build, focus on:
+
+1. Homepage.
+2. Buy catalog.
+3. Aircraft detail page.
+4. Seller upload wizard.
+5. Draft listing persistence.
+6. Private document upload structure.
+7. Basic dashboard.
+8. Listing statuses.
+9. Manual admin review placeholders.
+10. Fixed-price listing flow.
+
+Defer until later:
+
+- Real escrow integration.
+- Live bidding at scale.
+- Finance provider integrations.
+- Insurance integrations.
+- SACAA direct submission automation.
+- Cross-border export workflow automation.
+- Full advertising feed automation.

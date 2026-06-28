@@ -1,0 +1,67 @@
+import { Icon } from "@iconify/react";
+import { Input } from "@/components/ui/input";
+import React, { ChangeEvent, FormEvent, useContext, useState } from "react";
+import { ChatContext } from "@/app/context/chat-context/index";
+
+const ChatMsgSent = () => {
+  const { sendMessage, selectedChat } = useContext(ChatContext);
+  const [msg, setMsg] = useState<string>("");
+
+  const handleChatMsgChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setMsg(e.target.value);
+  };
+
+  const onChatMsgSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!msg.trim() || !selectedChat) return;
+    sendMessage(selectedChat.id, msg.trim());
+    setMsg("");
+  };
+
+  return (
+    <>
+      <form onSubmit={onChatMsgSubmit}>
+        <div className="flex flex-wrap gap-3 items-center py-2 px-5">
+          <div>
+            <div className="btn-circle-hover ">
+              <Icon icon="solar:sticker-smile-circle-2-linear" height="20" />
+            </div>
+          </div>
+          <div className="flex-1 min-w-[150px]">
+            <Input
+              className=" border-0 shadow-none"
+              required
+              value={msg}
+              onChange={handleChatMsgChange}
+              placeholder="Type here"
+            />
+          </div>
+          <div className="flex gap-3 items-center">
+            <div className="btn-circle-hover  ">
+              <Icon
+                icon="solar:plain-linear"
+                height="20"
+                onClick={() => {
+                  if (!msg.trim() || !selectedChat) return;
+                  sendMessage(selectedChat.id, msg.trim());
+                  setMsg("");
+                }}
+              />
+            </div>
+            <div className="btn-circle-hover ">
+              <Icon icon="solar:gallery-add-linear" height="20" />
+            </div>
+            <div className="btn-circle-hover ">
+              <Icon icon="solar:paperclip-outline" height="20" />
+            </div>
+            <div className="btn-circle-hover ">
+              <Icon icon="solar:microphone-2-outline" height="20" />
+            </div>
+          </div>
+        </div>
+      </form>
+    </>
+  );
+};
+
+export default ChatMsgSent;

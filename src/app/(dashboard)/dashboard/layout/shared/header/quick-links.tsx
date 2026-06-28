@@ -2,6 +2,7 @@
 import Link from "next/link";
 import React from "react";
 import * as QuicklinksData from "./data";
+import { withDashboardBase } from "@/lib/utils";
 
 const Quicklinks = () => {
   return (
@@ -13,7 +14,7 @@ const Quicklinks = () => {
         {QuicklinksData.pageLinks.map((links, index) => (
           <li className="mb-4" key={index}>
             <Link
-              href={links.href}
+              href={withDashboardBase(links.href)}
               className="text-sm font-semibold text-muted-foreground hover:text-primary dark:hover:text-primary"
             >
               {links.title}

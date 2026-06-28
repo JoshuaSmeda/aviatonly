@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Icon } from "@iconify/react";
+import { withDashboardBase } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import SimpleBar from "simplebar-react";
 import "simplebar-react/dist/simplebar.min.css";
@@ -90,7 +91,7 @@ const CartItems = ({ cartItems, updateQuantity, subTotal, total }: CartItemsProp
         </div>
 
         <Button variant="outline" className="w-full">
-          <Link href="/apps/ecommerce/shop">Go to shopping cart</Link>
+          <Link href={withDashboardBase("/apps/ecommerce/shop")}>Go to shopping cart</Link>
         </Button>
       </div>
     </SimpleBar>

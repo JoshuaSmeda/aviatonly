@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 const Logo = () => {
   return (
-    <Link href={'/'}>
+    <Link href={'/dashboard'}>
 
       <SidebarMenuButton
         size="lg"

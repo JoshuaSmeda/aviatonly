@@ -5,7 +5,7 @@ import Link from 'next/link'
 const FullLogo = () => {
   return (
 
-    <Link href={'/'} className="max-w-[40px] block lg:max-w-[147px] overflow-hidden">
+    <Link href={'/dashboard'} className="max-w-[40px] block lg:max-w-[147px] overflow-hidden">
       {/* Dark Logo   */}
       <Image
         src={'/images/logos/darklogo.svg'}

@@ -246,10 +246,6 @@ html[data-card-shadow="false"] [data-slot="card"] {
         width: 100% !important;
         gap: 12px !important;
       }
-
-
-
-
     }
 
     &:not(:hover) {
@@ -269,9 +265,6 @@ html[data-card-shadow="false"] [data-slot="card"] {
         gap: 0 !important;
         width: 100% !important;
       }
-
-
-
     }
   }
 }
@@ -298,6 +291,4 @@ html[data-card-shadow="false"] [data-slot="card"] {
       transform: translate(calc(-50% - 0.5rem));
     }
   }
-
-
 }

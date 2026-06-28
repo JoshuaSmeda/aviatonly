@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import NavItem from "../nav-items/index";
-import { cn } from "@/lib/utils";
+import { cn, withDashboardBase } from "@/lib/utils";
 import { useContext, useEffect } from "react";
 import { CustomizerContext } from "@/app/context/customizer-context";
 import { usePathname } from "next/navigation";
@@ -22,7 +22,8 @@ export default function NavCollapse({ menu, className }: NavCollapseProps) {
 
   // 🔍 Check active recursively (for parent auto-open)
   const isActiveRoute = (item: ChildItem): boolean => {
-    if (item.url && pathname === item.url) return true;
+    if (item.url && !item.external && pathname === withDashboardBase(item.url))
+      return true;
     if (item.items) return item.items.some(isActiveRoute);
     return false;
   };
@@ -64,7 +65,7 @@ export default function NavCollapse({ menu, className }: NavCollapseProps) {
               return (
                 <Link
                   key={index}
-                  href={item.url || "#"}
+                  href={item.external ? item.url || "#" : withDashboardBase(item.url)}
                   target={item.external ? "_blank" : undefined}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2 my-1 rounded-md hover:transform hover:translate-x-1 transition-all duration-200 ease-in-out ",
@@ -111,11 +112,11 @@ export default function NavCollapse({ menu, className }: NavCollapseProps) {
                     ) : (
                       <Link
                         key={index}
-                        href={sub.url || "#"}
+                        href={sub.external ? sub.url || "#" : withDashboardBase(sub.url)}
                         target={sub.external ? "_blank" : undefined}
                         className={cn(
                           "block px-2 py-1 rounded-md hover:transform hover:translate-x-1 transition-all duration-200 ease-in-out",
-                          pathname === sub.url
+                          !sub.external && pathname === withDashboardBase(sub.url)
                             ? "font-medium bg-primary/5 text-primary"
                             : "hover:bg-primary/5 hover:text-primary",
                           className,

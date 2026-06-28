@@ -5,8 +5,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum ListingStatus {
@@ -29,6 +30,11 @@ enum ListingStatus {
   EXPIRED
 }
 
+enum SaleType {
+  FIXED_PRICE
+  AUCTION
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -40,18 +46,66 @@ model User {
 }
 
 model AircraftListing {
-  id             String        @id @default(cuid())
-  registration   String        @unique
+  id               String   @id @default(cuid())
+  registration     String   @unique
   registrationType String
-  make           String
-  model          String
-  year           Int
-  status         ListingStatus @default(DRAFT)
-  sellerId       String
-  seller         User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  make             String
+  model            String
+  year             Int
+  category         String
+  airfield         String
+  province         String
+
+  // Technical
+  ttaf               Float?
+  engineMakeModel    String?
+  engineHours        Float?
+  tso                Float?
+  propellerMakeModel String?
+  propellerHours     Float?
+  avionics           String?
+  maintenanceStatus  String?
+  lastMpiDate        DateTime?
+  knownDefects       String?
+
+  // Pricing (ZAR, whole rand)
+  saleType          SaleType @default(FIXED_PRICE)
+  valuationEstimate Int?
+  askingPrice       Int?
+  reservePrice      Int?
+  startingBid       Int?
+  bidIncrement      Int?
+
+  status    ListingStatus @default(DRAFT)
+  sellerId  String
+  seller    User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  photos    AircraftPhoto[]
+  documents AircraftDocument[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
   @@index([status])
   @@index([sellerId])
+}
+
+model AircraftPhoto {
+  id        String          @id @default(cuid())
+  listingId String
+  listing   AircraftListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  slot      String
+  fileName  String
+  createdAt DateTime        @default(now())
+
+  @@index([listingId])
+}
+
+model AircraftDocument {
+  id        String          @id @default(cuid())
+  listingId String
+  listing   AircraftListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  slot      String
+  fileName  String
+  createdAt DateTime        @default(now())
+
+  @@index([listingId])
 }

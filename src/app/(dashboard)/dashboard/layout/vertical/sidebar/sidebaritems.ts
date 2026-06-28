@@ -37,6 +37,17 @@ import { uniqueId } from "lodash";
 
 const SidebarContent: MenuItem[] = [
   {
+    heading: "AVIATONLY",
+    items: [
+      {
+        id: uniqueId(),
+        name: "Sell Aircraft",
+        icon: "solar:jet-line-duotone",
+        url: "/seller/upload",
+      },
+    ],
+  },
+  {
     heading: "Dashboard",
     items: [
       {

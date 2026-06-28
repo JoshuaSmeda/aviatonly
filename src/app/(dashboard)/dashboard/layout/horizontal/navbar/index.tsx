@@ -16,6 +16,7 @@ import {
 import Menuitems, { MenuItem } from "../menudata";
 import Link from "next/link";
 import { CustomizerContext } from "@/app/context/customizer-context";
+import { withDashboardBase } from "@/lib/utils";
 
 const Navigation = () => {
   const pathname = usePathname();
@@ -23,7 +24,7 @@ const Navigation = () => {
   const { activeDir } = useContext(CustomizerContext);
   const isRTL = activeDir === "rtl";
 
-  const isActive = (href: string) => pathname === href;
+  const isActive = (href: string) => pathname === withDashboardBase(href);
   const hasChildren = (item: MenuItem) =>
     Array.isArray(item.children) && item.children.length > 0;
 
@@ -108,7 +109,7 @@ const Navigation = () => {
                                 return (
                                   <MenubarItem key={sub.id} >
                                     <Link
-                                      href={sub.href}
+                                      href={withDashboardBase(sub.href)}
                                       target={subExternal ? "_blank" : "_self"}
                                       className={`group text-sm flex items-center gap-3 rounded-md cursor-pointer transition-colors w-full
                                         ${
@@ -136,7 +137,7 @@ const Navigation = () => {
                       return (
                         <MenubarItem key={child.id} className={"px-0 py-0"}>
                           <Link
-                            href={child.href}
+                            href={withDashboardBase(child.href)}
                             target={childExternal ? "_blank" : "_self"}
                             className={`group text-sm flex items-center gap-2 rounded-md px-2 py-2 cursor-pointer transition-colors w-full
                               ${
@@ -164,7 +165,7 @@ const Navigation = () => {
                 /* Leaf item — no children, render trigger as a Link */
                 <MenubarTrigger>
                   <Link
-                    href={item.href}
+                    href={withDashboardBase(item.href)}
                     target={isExternal ? "_blank" : "_self"}
                     className={`capitalize font-medium flex gap-2 items-center py-2 px-3 rounded-md cursor-pointer transition-colors whitespace-nowrap
                       ${

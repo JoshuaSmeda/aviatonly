@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation'
 import Image from 'next/image'
 import NavLink from './navigation/NavLink'
 import { signOut, useSession } from 'next-auth/react'
+import { LayoutDashboard } from 'lucide-react'
 
 const Header: React.FC = () => {
   const { data: session } = useSession();
@@ -115,6 +116,20 @@ const Header: React.FC = () => {
               />
             </button>
 
+            <Link
+              href="/dashboard"
+              className={`flex items-center gap-2 ${isHomepage
+                ? sticky
+                  ? 'text-dark dark:text-white hover:text-primary'
+                  : 'text-white hover:text-primary'
+                : 'text-dark dark:text-white hover:text-primary'
+                }`}
+              aria-label="Dashboard"
+            >
+              <LayoutDashboard size={24} />
+              <span className="hidden sm:inline text-base font-medium">Dashboard</span>
+            </Link>
+
             {(user?.user || session?.user) &&
                 <div className="relative group flex items-center justify-center">
                   <Image src={"/images/avatar/avatar_1.jpg"} alt="avatar" width={35} height={35} className="rounded-full" />
@@ -196,6 +211,16 @@ const Header: React.FC = () => {
                 {navLinks && navLinks?.map((item: any, index: any) => (
                   <NavLink key={index} item={item} onClick={() => setNavbarOpen(false)} />
                 ))}
+                <li className="flex items-center group w-fit">
+                  <div className="w-0 h-0.5 bg-primary transition-all duration-300 group-hover:block group-hover:w-6 group-hover:mr-4" />
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setNavbarOpen(false)}
+                    className="py-3 text-3xl sm:text-5xl font-medium text-white/40 rounded-full group-hover:text-primary flex items-center gap-3"
+                  >
+                    Dashboard
+                  </Link>
+                </li>
                 {user?.user || session?.user ? (
                   <>
                     <button onClick={() => handleSignOut()} className='py-4 px-8 bg-primary text-base leading-4 block w-fit text-white rounded-full border border-primary font-semibold mt-3 hover:bg-transparent hover:text-primary duration-300 cursor-pointer'>

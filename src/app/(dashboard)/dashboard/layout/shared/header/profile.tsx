@@ -14,7 +14,7 @@ import Link from "next/link";
 import { useContext } from "react";
 import { CustomizerContext } from "@/app/context/customizer-context";
 import { profileDD } from "@/app/(dashboard)/dashboard/layout/shared/header/data";
-import { cn } from "@/lib/utils";
+import { cn, withDashboardBase } from "@/lib/utils";
 import { Mailbox } from 'lucide-react';
 
 export default function ProfileSheet() {
@@ -73,7 +73,7 @@ export default function ProfileSheet() {
             {profileDD.map((item) => (
               <li key={item.title} className="group">
                 <Link
-                  href={item.href}
+                  href={withDashboardBase(item.href)}
                   className={cn(
                     "flex gap-3 py-2 px-3 rounded-md group-hover:bg-primary/5 text-muted-foreground"
                   )}

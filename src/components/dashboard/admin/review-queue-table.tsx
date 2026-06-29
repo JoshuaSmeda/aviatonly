@@ -9,11 +9,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { buildReviewQueueRows } from "@/lib/aviatonly/mock";
+import type { ReviewQueueRow } from "@/lib/aviatonly/mock/types";
 
-const ReviewQueueTable = () => {
-  const rows = buildReviewQueueRows();
+interface ReviewQueueTableProps {
+  rows: ReviewQueueRow[];
+}
 
+const ReviewQueueTable = ({ rows }: ReviewQueueTableProps) => {
   if (rows.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">

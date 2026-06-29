@@ -13,6 +13,8 @@ import {
   aircraftSchema,
   type AircraftFormValues,
 } from "@/components/dashboard/seller/upload/schema";
+import { requireAnyRole } from "@/lib/auth/session";
+import { SELLER_ROLES } from "@/lib/auth/roles";
 
 export interface UploadMeta {
   slot: string;
@@ -23,15 +25,14 @@ export type SubmitListingResult =
   | { ok: true; id: string; registration: string; status: string }
   | { ok: false; error: string; field?: "registration" };
 
-// Placeholder until real auth is wired — every prototype submission is attached
-// to a single demo seller so the foreign key is satisfied.
-const DEMO_SELLER_EMAIL = "demo-seller@aviatonly.co.za";
-
 export async function submitAircraftListing(
   values: AircraftFormValues,
   photos: UploadMeta[] = [],
   documents: UploadMeta[] = [],
 ): Promise<SubmitListingResult> {
+  const session = await requireAnyRole(SELLER_ROLES);
+  const sellerId = session.user.id;
+
   // Re-validate on the server — never trust the client.
   const parsed = aircraftSchema.safeParse(values);
   if (!parsed.success) {
@@ -52,12 +53,6 @@ export async function submitAircraftListing(
   const hasMaintenance = Boolean(v.maintenanceStatus) || v.lastMpiDate != null;
 
   try {
-    const seller = await prisma.user.upsert({
-      where: { email: DEMO_SELLER_EMAIL },
-      update: {},
-      create: { email: DEMO_SELLER_EMAIL, name: "Demo Seller" },
-    });
-
     const existing = await prisma.aircraftListing.findUnique({
       where: { registration },
       select: { id: true },
@@ -95,7 +90,7 @@ export async function submitAircraftListing(
         // Submitting moves the listing out of DRAFT into the review queue.
         status: ListingStatus.SUBMITTED,
         completenessScore: completeness.score,
-        sellerId: seller.id,
+        sellerId,
 
         airframe: {
           create: {
@@ -171,12 +166,14 @@ export async function submitAircraftListing(
           create: {
             fromStatus: ListingStatus.DRAFT,
             toStatus: ListingStatus.SUBMITTED,
+            changedById: sellerId,
             reason: "Seller submitted aircraft for AVIATONLY review.",
           },
         },
         events: {
           create: {
             type: "SELLER_SUBMITTED_LISTING",
+            actorId: sellerId,
             message: `${registration} submitted for AVIATONLY review.`,
           },
         },

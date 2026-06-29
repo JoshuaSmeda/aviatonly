@@ -2,11 +2,13 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AircraftListingCard from "./aircraft-listing-card";
-import { buildSellerAircraftSummaries } from "@/lib/aviatonly/mock";
+import type { SellerAircraftSummary } from "@/lib/aviatonly/mock/types";
 
-const MyAircraft = () => {
-  const aircraft = buildSellerAircraftSummaries();
+interface MyAircraftProps {
+  aircraft: SellerAircraftSummary[];
+}
 
+const MyAircraft = ({ aircraft }: MyAircraftProps) => {
   return (
     <section className="flex flex-col gap-4 py-0">
       <div className="flex items-center justify-between">

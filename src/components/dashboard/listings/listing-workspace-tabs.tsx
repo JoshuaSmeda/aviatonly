@@ -27,23 +27,12 @@ import {
   getReviewTaskStatusMeta,
 } from "@/lib/aviatonly/domain";
 import {
-  buildListingWorkspaceOverview,
   formatTimeAgo,
   formatZar,
   getListingEventLabel,
-  getMockAirframe,
-  getMockAvionics,
-  getMockDealForListing,
-  getMockDocumentsForListing,
-  getMockEngines,
-  getMockEventsForListing,
-  getMockMaintenance,
-  getMockPhotosForListing,
-  getMockPropellers,
-  getOpenReviewTasksForListing,
   listingLocation,
 } from "@/lib/aviatonly/mock";
-import type { MockAircraftListing } from "@/lib/aviatonly/mock/types";
+import type { ListingWorkspaceData } from "@/lib/aviatonly/server/listing-workspace";
 import ListingWorkspaceActivityTimeline from "./listing-workspace-activity-timeline";
 import ListingLeadsOffersPanel from "./listing-leads-offers-panel";
 import ListingWorkspaceOverviewTab from "./listing-workspace-overview";
@@ -74,30 +63,29 @@ function resolveTab(tab: string | null): WorkspaceTabValue {
 }
 
 interface ListingWorkspaceTabsProps {
-  listing: MockAircraftListing;
+  workspace: ListingWorkspaceData;
 }
 
-const ListingWorkspaceTabs = ({ listing }: ListingWorkspaceTabsProps) => {
+const ListingWorkspaceTabs = ({ workspace }: ListingWorkspaceTabsProps) => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   const activeTab = resolveTab(searchParams.get("tab"));
 
-  const overview = buildListingWorkspaceOverview(listing.id);
-  if (!overview) {
-    return null;
-  }
-
-  const airframe = getMockAirframe(listing.id);
-  const engines = getMockEngines(listing.id);
-  const propellers = getMockPropellers(listing.id);
-  const avionics = getMockAvionics(listing.id);
-  const maintenance = getMockMaintenance(listing.id);
-  const photos = getMockPhotosForListing(listing.id);
-  const documents = getMockDocumentsForListing(listing.id);
-  const openTasks = getOpenReviewTasksForListing(listing.id);
-  const deal = getMockDealForListing(listing.id);
-  const events = getMockEventsForListing(listing.id);
+  const {
+    listing,
+    overview,
+    airframe,
+    engines,
+    propellers,
+    avionics,
+    maintenance,
+    photos,
+    documents,
+    openTasks,
+    deal,
+    events,
+  } = workspace;
 
   const setTab = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());

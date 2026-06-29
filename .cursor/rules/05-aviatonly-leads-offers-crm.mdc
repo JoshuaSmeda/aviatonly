@@ -1,0 +1,259 @@
+---
+description: "Use when building leads, offers, buyer qualification, CRM pipelines, lead/offer detail workspaces, activity timelines, negotiations, or replacing mock lead/offer tables with persisted workflows."
+alwaysApply: false
+globs:
+  - "src/app/**/dashboard/**"
+  - "src/app/**/admin/**"
+  - "src/app/(site)/buy/**"
+  - "src/components/**/leads/**"
+  - "src/components/**/offers/**"
+  - "src/components/**/deals/**"
+  - "src/lib/aviatonly/**"
+  - "prisma/**"
+---
+
+# AVIATONLY Leads & Offers CRM
+
+Leads and offers are **workflow objects**, not CRUD rows.
+
+A **lead** is buyer interest on a specific aircraft (enquiry, viewing, document access, demo flight, finance).
+
+An **offer** is a commercial proposal with negotiation, expiry, and deal consequences.
+
+CRM here means moving qualified buyers **enquiry → offer → deal** with audit trails, role separation, and aviation-specific compliance gates — not a generic contacts spreadsheet.
+
+Related rules: `00-aviatonly-product-context.mdc`, `03-aviatonly-data-model.mdc`, `02-aviatonly-dashboard-architecture.mdc`.
+
+## Current state (interim)
+
+- Mock data in `src/lib/aviatonly/mock/leads.ts` and `offers.ts`
+- List tables with search/filter/sort on `/dashboard/seller/leads`, `/dashboard/seller/offers`, admin equivalents
+- Listing workspace **Leads & Offers** tab is a summary view only
+
+**Do not** treat table pages as the final product. They are queues; CRM lives in **detail workspaces** and **activity timelines**.
+
+## Anti-patterns (do not build)
+
+- Generic CRM contacts module disconnected from listings
+- Client-only status changes without server validation
+- Editing status fields directly without `LeadActivity` / `OfferActivity` rows
+- Public or seller exposure of `internalNotes`
+- Document access without authorization + audit log
+- Fake finance/escrow automation
+- HubSpot-style email sequences in MVP
+- Drag-and-drop kanban before server-side status transition rules exist
+
+## Domain model (extend Prisma — do not stop at mock types)
+
+### Lead (extends `03-aviatonly-data-model.mdc`)
+
+Required fields beyond basics:
+
+- `type`: `GENERAL_ENQUIRY` | `VIEWING_REQUEST` | `DOCUMENT_ACCESS` | `DEMO_FLIGHT` | `FINANCE_ENQUIRY`
+- `status`: `NEW` | `CONTACTED` | `QUALIFIED` | `UNQUALIFIED` | `VIEWING_REQUESTED` | `OFFER_MADE` | `CLOSED`
+- `source`: `PUBLIC_LISTING` | `BROKER_REFERRAL` | `AUCTION` | `ADMIN`
+- `priority`: `LOW` | `NORMAL` | `HIGH`
+- `assignedToId` (seller, broker, or admin)
+- `internalNotes` (seller/admin only — never public)
+- `nextFollowUpAt`, `lastContactedAt`
+- `convertedOfferId` (nullable)
+- `closedReason` (required when `CLOSED`)
+
+Use domain enums in `src/lib/aviatonly/domain/` (mirror `lead-status.ts`, `offer-status.ts`).
+
+### Offer
+
+Required fields beyond basics:
+
+- `counterAmount`, `counterMessage`, `counteredAt`, `counteredById`
+- `conditions` (JSON: inspection window, finance contingency, deposit timeline)
+- `reviewedById` (AVIATONLY ops)
+- `acceptedAt`, `rejectedAt`, `rejectedReason`
+- `dealId` (set when accepted)
+
+### Activity (mandatory for CRM feel)
+
+`LeadActivity` and `OfferActivity` — **append-only**:
+
+- `NOTE_ADDED`, `STATUS_CHANGED`, `ASSIGNED`, `EMAIL_SENT`, `CALL_LOGGED`
+- `VIEWING_SCHEDULED`, `DOC_ACCESS_GRANTED`, `DOC_ACCESS_DENIED`
+- `COUNTER_SENT`, `OFFER_ACCEPTED`, `OFFER_REJECTED`, `FOLLOW_UP_SET`
+
+Every status change must create an activity row. Never update status silently.
+
+### Authorization
+
+- Seller: leads/offers on own listings only
+- Buyer: create leads/offers; view own submissions
+- Broker: assigned listings/leads
+- Admin: cross-listing visibility; qualify, assign, intervene
+- Never trust client-provided `sellerId` / `listingId` without server ownership check
+
+## Routes to implement
+
+```text
+/dashboard/seller/leads              → queue (exists — wire to DB)
+/dashboard/seller/leads/[leadId]     → lead CRM workspace (build)
+/dashboard/seller/offers             → queue (exists — wire to DB)
+/dashboard/seller/offers/[offerId]   → offer negotiation workspace (build)
+/dashboard/admin/leads               → admin queue
+/dashboard/admin/offers              → admin queue
+/buy/[registration]                  → public enquiry / viewing / doc request forms
+```
+
+Listing workspace **Leads & Offers** tab remains a **per-listing summary** linking into lead/offer detail pages — not the primary CRM surface.
+
+## Lead detail workspace (`/dashboard/seller/leads/[leadId]`)
+
+Layout sections:
+
+1. **Header** — buyer, aircraft (registration + title), status badge, priority, assignee
+2. **Timeline** — `LeadActivity` feed (newest first)
+3. **Buyer panel** — verification / FICA status, prior enquiries on other aircraft
+4. **Aircraft panel** — listing status, link to `/dashboard/listings/[listingId]`
+5. **Actions** (server actions, not client-only):
+   - Mark contacted
+   - Qualify / unqualify (with reason)
+   - Schedule viewing
+   - Grant / deny document access (compliance gate)
+   - Convert to offer
+   - Add internal note
+   - Set follow-up (`nextFollowUpAt`)
+   - Close lead (`closedReason` required)
+
+## Offer detail workspace (`/dashboard/seller/offers/[offerId]`)
+
+Must support:
+
+- Offer thread / negotiation history via `OfferActivity`
+- Counter-offer flow → `SELLER_COUNTERED`
+- Expiry → `EXPIRED` (scheduled job or checked on read)
+- Accept / reject with mandatory `rejectedReason`
+- **Accept** → create `Deal`, link lead to `OFFER_MADE` → `CLOSED`, open deal room
+- Compare multiple active offers on same listing (side-by-side panel)
+
+## Buyer qualification gates (aviation-specific)
+
+| Gate | Allowed actions |
+|------|-----------------|
+| Unverified | General enquiry only |
+| FICA pending | Enquiry + viewing request |
+| FICA cleared | Document access (after grant), formal offer |
+
+Document access:
+
+- Private by default
+- Grant creates activity + optional `ComplianceCheck`
+- Short-lived signed URLs only after authorization
+- Log who granted access and when
+
+## Pipeline views (after detail pages work)
+
+Add grouped views — status columns or filtered tabs:
+
+- **Lead pipeline**: New → Contacted → Qualified → Viewing → Offer made → Closed
+- **Offer pipeline**: Received → Under review → Countered → Accepted / Rejected / Expired
+- **My follow-ups**: `nextFollowUpAt` due today / overdue
+- **Admin unassigned queue**: new leads needing assignment
+
+Status changes via action menu first; drag-and-drop is deferred.
+
+## Dashboard integration
+
+Feed real data into existing seller home sections:
+
+- **Action required** — stale leads, overdue follow-ups, offers awaiting response
+- **Buyer activity** — from `LeadActivity` / new offers, not mock selectors
+- **Summary stats** — open leads, active offers from DB counts
+
+Replace `buildLeadTableRows` / mock selectors incrementally; keep selector shape where possible.
+
+## Public ingestion (`/buy/[registration]`)
+
+Forms create persisted leads:
+
+- Enquire (general)
+- Request viewing
+- Request document access (auth + verification check)
+
+Each submission: `Lead` + `LeadActivity` + `NotificationEvent` to seller.
+
+Offers on fixed-price listings: authenticated buyer, FICA gate, creates `Offer` + activity.
+
+## Notifications (Phase 2+)
+
+`NotificationEvent` for: new lead, viewing confirmed, doc access granted, counter-offer, offer accepted.
+
+Link to `/dashboard/seller/messages` thread per lead when messages module exists.
+
+## Analytics (defer until persistence works)
+
+Track: `LeadCreated`, `LeadQualified`, `LeadConverted`, `OfferReceived`, `OfferAccepted`.
+
+Seller metrics: lead → qualified → offer → deal conversion, median first-response time.
+
+## Recommended build order
+
+Implement in this sequence. **Do not skip activity logging or server authorization.**
+
+```text
+Phase 1 — Foundation
+  [x] Prisma: Lead, Offer, LeadActivity, OfferActivity (+ indexes)
+  [x] Domain enums + status meta + transition validators
+  [x] Server actions with role checks
+  [x] Seed or migrate mock data shape to DB
+
+Phase 2 — Lead CRM workspace
+  [x] /dashboard/seller/leads/[leadId] page
+  [x] Activity timeline component (reuse listing workspace activity patterns)
+  [x] Lead action sidebar (status transitions + notes + follow-up)
+  [x] Wire seller/admin lead tables to DB; row links to detail page
+
+Phase 3 — Offer negotiation workspace
+  [ ] /dashboard/seller/offers/[offerId] page
+  [ ] Counter / accept / reject flows
+  [ ] Accept → Deal creation + deal room link
+  [ ] Compare offers on same listing
+
+Phase 4 — Ingestion & gates
+  [ ] Public enquiry forms on /buy/[registration]
+  [ ] FICA / verification gates on actions
+  [ ] Document access grant workflow
+
+Phase 5 — Pipeline & ops
+  [ ] Follow-up queue + action required from DB
+  [ ] Pipeline/grouped views
+  [ ] Admin assign + qualify workflows
+  [ ] Notifications
+
+Phase 6 — Analytics
+  [ ] Dashboard KPIs + PostHog events
+```
+
+When the user says **"build the leads CRM"** or **"start Phase 1"**, begin at the first unchecked phase unless they specify otherwise.
+
+## Definition of done (CRM vs CRUD)
+
+The feature is CRM-ready when:
+
+1. Seller opens a **lead detail page**, sees **activity history**, takes an **action**, status changes with **audit trail**
+2. **Follow-ups** appear on dashboard without hunting tables
+3. **Qualification** gates document access and offers
+4. **Offer accept** auto-creates a **deal**
+5. Admin can **assign, review, and intervene** without raw row editing
+
+## UI conventions
+
+- Use shadcn `Table` for queues, `Card` + `Tabs` for detail workspaces
+- Status badges use domain meta (`getLeadStatusMeta`, `getOfferStatusMeta`) — no vague "Pending"
+- Row primary action: link to **lead/offer detail**, not only listing workspace
+- No `section` tags in dashboard (site `globals.css` applies `py-24` to sections)
+- Mock layer (`src/lib/aviatonly/mock/`) is for UI dev only — new features read/write Prisma
+
+## Tests to add (when implementing)
+
+- Lead status transition validation (illegal transitions rejected)
+- Offer accept creates deal
+- Authorization: seller cannot access another seller's lead
+- Document access requires grant + logs activity
+- Activity row created on every status change

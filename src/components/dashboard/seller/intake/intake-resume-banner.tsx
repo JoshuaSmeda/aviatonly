@@ -2,18 +2,17 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  DEMO_DRAFT_LISTING_ID,
-  getIntakePrefillFromListing,
-  getMockListingById,
-  listingTitle,
-} from "@/lib/aviatonly/mock";
+import { listingTitle } from "@/lib/aviatonly/server/listing-mappers";
+import { queryDraftListingsForSeller } from "@/lib/aviatonly/server/listings";
+import { SELLER_ROLES } from "@/lib/auth/roles";
+import { requireAnyRole } from "@/lib/auth/session";
 
-const IntakeResumeBanner = () => {
-  const listing = getMockListingById(DEMO_DRAFT_LISTING_ID);
-  const prefill = getIntakePrefillFromListing(DEMO_DRAFT_LISTING_ID);
+const IntakeResumeBanner = async () => {
+  const session = await requireAnyRole(SELLER_ROLES);
+  const drafts = await queryDraftListingsForSeller(session.user.id);
+  const listing = drafts[0];
 
-  if (!listing || !prefill) return null;
+  if (!listing) return null;
 
   return (
     <Alert className="mb-6">

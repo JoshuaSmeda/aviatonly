@@ -1,5 +1,3 @@
-"use client";
-
 import {
   AlertTriangle,
   HandCoins,
@@ -10,7 +8,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { isLiveStatus } from "@/lib/aviatonly/domain";
-import { buildActionRequiredItems, buildSellerAircraftSummaries } from "@/lib/aviatonly/mock";
+import type { ActionRequiredItem, SellerAircraftSummary } from "@/lib/aviatonly/mock/types";
 import { cn } from "@/lib/utils";
 
 interface Stat {
@@ -20,10 +18,12 @@ interface Stat {
   icon: LucideIcon;
 }
 
-const SummaryStats = () => {
-  const aircraft = buildSellerAircraftSummaries();
-  const actionItems = buildActionRequiredItems();
+interface SummaryStatsProps {
+  aircraft: SellerAircraftSummary[];
+  actionItems: ActionRequiredItem[];
+}
 
+const SummaryStats = ({ aircraft, actionItems }: SummaryStatsProps) => {
   const stats: Stat[] = [
     {
       label: "My aircraft",

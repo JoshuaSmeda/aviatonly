@@ -1,6 +1,6 @@
 # ShadcnSpace Dashboard Pro - Complete AI Instructions
 
-> **AVIATONLY monolith:** This dashboard template is merged into a single Next.js app at the repo root. Dashboard routes live under `src/app/(dashboard)/dashboard/` (URLs: `/dashboard/*`). Public site: `src/app/(site)/`. AVIATONLY product rules: `.cursor/rules/aviatonly.mdc`.
+> **AVIATONLY monolith:** This dashboard template is merged into a single Next.js app at the repo root. Dashboard routes live under `src/app/(dashboard)/dashboard/` (URLs: `/dashboard/*`). Public site: `src/app/(site)/`. AVIATONLY product rules: `.cursor/rules/aviatonly.mdc`. **Leads/offers CRM implementation plan:** `.cursor/rules/05-aviatonly-leads-offers-crm.mdc`.
 
 ## Role & Context
 

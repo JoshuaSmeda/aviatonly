@@ -2,14 +2,15 @@ import type { Metadata } from "next";
 import BreadcrumbComp from "@/app/(dashboard)/dashboard/layout/shared/breadcrumb/breadcrumb-comp";
 import OffersTable from "@/components/dashboard/offers/offers-table";
 import TitleCard from "@/components/dashboard/shared/titleborder-card";
-import { buildOfferTableRows } from "@/lib/aviatonly/mock";
+import { getOfferTableRows } from "@/lib/aviatonly/server/offer-table";
 
 export const metadata: Metadata = {
   title: "Offers | AVIATONLY Admin",
 };
 
-const AdminOffersPage = () => {
-  const activeCount = buildOfferTableRows({ activeOnly: true }).length;
+const AdminOffersPage = async () => {
+  const activeOffers = await getOfferTableRows({ options: { activeOnly: true } });
+  const activeCount = activeOffers.length;
 
   return (
     <>

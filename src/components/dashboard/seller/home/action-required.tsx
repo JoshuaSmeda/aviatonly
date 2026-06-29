@@ -11,24 +11,24 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import type { ActionRequiredItem } from "@/lib/aviatonly/mock/types";
 import { cn } from "@/lib/utils";
-import { buildActionRequiredItems } from "@/lib/aviatonly/mock";
 
-const ActionRequired = () => {
-  const actionItems = buildActionRequiredItems();
+interface ActionRequiredProps {
+  items: ActionRequiredItem[];
+}
 
+const ActionRequired = ({ items }: ActionRequiredProps) => {
   return (
     <CardBox>
       <CardHeader className="border-b [.border-b]:pb-4">
         <CardTitle className="flex items-center gap-2">
           Action required
-          {actionItems.length > 0 && (
-            <Badge variant="destructive">{actionItems.length}</Badge>
-          )}
+          {items.length > 0 && <Badge variant="destructive">{items.length}</Badge>}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {actionItems.length === 0 ? (
+        {items.length === 0 ? (
           <Empty>
             <EmptyHeader>
               <EmptyMedia variant="icon">
@@ -40,7 +40,7 @@ const ActionRequired = () => {
           </Empty>
         ) : (
           <ul className="flex flex-col gap-3">
-            {actionItems.map((item) => (
+            {items.map((item) => (
               <li
                 key={item.id}
                 className="flex flex-col gap-3 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between"

@@ -1,3 +1,6 @@
+import { SELLER_ROLES } from "@/lib/auth/roles";
+import { requireAnyRole } from "@/lib/auth/session";
+import { getSellerDashboardData } from "@/lib/aviatonly/server/seller-dashboard";
 import SummaryStats from "./summary-stats";
 import ActionRequired from "./action-required";
 import MyAircraft from "./my-aircraft";
@@ -5,7 +8,10 @@ import BuyerActivity from "./buyer-activity";
 import DealProgress from "./deal-progress";
 import RecentActivity from "./recent-activity";
 
-const SellerDashboardHome = () => {
+const SellerDashboardHome = async () => {
+  const session = await requireAnyRole(SELLER_ROLES);
+  const data = await getSellerDashboardData(session.user.id);
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
@@ -15,16 +21,13 @@ const SellerDashboardHome = () => {
         </p>
       </div>
 
-      <SummaryStats />
-
-      <ActionRequired />
-
-      <MyAircraft />
-
+      <SummaryStats aircraft={data.aircraft} actionItems={data.actionItems} />
+      <ActionRequired items={data.actionItems} />
+      <MyAircraft aircraft={data.aircraft} />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <BuyerActivity />
-        <DealProgress />
-        <RecentActivity />
+        <BuyerActivity activity={data.buyerActivity} />
+        <DealProgress deals={data.dealProgress} />
+        <RecentActivity activity={data.recentActivity} />
       </div>
     </div>
   );

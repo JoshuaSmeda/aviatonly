@@ -4,12 +4,12 @@ import { Suspense } from "react";
 import CardBox from "@/components/dashboard/shared/CardBox";
 import ListingStatusProgress from "@/components/dashboard/shared/listing-status-progress";
 import { Spinner } from "@/components/ui/spinner";
-import type { MockAircraftListing } from "@/lib/aviatonly/mock/types";
+import type { ListingWorkspaceData } from "@/lib/aviatonly/server/listing-workspace";
 import ListingWorkspaceHeader from "./listing-workspace-header";
 import ListingWorkspaceTabs from "./listing-workspace-tabs";
 
 interface ListingWorkspaceProps {
-  listing: MockAircraftListing;
+  workspace: ListingWorkspaceData;
 }
 
 const ListingWorkspaceTabsFallback = () => (
@@ -18,7 +18,9 @@ const ListingWorkspaceTabsFallback = () => (
   </div>
 );
 
-const ListingWorkspace = ({ listing }: ListingWorkspaceProps) => {
+const ListingWorkspace = ({ workspace }: ListingWorkspaceProps) => {
+  const { listing } = workspace;
+
   return (
     <>
       <ListingWorkspaceHeader listing={listing} />
@@ -30,7 +32,7 @@ const ListingWorkspace = ({ listing }: ListingWorkspaceProps) => {
 
       <CardBox className="p-6">
         <Suspense fallback={<ListingWorkspaceTabsFallback />}>
-          <ListingWorkspaceTabs listing={listing} />
+          <ListingWorkspaceTabs workspace={workspace} />
         </Suspense>
       </CardBox>
     </>

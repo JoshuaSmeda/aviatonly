@@ -72,6 +72,39 @@ export {
 } from "./lead-status";
 
 export {
+  LeadSource,
+  LeadPriority,
+  BuyerVerificationStatus,
+  LEAD_SOURCE_META,
+  LEAD_PRIORITY_META,
+  BUYER_VERIFICATION_META,
+} from "./lead-enums";
+
+export {
+  LeadActivityType,
+  LEAD_ACTIVITY_TYPE_LABELS,
+} from "./lead-activity-type";
+
+export {
+  canTransitionLeadStatus,
+  assertCanTransitionLeadStatus,
+  isTerminalLeadStatus,
+  LeadTransitionError,
+} from "./lead-transitions";
+
+export {
+  OfferActivityType,
+  OFFER_ACTIVITY_TYPE_LABELS,
+} from "./offer-activity-type";
+
+export {
+  canTransitionOfferStatus,
+  assertCanTransitionOfferStatus,
+  isTerminalOfferStatus,
+  OfferTransitionError,
+} from "./offer-transitions";
+
+export {
   DealStatus,
   DEAL_STATUS_META,
   DEAL_SELLER_MILESTONES,

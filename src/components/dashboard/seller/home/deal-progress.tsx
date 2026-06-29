@@ -12,11 +12,14 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { getDealStatusMeta } from "@/lib/aviatonly/domain";
-import { buildDealProgressSummaries, formatZar } from "@/lib/aviatonly/mock";
+import { formatZar } from "@/lib/aviatonly/mock/format";
+import type { DealProgressSummary } from "@/lib/aviatonly/mock/types";
 
-const DealProgress = () => {
-  const deals = buildDealProgressSummaries();
+interface DealProgressProps {
+  deals: DealProgressSummary[];
+}
 
+const DealProgress = ({ deals }: DealProgressProps) => {
   return (
     <CardBox className="h-full">
       <CardHeader className="border-b [.border-b]:pb-4">

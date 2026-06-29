@@ -7,7 +7,8 @@ import TitleCard from "@/components/dashboard/shared/titleborder-card";
 import WorkflowPlaceholder from "@/components/dashboard/shared/workflow-placeholder";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { buildDealProgressSummaries, formatZar } from "@/lib/aviatonly/mock";
+import { formatZar } from "@/lib/aviatonly/mock/format";
+import { queryDealProgressSummaries } from "@/lib/aviatonly/server/seller-dashboard";
 import { ADMIN_ROLES, SELLER_ROLES } from "@/lib/auth/roles";
 import { requireAnyRole } from "@/lib/auth/session";
 
@@ -16,8 +17,8 @@ export const metadata: Metadata = {
 };
 
 const EscrowTrackerPage = async () => {
-  await requireAnyRole([...SELLER_ROLES, ...ADMIN_ROLES]);
-  const deals = buildDealProgressSummaries();
+  const session = await requireAnyRole([...SELLER_ROLES, ...ADMIN_ROLES]);
+  const deals = await queryDealProgressSummaries(session.user.id);
 
   return (
     <>

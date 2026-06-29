@@ -103,6 +103,93 @@ enum ReviewTaskStatus {
   CANCELLED
 }
 
+enum LeadType {
+  GENERAL_ENQUIRY
+  VIEWING_REQUEST
+  DOCUMENT_ACCESS
+  DEMO_FLIGHT
+  FINANCE_ENQUIRY
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  UNQUALIFIED
+  VIEWING_REQUESTED
+  OFFER_MADE
+  CLOSED
+}
+
+enum LeadSource {
+  PUBLIC_LISTING
+  BROKER_REFERRAL
+  AUCTION
+  ADMIN
+}
+
+enum LeadPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+enum BuyerVerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+}
+
+enum LeadActivityType {
+  NOTE_ADDED
+  STATUS_CHANGED
+  ASSIGNED
+  EMAIL_SENT
+  CALL_LOGGED
+  VIEWING_SCHEDULED
+  DOC_ACCESS_GRANTED
+  DOC_ACCESS_DENIED
+  COUNTER_SENT
+  OFFER_ACCEPTED
+  OFFER_REJECTED
+  FOLLOW_UP_SET
+  LEAD_CREATED
+}
+
+enum OfferStatus {
+  RECEIVED
+  UNDER_REVIEW
+  SELLER_COUNTERED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  WITHDRAWN
+}
+
+enum OfferActivityType {
+  NOTE_ADDED
+  STATUS_CHANGED
+  COUNTER_SENT
+  OFFER_ACCEPTED
+  OFFER_REJECTED
+  OFFER_CREATED
+  OFFER_WITHDRAWN
+}
+
+enum DealStatus {
+  OFFER_ACCEPTED
+  DEPOSIT_PENDING
+  DEPOSIT_CONFIRMED
+  CONTRACT_PENDING
+  CONTRACT_SIGNED
+  INSPECTION_WINDOW
+  TRANSFER_DOCUMENTS_PENDING
+  SACAA_TRANSFER_PENDING
+  FUNDS_RELEASE_PENDING
+  COMPLETED
+  CANCELLED
+}
+
 // ---------------------------------------------------------------------------
 // Core
 // ---------------------------------------------------------------------------
@@ -122,6 +209,18 @@ model User {
   listings AircraftListing[]
   members     Member[]
   invitations Invitation[]
+
+  buyerLeads       Lead[]         @relation("LeadBuyer")
+  sellerLeads      Lead[]         @relation("LeadSeller")
+  assignedLeads    Lead[]         @relation("LeadAssignee")
+  buyerOffers      Offer[]        @relation("OfferBuyer")
+  sellerOffers     Offer[]        @relation("OfferSeller")
+  counteredOffers  Offer[]        @relation("OfferCounteredBy")
+  reviewedOffers   Offer[]        @relation("OfferReviewedBy")
+  buyerDeals       Deal[]         @relation("DealBuyer")
+  sellerDeals      Deal[]         @relation("DealSeller")
+  leadActivities   LeadActivity[]
+  offerActivities  OfferActivity[]
 }
 
 model Session {
@@ -257,6 +356,9 @@ model AircraftListing {
   statusHistory ListingStatusHistory[]
   events        ListingEvent[]
   reviewTasks   ListingReviewTask[]
+  leads         Lead[]
+  offers        Offer[]
+  deals         Deal[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -481,4 +583,165 @@ model ListingReviewTask {
   updatedAt DateTime @updatedAt
 
   @@index([listingId])
+}
+
+// ---------------------------------------------------------------------------
+// Leads, offers, deals (CRM workflow)
+// ---------------------------------------------------------------------------
+
+model Lead {
+  id        String          @id @default(cuid())
+  listingId String
+  listing   AircraftListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  buyerId  String
+  buyer    User   @relation("LeadBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  sellerId String
+  seller   User   @relation("LeadSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+
+  type     LeadType
+  status   LeadStatus     @default(NEW)
+  source   LeadSource     @default(PUBLIC_LISTING)
+  priority LeadPriority   @default(NORMAL)
+
+  message                 String
+  buyerVerificationStatus BuyerVerificationStatus @default(UNVERIFIED)
+  internalNotes           String?
+
+  assignedToId String?
+  assignee     User?   @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  nextFollowUpAt  DateTime?
+  lastContactedAt DateTime?
+
+  convertedOfferId String? @unique
+  convertedOffer   Offer?  @relation("LeadConvertedOffer", fields: [convertedOfferId], references: [id], onDelete: SetNull)
+
+  closedReason String?
+
+  activities LeadActivity[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([listingId])
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([status])
+  @@index([assignedToId])
+  @@index([nextFollowUpAt])
+}
+
+model LeadActivity {
+  id     String @id @default(cuid())
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  actorId String?
+  actor   User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  type     LeadActivityType
+  message  String?
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([leadId])
+  @@index([createdAt])
+}
+
+model Offer {
+  id        String          @id @default(cuid())
+  listingId String
+  listing   AircraftListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  buyerId  String
+  buyer    User   @relation("OfferBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  sellerId String
+  seller   User   @relation("OfferSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+
+  amount   Int
+  currency String      @default("ZAR")
+  message  String?
+  status   OfferStatus @default(RECEIVED)
+
+  expiresAt DateTime?
+
+  counterAmount  Int?
+  counterMessage String?
+  counteredAt    DateTime?
+  counteredById  String?
+  counteredBy    User?     @relation("OfferCounteredBy", fields: [counteredById], references: [id], onDelete: SetNull)
+
+  conditions Json?
+
+  reviewedById String?
+  reviewedBy   User?     @relation("OfferReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  acceptedAt     DateTime?
+  rejectedAt     DateTime?
+  rejectedReason String?
+
+  deal Deal?
+
+  convertedFromLead Lead? @relation("LeadConvertedOffer")
+
+  activities OfferActivity[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([listingId])
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model OfferActivity {
+  id      String @id @default(cuid())
+  offerId String
+  offer   Offer  @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  actorId String?
+  actor   User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  type     OfferActivityType
+  message  String?
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([offerId])
+  @@index([createdAt])
+}
+
+model Deal {
+  id        String          @id @default(cuid())
+  listingId String
+  listing   AircraftListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  buyerId  String
+  buyer    User   @relation("DealBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  sellerId String
+  seller   User   @relation("DealSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+
+  acceptedOfferId String @unique
+  offer           Offer  @relation(fields: [acceptedOfferId], references: [id], onDelete: Restrict)
+
+  agreedPrice      Int
+  currency         String     @default("ZAR")
+  depositAmount    Int?
+  commissionAmount Int?
+  vatAmount        Int?
+  status           DealStatus @default(OFFER_ACCEPTED)
+  nextAction       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([listingId])
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([status])
 }

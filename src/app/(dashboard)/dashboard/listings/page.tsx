@@ -5,7 +5,7 @@ import BreadcrumbComp from "@/app/(dashboard)/dashboard/layout/shared/breadcrumb
 import AircraftListingCard from "@/components/dashboard/seller/home/aircraft-listing-card";
 import CardBox from "@/components/dashboard/shared/CardBox";
 import { Button } from "@/components/ui/button";
-import { buildSellerAircraftSummaries } from "@/lib/aviatonly/mock";
+import { querySellerAircraftSummaries } from "@/lib/aviatonly/server/seller-dashboard";
 import { ADMIN_ROLES, SELLER_ROLES } from "@/lib/auth/roles";
 import { requireAnyRole } from "@/lib/auth/session";
 
@@ -14,8 +14,8 @@ export const metadata: Metadata = {
 };
 
 const MyAircraftPage = async () => {
-  await requireAnyRole([...SELLER_ROLES, ...ADMIN_ROLES]);
-  const aircraft = buildSellerAircraftSummaries();
+  const session = await requireAnyRole([...SELLER_ROLES, ...ADMIN_ROLES]);
+  const aircraft = await querySellerAircraftSummaries(session.user.id);
 
   return (
     <>

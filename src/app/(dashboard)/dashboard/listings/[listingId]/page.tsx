@@ -6,7 +6,8 @@ import WorkflowPlaceholder from "@/components/dashboard/shared/workflow-placehol
 import { Plane } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { getMockListingById } from "@/lib/aviatonly/mock";
+import { assertCanAccessListing } from "@/lib/aviatonly/server/authorization";
+import { getListingWorkspaceData } from "@/lib/aviatonly/server/listing-workspace";
 import { ADMIN_ROLES, SELLER_ROLES } from "@/lib/auth/roles";
 import { requireAnyRole } from "@/lib/auth/session";
 
@@ -19,11 +20,11 @@ interface PageProps {
 }
 
 const ListingWorkspacePage = async ({ params }: PageProps) => {
-  await requireAnyRole([...SELLER_ROLES, ...ADMIN_ROLES]);
+  const session = await requireAnyRole([...SELLER_ROLES, ...ADMIN_ROLES]);
   const { listingId } = await params;
-  const listing = getMockListingById(listingId);
+  const workspace = await getListingWorkspaceData(listingId);
 
-  if (!listing) {
+  if (!workspace) {
     return (
       <>
         <BreadcrumbComp title="Listing Workspace" />
@@ -40,10 +41,12 @@ const ListingWorkspacePage = async ({ params }: PageProps) => {
     );
   }
 
+  assertCanAccessListing({ sellerId: workspace.listing.sellerId }, session);
+
   return (
     <>
       <BreadcrumbComp title="Listing Workspace" />
-      <ListingWorkspace listing={listing} />
+      <ListingWorkspace workspace={workspace} />
     </>
   );
 };

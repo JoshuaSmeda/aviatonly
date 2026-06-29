@@ -1,12 +1,14 @@
 import CardBox from "@/components/dashboard/shared/CardBox";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import type { ActivityFeedItem } from "@/lib/aviatonly/mock/types";
 import { cn } from "@/lib/utils";
-import { buildRecentActivityFeed } from "@/lib/aviatonly/mock";
 
-const RecentActivity = () => {
-  const activity = buildRecentActivityFeed();
+interface RecentActivityProps {
+  activity: ActivityFeedItem[];
+}
 
+const RecentActivity = ({ activity }: RecentActivityProps) => {
   return (
     <CardBox className="h-full">
       <CardHeader className="border-b [.border-b]:pb-4">

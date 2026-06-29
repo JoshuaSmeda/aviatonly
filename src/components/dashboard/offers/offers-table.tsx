@@ -1,21 +1,24 @@
-import { buildOfferTableRows } from "@/lib/aviatonly/mock";
+import { getOfferTableRows } from "@/lib/aviatonly/server/offer-table";
 import type { BuildOfferTableRowsOptions } from "@/lib/aviatonly/mock";
+import type { SellerListingScope } from "@/lib/aviatonly/server/seller-scope";
 import OffersDataTable from "./offers-data-table";
 
 interface OffersTableProps {
   options?: BuildOfferTableRowsOptions;
+  scope?: SellerListingScope;
   showSeller?: boolean;
   showListingColumns?: boolean;
   showActions?: boolean;
 }
 
-const OffersTable = ({
+const OffersTable = async ({
   options,
+  scope,
   showSeller = false,
   showListingColumns = true,
   showActions = true,
 }: OffersTableProps) => {
-  const rows = buildOfferTableRows(options);
+  const rows = await getOfferTableRows({ options, scope });
 
   return (
     <OffersDataTable

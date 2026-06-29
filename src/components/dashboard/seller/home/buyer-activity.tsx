@@ -3,7 +3,7 @@ import CardBox from "@/components/dashboard/shared/CardBox";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BuyerActivityType } from "@/lib/aviatonly/domain";
-import { buildBuyerActivityFeed } from "@/lib/aviatonly/mock";
+import type { BuyerActivityFeedItem } from "@/lib/aviatonly/mock/types";
 
 const TYPE_ICON: Record<BuyerActivityType, LucideIcon> = {
   [BuyerActivityType.ENQUIRY]: MessageSquare,
@@ -11,9 +11,11 @@ const TYPE_ICON: Record<BuyerActivityType, LucideIcon> = {
   [BuyerActivityType.OFFER]: HandCoins,
 };
 
-const BuyerActivity = () => {
-  const activity = buildBuyerActivityFeed();
+interface BuyerActivityProps {
+  activity: BuyerActivityFeedItem[];
+}
 
+const BuyerActivity = ({ activity }: BuyerActivityProps) => {
   const enquiries = activity.filter((i) => i.type === BuyerActivityType.ENQUIRY).length;
   const docRequests = activity.filter((i) => i.type === BuyerActivityType.DOC_REQUEST).length;
   const offers = activity.filter((i) => i.type === BuyerActivityType.OFFER).length;

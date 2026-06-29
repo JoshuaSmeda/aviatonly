@@ -68,6 +68,8 @@ interface LeadsDataTableProps {
   showListingColumns?: boolean;
   showSeller?: boolean;
   showActions?: boolean;
+  detailBasePath?: string;
+  emptyDescription?: string;
 }
 
 const LeadsDataTable = ({
@@ -75,6 +77,8 @@ const LeadsDataTable = ({
   showListingColumns = true,
   showSeller = false,
   showActions = true,
+  detailBasePath = "/dashboard/seller/leads",
+  emptyDescription = "Try adjusting your search or filters.",
 }: LeadsDataTableProps) => {
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -88,7 +92,11 @@ const LeadsDataTable = ({
         id: "actions",
         header: () => <span className="sr-only">Open</span>,
         cell: ({ row }) => (
-          <Button size="sm" variant="outline" render={<Link href={row.original.listingHref} />}>
+          <Button
+            size="sm"
+            variant="outline"
+            render={<Link href={`${detailBasePath}/${row.original.id}`} />}
+          >
             Open
           </Button>
         ),
@@ -169,7 +177,7 @@ const LeadsDataTable = ({
     );
 
     return cols;
-  }, [showActions, showListingColumns, showSeller]);
+  }, [showActions, showListingColumns, showSeller, detailBasePath]);
 
   const table = useReactTable({
     data: rows,
@@ -258,7 +266,7 @@ const LeadsDataTable = ({
               <Search />
             </EmptyMedia>
             <EmptyTitle>No leads found</EmptyTitle>
-            <EmptyDescription>Try adjusting your search or filters.</EmptyDescription>
+            <EmptyDescription>{emptyDescription}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (

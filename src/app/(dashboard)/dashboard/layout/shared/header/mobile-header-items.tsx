@@ -6,9 +6,12 @@ import { Language } from "./language";
 
 import { CustomizerContext } from "@/app/context/customizer-context";
 import { Button } from "@/components/ui/button";
+import { useSession } from "@/lib/auth-client";
+import { parseRoles } from "@/lib/auth/roles";
 
 const MobileHeaderItems = () => {
   const { setActiveMode, activeMode } = useContext(CustomizerContext);
+  const { data: session } = useSession();
 
   const toggleMode = () => {
     setActiveMode(activeMode === "light" ? "dark" : "light");
@@ -53,7 +56,14 @@ const MobileHeaderItems = () => {
           <Language />
 
           {/* Profile Dropdown */}
-          <Profile />
+          {session?.user ? (
+            <Profile
+              user={{
+                ...session.user,
+                roles: parseRoles(session.user.roles),
+              }}
+            />
+          ) : null}
         </div>
       </div>
     </nav>

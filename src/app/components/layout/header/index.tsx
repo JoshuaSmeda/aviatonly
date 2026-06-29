@@ -6,7 +6,7 @@ import { useTheme } from 'next-themes'
 import { usePathname } from 'next/navigation'
 import Image from 'next/image'
 import NavLink from './navigation/NavLink'
-import { signOut, useSession } from 'next-auth/react'
+import { signOut, useSession } from '@/lib/auth-client'
 import { LayoutDashboard } from 'lucide-react'
 
 const Header: React.FC = () => {
@@ -60,9 +60,9 @@ const Header: React.FC = () => {
 
   const isHomepage = pathname === '/'
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     localStorage.removeItem("user");
-    signOut();
+    await signOut();
     setUser(null);
   };
 

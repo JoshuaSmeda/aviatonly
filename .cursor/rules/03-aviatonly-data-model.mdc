@@ -1,0 +1,413 @@
+---
+description: "Use when designing or modifying database schema, Prisma models, API contracts, server actions, backend workflows, status enums, listing state machines, aircraft media, aircraft documents, offers, auctions, or deals."
+alwaysApply: false
+globs:
+  - "prisma/**"
+  - "db/**"
+  - "lib/**"
+  - "server/**"
+  - "actions/**"
+  - "app/**/api/**"
+---
+
+# AVIATONLY Data Model and Workflow Rules
+
+Avoid one giant AircraftListing table with many nullable fields.
+
+Use a clean domain model.
+
+Recommended core entities:
+
+- User
+- AircraftListing
+- AircraftAirframe
+- AircraftEngine
+- AircraftPropeller
+- AircraftAvionics
+- AircraftMaintenance
+- AircraftPhoto
+- AircraftDocument
+- ListingReviewTask
+- ListingStatusHistory
+- ListingEvent
+- Lead
+- Offer
+- Deal
+- Inspection
+- Valuation
+- Auction
+
+## Listing Status
+
+Use explicit statuses.
+
+Recommended listing statuses:
+
+- DRAFT
+- SUBMITTED
+- UNDER_REVIEW
+- NEEDS_CHANGES
+- VALUATION_READY
+- INSPECTION_PENDING
+- APPROVED_FOR_LISTING
+- LIVE_FIXED_PRICE
+- LIVE_AUCTION
+- UNDER_OFFER
+- DEPOSIT_PENDING
+- UNDER_CONTRACT
+- TRANSFER_PENDING
+- SOLD
+- WITHDRAWN
+
+Do not allow arbitrary client-side status changes.
+
+Only authorised server-side workflows should move listings into important statuses such as:
+
+- APPROVED_FOR_LISTING
+- LIVE_FIXED_PRICE
+- LIVE_AUCTION
+- UNDER_CONTRACT
+- TRANSFER_PENDING
+- SOLD
+
+## Listing Status History
+
+Every status change should be tracked.
+
+Fields:
+
+- id
+- listingId
+- fromStatus
+- toStatus
+- changedById
+- reason
+- createdAt
+
+## Listing Event
+
+Keep a generic event log for the activity timeline.
+
+Fields:
+
+- id
+- listingId
+- actorId
+- type
+- message
+- metadata
+- createdAt
+
+Event examples:
+
+- PHOTO_UPLOADED
+- DOCUMENT_REJECTED
+- SELLER_SUBMITTED_LISTING
+- ADMIN_REQUESTED_CHANGES
+- VALUATION_ADDED
+- INSPECTION_SCHEDULED
+- LISTING_PUBLISHED
+- OFFER_RECEIVED
+
+## Aircraft Engines
+
+Model engines as child records.
+
+Fields:
+
+- id
+- listingId
+- position
+- manufacturer
+- model
+- serialNumber
+- horsepowerOrThrust
+- engineHours
+- timeSinceOverhaul
+- timeSinceNew
+- overhaulDate
+- overhaulFacility
+- calendarLifeRemaining
+- knownIssues
+- createdAt
+- updatedAt
+
+Engine position options:
+
+- SINGLE
+- LEFT
+- RIGHT
+- FRONT
+- REAR
+
+## Aircraft Propellers
+
+Model propellers as child records.
+
+Fields:
+
+- id
+- listingId
+- manufacturer
+- model
+- serialNumber
+- bladeCount
+- propellerType
+- propellerHours
+- timeSinceOverhaul
+- overhaulDate
+- knownDamageNotes
+- createdAt
+- updatedAt
+
+Propeller type options:
+
+- FIXED_PITCH
+- CONSTANT_SPEED
+- VARIABLE_PITCH
+- OTHER
+
+## Aircraft Photos
+
+Use guided photo slots.
+
+Photo statuses:
+
+- EMPTY
+- UPLOADING
+- UPLOADED
+- PROCESSING
+- READY
+- APPROVED
+- REJECTED
+- NEEDS_REPLACEMENT
+
+Fields:
+
+- id
+- listingId
+- slotKey
+- fileName
+- mimeType
+- sizeBytes
+- storageKey
+- publicUrl
+- status
+- rejectionReason
+- uploadedById
+- reviewedById
+- uploadedAt
+- reviewedAt
+- sortOrder
+- isPublicGalleryImage
+- createdAt
+- updatedAt
+
+Do not treat all images as equal. Required slots and gallery images are separate concerns.
+
+## Aircraft Documents
+
+Documents are private by default.
+
+Document statuses:
+
+- MISSING
+- UPLOADED
+- UNDER_REVIEW
+- ACCEPTED
+- REJECTED
+- EXPIRED
+- NEEDS_REPLACEMENT
+
+Document visibility:
+
+- PRIVATE_INTERNAL
+- AVAILABLE_ON_REQUEST
+- SHARED_WITH_VERIFIED_BUYER
+- PUBLIC_SUMMARY_ONLY
+
+Fields:
+
+- id
+- listingId
+- documentType
+- fileName
+- mimeType
+- sizeBytes
+- storageKey
+- uploadedById
+- uploadedAt
+- reviewStatus
+- reviewedById
+- reviewedAt
+- rejectionReason
+- visibility
+- createdAt
+- updatedAt
+
+Sensitive documents must never be public by default.
+
+## Review Tasks
+
+Fields:
+
+- id
+- listingId
+- title
+- description
+- assignedToId
+- assignedRole
+- status
+- dueDate
+- blockingPublication
+- createdById
+- resolvedById
+- createdAt
+- resolvedAt
+- updatedAt
+
+Task statuses:
+
+- OPEN
+- IN_PROGRESS
+- WAITING_ON_SELLER
+- WAITING_ON_ADMIN
+- DONE
+- CANCELLED
+
+## Completeness Score
+
+Each listing should have a completeness score.
+
+Suggested weighting:
+
+- Basic details: 20%
+- Technical details: 25%
+- Photos: 25%
+- Documents: 20%
+- Sale setup: 10%
+
+Show missing required items explicitly.
+
+Example:
+
+ZS-ABC Cessna 172N
+Draft
+Completeness: 72%
+Missing:
+- Engine logbook summary
+- Cockpit powered-on photo
+- Asking price
+
+## Leads
+
+Lead statuses:
+
+- NEW
+- CONTACTED
+- QUALIFIED
+- UNQUALIFIED
+- VIEWING_REQUESTED
+- OFFER_MADE
+- CLOSED
+
+Fields:
+
+- id
+- listingId
+- buyerId
+- sellerId
+- message
+- status
+- verificationStatus
+- createdAt
+- updatedAt
+
+## Offers
+
+Offer statuses:
+
+- RECEIVED
+- UNDER_REVIEW
+- SELLER_COUNTERED
+- ACCEPTED
+- REJECTED
+- EXPIRED
+- WITHDRAWN
+
+Fields:
+
+- id
+- listingId
+- buyerId
+- sellerId
+- amount
+- currency
+- message
+- status
+- expiresAt
+- createdAt
+- updatedAt
+
+## Deals
+
+A Deal should be created after an offer is accepted or an auction closes successfully.
+
+Deal statuses:
+
+- OFFER_ACCEPTED
+- DEPOSIT_PENDING
+- DEPOSIT_CONFIRMED
+- CONTRACT_PENDING
+- CONTRACT_SIGNED
+- INSPECTION_WINDOW
+- TRANSFER_DOCUMENTS_PENDING
+- SACAA_TRANSFER_PENDING
+- FUNDS_RELEASE_PENDING
+- COMPLETED
+- CANCELLED
+
+Fields:
+
+- id
+- listingId
+- buyerId
+- sellerId
+- acceptedOfferId
+- agreedPrice
+- currency
+- depositAmount
+- commissionAmount
+- vatAmount
+- status
+- createdAt
+- updatedAt
+
+## Server Action Rules
+
+Use explicit server actions or API handlers for domain events.
+
+Examples:
+
+- createDraftListing()
+- updateAircraftIdentity()
+- updateOwnershipDetails()
+- updateAirframeDetails()
+- addEngine()
+- updateEngine()
+- removeEngine()
+- addPropeller()
+- updatePropeller()
+- uploadPhotoForSlot()
+- uploadDocumentForSlot()
+- submitListingForReview()
+- requestListingChanges()
+- approveListingSection()
+- publishFixedPriceListing()
+- createAuctionDraft()
+- submitOffer()
+- acceptOffer()
+- createDealFromAcceptedOffer()
+- advanceDealMilestone()
+
+Do not let the client directly mutate sensitive workflow states.

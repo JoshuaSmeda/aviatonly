@@ -1,0 +1,81 @@
+---
+description: "Core AVIATONLY product context. Always apply this when working on the AVIATONLY codebase."
+alwaysApply: true
+---
+
+# AVIATONLY Product Context
+
+AVIATONLY is an aviation-focused aircraft marketplace and transaction platform.
+
+The product should not behave like a generic classified ads website. It should feel like a curated, trust-heavy aircraft sales workflow.
+
+Core principle:
+
+Aircraft onboarding is not the same as publishing a listing.
+
+The correct product flow is:
+
+Aircraft Intake Wizard
+→ Listing Workspace
+→ AVIATONLY Review
+→ Valuation / Inspection
+→ Publish as Fixed Price or Auction
+→ Lead / Offer / Bid Management
+→ Deal Room / Escrow Tracker
+→ Ownership Transfer Workflow
+
+The listing is a workflow object, not just a database row.
+
+Do not design features as simple CRUD screens unless explicitly requested. Prefer workflow-driven states, clear next actions, status badges, timelines, review tasks, and seller/buyer/admin role separation.
+
+Primary roles:
+
+- Buyer
+- Seller
+- Broker
+- Inspector
+- Admin
+- Super Admin
+
+A user may have multiple roles.
+
+Core listing lifecycle:
+
+DRAFT
+→ SUBMITTED
+→ UNDER_REVIEW
+→ NEEDS_CHANGES
+→ SUBMITTED
+→ VALUATION_READY
+→ INSPECTION_PENDING
+→ APPROVED_FOR_LISTING
+→ LIVE_FIXED_PRICE or LIVE_AUCTION
+→ UNDER_OFFER
+→ UNDER_CONTRACT
+→ TRANSFER_PENDING
+→ SOLD
+
+Withdrawn/cancelled paths should be supported where appropriate.
+
+Important product rules:
+
+- Sellers should not publish aircraft directly in the first version.
+- Sellers submit aircraft for AVIATONLY review.
+- AVIATONLY controls public listing quality.
+- Photos and documents should be reviewed before publication.
+- Documents are private by default.
+- Logbooks, proof of ownership, registration certificates, and finance documents must not be made public by default.
+- Buyer access to sensitive documents should require explicit approval or verified buyer status.
+- Admins manage review, valuation, inspection, publishing, and transaction progression.
+- The seller dashboard should focus on action required, listing status, buyer activity, and deal progress.
+- The admin dashboard should focus on review queues, documents, valuations, inspections, offers, deals, and auctions.
+
+UX tone:
+
+- Premium
+- Aviation-specific
+- Operationally clear
+- Trust-heavy
+- Not gimmicky
+- Not a Gumtree-style marketplace
+- Avoid vague labels like "Pending" where a more specific status is available.

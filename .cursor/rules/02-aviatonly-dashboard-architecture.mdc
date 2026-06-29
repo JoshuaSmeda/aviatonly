@@ -1,0 +1,449 @@
+---
+description: "Use when building or modifying the AVIATONLY dashboard, seller dashboard, buyer dashboard, broker dashboard, admin dashboard, listing workspace, review queues, leads, offers, deals, or activity timelines."
+alwaysApply: false
+globs:
+  - "app/**/dashboard/**"
+  - "app/**/admin/**"
+  - "components/**/dashboard/**"
+  - "components/**/listings/**"
+  - "components/**/deals/**"
+  - "components/**/offers/**"
+  - "components/**/leads/**"
+---
+
+# AVIATONLY Dashboard Architecture
+
+The dashboard should be role-aware.
+
+Supported roles:
+
+- Buyer
+- Seller
+- Broker
+- Inspector
+- Admin
+- Super Admin
+
+A user can have multiple roles.
+
+The dashboard should prioritise operational clarity:
+
+1. What aircraft am I selling or buying?
+2. What stage is each aircraft in?
+3. What is AVIATONLY waiting for?
+4. What do I need to do next?
+5. Are there buyers, leads, offers, or bids?
+6. Is a deal progressing?
+
+## Seller Dashboard
+
+Seller dashboard sections:
+
+- Top summary
+- Action required
+- My aircraft
+- Buyer activity
+- Deal progress
+- Messages or notifications
+
+Top summary cards:
+
+- Draft listings
+- Under review
+- Live listings
+- Open offers
+- Deals in progress
+
+The Action Required section should be the primary area.
+
+Example:
+
+Action required
+
+ZS-ABC Cessna 172N
+- Replace 2 photos
+- Upload latest MPI stamp
+[Fix now]
+
+ZU-XYZ Sling 2
+- Confirm reserve price
+[Review pricing]
+
+## My Aircraft Cards
+
+Aircraft cards should show:
+
+- Image
+- Registration
+- Year
+- Make
+- Model
+- Status
+- Completeness
+- Price or valuation status
+- Number of leads/offers
+- Primary next action
+
+Common CTAs:
+
+- Continue draft
+- View review notes
+- Preview listing
+- View enquiries
+- Open deal room
+- Fix issues
+
+## Listing Workspace
+
+After creating or submitting an aircraft, use a listing workspace route.
+
+Recommended route:
+
+/dashboard/listings/[listingId]
+
+The listing workspace is not the public listing page.
+
+Recommended tabs:
+
+- Overview
+- Aircraft Data
+- Media
+- Documents
+- Review Tasks
+- Valuation
+- Inspection
+- Listing Preview
+- Leads & Offers
+- Deal Room
+- Activity
+- Settings
+
+## Listing Workspace: Overview
+
+Show:
+
+- Aircraft card
+- Current status
+- Completeness score
+- Next required action
+- Review notes
+- Timeline
+- Primary CTA
+
+Example:
+
+ZS-ABC — 1978 Cessna 172N
+
+Status: Under Review
+Completeness: 91%
+
+Next action:
+AVIATONLY is reviewing your uploaded documents.
+
+Open tasks:
+- Replace blurry propeller leading edge photo
+- Upload latest MPI stamp
+
+## Listing Workspace: Aircraft Data
+
+Group aircraft data by:
+
+- Identity
+- Airframe
+- Engine
+- Propeller
+- Avionics
+- Interior
+- Exterior
+- Maintenance
+- Ownership
+- Sale preferences
+
+After submission, edits should either require review or be clearly marked as pending review.
+
+## Listing Workspace: Media
+
+Show:
+
+- Required photos
+- Recommended photos
+- Public gallery order
+- Rejected / needs replacement photos
+
+Admin can mark photos as:
+
+- Approved for public listing
+- Internal only
+- Needs replacement
+
+## Listing Workspace: Documents
+
+Documents are a private vault.
+
+Group by:
+
+- Registration documents
+- Airworthiness documents
+- Maintenance documents
+- Ownership documents
+- Finance / encumbrance documents
+- Other
+
+Seller sees:
+
+- Uploaded
+- Under review
+- Accepted
+- Needs replacement
+
+Buyer should not access documents unless explicitly granted.
+
+## Listing Workspace: Review Tasks
+
+Review tasks can be generated automatically or manually.
+
+Examples:
+
+- Upload Certificate of Registration
+- Replace cockpit photo
+- Confirm engine TSO
+- Confirm aircraft finance status
+- Review damage history
+- Schedule inspection
+- Confirm VAT status
+
+Task statuses:
+
+- OPEN
+- IN_PROGRESS
+- WAITING_ON_SELLER
+- WAITING_ON_ADMIN
+- DONE
+- CANCELLED
+
+Tasks may block publication.
+
+## Listing Workspace: Valuation
+
+Valuation statuses:
+
+- NOT_STARTED
+- IN_PROGRESS
+- VALUATION_READY
+- SELLER_ACCEPTED
+- SELLER_REJECTED
+
+Valuation fields:
+
+- Low estimate
+- Recommended listing price
+- High estimate
+- Recommended reserve
+- Valuation notes
+- Comparable aircraft notes
+
+Do not over-automate valuation in MVP. Manual admin input is acceptable.
+
+## Listing Workspace: Inspection
+
+Inspection statuses:
+
+- NOT_REQUIRED
+- RECOMMENDED
+- PENDING_SCHEDULING
+- SCHEDULED
+- IN_PROGRESS
+- PASSED
+- PASSED_WITH_NOTES
+- FAILED
+- CANCELLED
+
+Inspection fields:
+
+- Inspection required?
+- Inspection type
+- Assigned inspector / AMO
+- Scheduled date
+- Inspection location
+- Inspection result
+- Inspection report
+- Defects found
+- Recommended actions
+
+## Listing Workspace: Listing Preview
+
+Show the public buyer-facing listing preview.
+
+The preview must clearly say:
+
+This is a preview. Your aircraft is not live yet.
+
+Admin controls:
+
+- Approve for fixed-price listing
+- Approve for auction
+- Request changes
+- Reject listing
+
+## Listing Workspace: Leads & Offers
+
+Show:
+
+- Enquiries
+- Verified buyers
+- Offers
+- Auction bids
+- Viewing requests
+- Demo flight requests
+- Document access requests
+
+Lead statuses:
+
+- NEW
+- CONTACTED
+- QUALIFIED
+- UNQUALIFIED
+- VIEWING_REQUESTED
+- OFFER_MADE
+- CLOSED
+
+Offer statuses:
+
+- RECEIVED
+- UNDER_REVIEW
+- SELLER_COUNTERED
+- ACCEPTED
+- REJECTED
+- EXPIRED
+- WITHDRAWN
+
+## Listing Workspace: Deal Room
+
+After an offer is accepted or auction closes, create a Deal.
+
+Deal statuses:
+
+- OFFER_ACCEPTED
+- DEPOSIT_PENDING
+- DEPOSIT_CONFIRMED
+- CONTRACT_PENDING
+- CONTRACT_SIGNED
+- INSPECTION_WINDOW
+- TRANSFER_DOCUMENTS_PENDING
+- SACAA_TRANSFER_PENDING
+- FUNDS_RELEASE_PENDING
+- COMPLETED
+- CANCELLED
+
+Seller-facing milestones:
+
+1. Buyer deposit pending
+2. Deposit verified
+3. Sale agreement issued
+4. Logbooks handed over
+5. Transfer documents signed
+6. SACAA transfer pending
+7. Funds release pending
+8. Sale complete
+
+Buyer-facing milestones:
+
+1. Offer accepted
+2. Deposit instructions issued
+3. Deposit verified
+4. Inspection window active
+5. Transfer documents in progress
+6. Registration transfer pending
+7. Aircraft handover
+
+## Admin Dashboard
+
+Admin route should be separate:
+
+/admin
+
+Admin dashboard sections:
+
+- Review Queue
+- Listings
+- Sellers
+- Buyers
+- Documents
+- Valuations
+- Inspections
+- Leads
+- Offers
+- Deals
+- Auctions
+- Reports
+- Settings
+
+## Admin Review Queue
+
+The review queue is the most important admin page.
+
+Columns:
+
+- Submitted date
+- Registration
+- Aircraft
+- Seller
+- Completeness
+- Missing docs
+- Photo issues
+- Risk flags
+- Assigned reviewer
+- Status
+
+Filters:
+
+- New submissions
+- Needs changes
+- Documents pending
+- Photos pending
+- Valuation pending
+- Inspection pending
+- Ready to publish
+
+Admin actions:
+
+- Approve field
+- Reject field
+- Request change
+- Add internal note
+- Assign reviewer
+- Start valuation
+- Schedule inspection
+- Approve for fixed-price
+- Approve for auction
+
+## Dashboard Navigation
+
+Seller/broker dashboard sidebar:
+
+- Dashboard
+- My Aircraft
+- Create Listing
+- Leads
+- Offers
+- Deals
+- Document Vault
+- Messages
+- Billing
+- Settings
+
+Admin dashboard sidebar:
+
+- Dashboard
+- Review Queue
+- Listings
+- Users
+- Documents
+- Valuations
+- Inspections
+- Leads
+- Offers
+- Deals
+- Auctions
+- Reports
+- Settings

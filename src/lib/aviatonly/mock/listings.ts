@@ -1,0 +1,403 @@
+import { EnginePosition, ListingStatus, PropellerType, SaleType } from "@/lib/aviatonly/domain";
+import type {
+  MockAircraftAirframe,
+  MockAircraftAvionics,
+  MockAircraftEngine,
+  MockAircraftListing,
+  MockAircraftMaintenance,
+  MockAircraftPropeller,
+} from "./types";
+import { DEMO_SELLER_ID } from "./users";
+
+const T = "2026-06-29T10:00:00.000Z";
+
+export const MOCK_LISTINGS: MockAircraftListing[] = [
+  {
+    id: "zs-abc",
+    registration: "ZS-ABC",
+    registrationType: "ZS",
+    make: "Cessna",
+    model: "172N Skyhawk",
+    year: 1978,
+    category: "Single-Engine Piston",
+    airfield: "FALA — Lanseria",
+    province: "Gauteng",
+    ownerName: "Johan van der Merwe",
+    sellerRole: "Registered owner",
+    authorisedToSell: true,
+    saleType: SaleType.FIXED_PRICE,
+    valuationEstimate: 900000,
+    askingPrice: 850000,
+    reservePrice: null,
+    startingBid: null,
+    bidIncrement: null,
+    status: ListingStatus.NEEDS_CHANGES,
+    completenessScore: 72,
+    sellerId: DEMO_SELLER_ID,
+    createdAt: "2026-05-01T09:00:00.000Z",
+    updatedAt: "2026-06-28T11:00:00.000Z",
+  },
+  {
+    id: "zu-xyz",
+    registration: "ZU-XYZ",
+    registrationType: "ZU",
+    make: "Sling",
+    model: "2",
+    year: 2019,
+    category: "Experimental / LSA",
+    airfield: "FATA — Tedderfield",
+    province: "Gauteng",
+    ownerName: "Johan van der Merwe",
+    sellerRole: "Registered owner",
+    authorisedToSell: true,
+    saleType: SaleType.AUCTION,
+    valuationEstimate: 1200000,
+    askingPrice: null,
+    reservePrice: 1100000,
+    startingBid: 950000,
+    bidIncrement: 25000,
+    status: ListingStatus.VALUATION_READY,
+    completenessScore: 95,
+    sellerId: DEMO_SELLER_ID,
+    createdAt: "2026-04-10T08:30:00.000Z",
+    updatedAt: "2026-06-27T15:20:00.000Z",
+  },
+  {
+    id: "zs-def",
+    registration: "ZS-DEF",
+    registrationType: "ZS",
+    make: "Cirrus",
+    model: "SR22 G5",
+    year: 2016,
+    category: "Single-Engine Piston",
+    airfield: "FACT — Cape Town Intl",
+    province: "Western Cape",
+    ownerName: "Johan van der Merwe",
+    sellerRole: "Registered owner",
+    authorisedToSell: true,
+    saleType: SaleType.FIXED_PRICE,
+    valuationEstimate: 6200000,
+    askingPrice: 6500000,
+    reservePrice: null,
+    startingBid: null,
+    bidIncrement: null,
+    status: ListingStatus.LIVE_FIXED_PRICE,
+    completenessScore: 100,
+    sellerId: DEMO_SELLER_ID,
+    createdAt: "2026-03-15T10:00:00.000Z",
+    updatedAt: "2026-06-26T09:00:00.000Z",
+  },
+  {
+    id: "zu-pqr",
+    registration: "ZU-PQR",
+    registrationType: "ZU",
+    make: "BushCat",
+    model: "",
+    year: 2021,
+    category: "Microlight",
+    airfield: "FABS — Brits",
+    province: "North West",
+    ownerName: "Johan van der Merwe",
+    sellerRole: "Registered owner",
+    authorisedToSell: true,
+    saleType: SaleType.FIXED_PRICE,
+    valuationEstimate: 1300000,
+    askingPrice: 1350000,
+    reservePrice: null,
+    startingBid: null,
+    bidIncrement: null,
+    status: ListingStatus.UNDER_CONTRACT,
+    completenessScore: 100,
+    sellerId: DEMO_SELLER_ID,
+    createdAt: "2026-02-20T11:00:00.000Z",
+    updatedAt: "2026-06-25T16:45:00.000Z",
+  },
+  {
+    id: "zs-ghi",
+    registration: "ZS-GHI",
+    registrationType: "ZS",
+    make: "Piper",
+    model: "PA-28 Archer",
+    year: 1981,
+    category: "Single-Engine Piston",
+    airfield: "FASH — Stellenbosch",
+    province: "Western Cape",
+    ownerName: "Johan van der Merwe",
+    sellerRole: "Registered owner",
+    authorisedToSell: false,
+    saleType: SaleType.FIXED_PRICE,
+    valuationEstimate: null,
+    askingPrice: null,
+    reservePrice: null,
+    startingBid: null,
+    bidIncrement: null,
+    status: ListingStatus.DRAFT,
+    completenessScore: 40,
+    sellerId: DEMO_SELLER_ID,
+    createdAt: "2026-06-20T13:00:00.000Z",
+    updatedAt: "2026-06-28T18:00:00.000Z",
+  },
+  {
+    id: "zs-mno",
+    registration: "ZS-MNO",
+    registrationType: "ZS",
+    make: "Beechcraft",
+    model: "Bonanza A36",
+    year: 2005,
+    category: "Single-Engine Piston",
+    airfield: "FAOR — OR Tambo",
+    province: "Gauteng",
+    ownerName: "Elaine Mokoena",
+    sellerRole: "Authorised agent / broker",
+    authorisedToSell: true,
+    saleType: SaleType.FIXED_PRICE,
+    valuationEstimate: 4800000,
+    askingPrice: 4950000,
+    reservePrice: null,
+    startingBid: null,
+    bidIncrement: null,
+    status: ListingStatus.SUBMITTED,
+    completenessScore: 88,
+    sellerId: "user-seller-elaine",
+    createdAt: "2026-06-26T07:00:00.000Z",
+    updatedAt: "2026-06-29T06:30:00.000Z",
+  },
+];
+
+export const MOCK_AIRFRAMES: MockAircraftAirframe[] = [
+  {
+    id: "af-zs-abc",
+    listingId: "zs-abc",
+    serialNumber: "172-65421",
+    totalTimeAirframe: 3250,
+    damageHistory: "Minor wing tip repair (2019), documented in logbooks.",
+    notes: null,
+    createdAt: T,
+    updatedAt: T,
+  },
+  {
+    id: "af-zu-xyz",
+    listingId: "zu-xyz",
+    serialNumber: "SL2-0194",
+    totalTimeAirframe: 420,
+    damageHistory: "No known damage history.",
+    notes: null,
+    createdAt: T,
+    updatedAt: T,
+  },
+  {
+    id: "af-zs-def",
+    listingId: "zs-def",
+    serialNumber: "SR22-0892",
+    totalTimeAirframe: 1850,
+    damageHistory: null,
+    notes: "Hangared since new.",
+    createdAt: T,
+    updatedAt: T,
+  },
+  {
+    id: "af-zu-pqr",
+    listingId: "zu-pqr",
+    serialNumber: "BC-1042",
+    totalTimeAirframe: 280,
+    damageHistory: null,
+    notes: null,
+    createdAt: T,
+    updatedAt: T,
+  },
+];
+
+export const MOCK_ENGINES: MockAircraftEngine[] = [
+  {
+    id: "eng-zs-abc",
+    listingId: "zs-abc",
+    position: EnginePosition.SINGLE,
+    manufacturer: "Lycoming",
+    model: "O-320-H2AD",
+    serialNumber: "L-12345",
+    horsepowerOrThrust: "160 hp",
+    engineHours: 1450,
+    timeSinceOverhaul: 650,
+    timeSinceNew: null,
+    overhaulDate: "2021-03-15T00:00:00.000Z",
+    overhaulFacility: "AeroTech AMO, Lanseria",
+    calendarLifeRemaining: null,
+    knownIssues: null,
+    createdAt: T,
+    updatedAt: T,
+  },
+  {
+    id: "eng-zu-xyz",
+    listingId: "zu-xyz",
+    position: EnginePosition.SINGLE,
+    manufacturer: "Rotax",
+    model: "912 ULS",
+    serialNumber: "R-88721",
+    horsepowerOrThrust: "100 hp",
+    engineHours: 420,
+    timeSinceOverhaul: null,
+    timeSinceNew: 420,
+    overhaulDate: null,
+    overhaulFacility: null,
+    calendarLifeRemaining: null,
+    knownIssues: null,
+    createdAt: T,
+    updatedAt: T,
+  },
+  {
+    id: "eng-zs-def",
+    listingId: "zs-def",
+    position: EnginePosition.SINGLE,
+    manufacturer: "Continental",
+    model: "IO-550-N",
+    serialNumber: "C-55201",
+    horsepowerOrThrust: "310 hp",
+    engineHours: 980,
+    timeSinceOverhaul: 320,
+    timeSinceNew: null,
+    overhaulDate: "2023-08-01T00:00:00.000Z",
+    overhaulFacility: "Cirrus Service Centre, Cape Town",
+    calendarLifeRemaining: null,
+    knownIssues: null,
+    createdAt: T,
+    updatedAt: T,
+  },
+];
+
+export const MOCK_PROPELLERS: MockAircraftPropeller[] = [
+  {
+    id: "prop-zs-abc",
+    listingId: "zs-abc",
+    manufacturer: "McCauley",
+    model: "1C160",
+    serialNumber: "P-44210",
+    bladeCount: 2,
+    propellerType: PropellerType.FIXED_PITCH,
+    propellerHours: 650,
+    timeSinceOverhaul: 650,
+    overhaulDate: "2021-03-15T00:00:00.000Z",
+    knownDamageNotes: null,
+    createdAt: T,
+    updatedAt: T,
+  },
+  {
+    id: "prop-zs-def",
+    listingId: "zs-def",
+    manufacturer: "Hartzell",
+    model: "3-blade composite",
+    serialNumber: "H-99102",
+    bladeCount: 3,
+    propellerType: PropellerType.CONSTANT_SPEED,
+    propellerHours: 320,
+    timeSinceOverhaul: 320,
+    overhaulDate: "2023-08-01T00:00:00.000Z",
+    knownDamageNotes: null,
+    createdAt: T,
+    updatedAt: T,
+  },
+];
+
+export const MOCK_AVIONICS: MockAircraftAvionics[] = [
+  {
+    id: "av-zs-abc",
+    listingId: "zs-abc",
+    equipment: ["IFR certified", "GPS / GNSS navigator", "Mode S transponder"],
+    summary: "Garmin GNS 430W, GTX 327 transponder",
+    createdAt: T,
+    updatedAt: T,
+  },
+  {
+    id: "av-zu-xyz",
+    listingId: "zu-xyz",
+    equipment: ["Glass cockpit (EFIS)", "GPS / GNSS navigator", "ADS-B Out", "Autopilot"],
+    summary: "MGL EFIS, Garmin G5 backup, GTX 345",
+    createdAt: T,
+    updatedAt: T,
+  },
+  {
+    id: "av-zs-def",
+    listingId: "zs-def",
+    equipment: [
+      "IFR certified",
+      "Glass cockpit (EFIS)",
+      "Autopilot",
+      "ADS-B Out",
+      "ADS-B In",
+      "Engine monitor",
+    ],
+    summary: "Garmin Perspective+, GFC 700 autopilot, GTX 345",
+    createdAt: T,
+    updatedAt: T,
+  },
+];
+
+export const MOCK_MAINTENANCE: MockAircraftMaintenance[] = [
+  {
+    id: "maint-zs-abc",
+    listingId: "zs-abc",
+    status: "MPI due within 90 days",
+    lastMpiDate: "2025-09-10T00:00:00.000Z",
+    nextMpiDue: "2026-09-10T00:00:00.000Z",
+    notes: "Annual valid; MPI stamp upload pending review.",
+    createdAt: T,
+    updatedAt: T,
+  },
+  {
+    id: "maint-zu-xyz",
+    listingId: "zu-xyz",
+    status: "Current — in annual / MPI valid",
+    lastMpiDate: "2026-01-15T00:00:00.000Z",
+    nextMpiDue: "2027-01-15T00:00:00.000Z",
+    notes: null,
+    createdAt: T,
+    updatedAt: T,
+  },
+  {
+    id: "maint-zs-def",
+    listingId: "zs-def",
+    status: "Current — in annual / MPI valid",
+    lastMpiDate: "2026-03-01T00:00:00.000Z",
+    nextMpiDue: "2027-03-01T00:00:00.000Z",
+    notes: null,
+    createdAt: T,
+    updatedAt: T,
+  },
+];
+
+export function getMockListingById(id: string): MockAircraftListing | undefined {
+  return MOCK_LISTINGS.find(
+    (l) => l.id === id || l.id === id.toLowerCase() || l.registration === id.toUpperCase(),
+  );
+}
+
+export function getMockListingsForSeller(sellerId: string): MockAircraftListing[] {
+  return MOCK_LISTINGS.filter((l) => l.sellerId === sellerId);
+}
+
+export function getMockAirframe(listingId: string): MockAircraftAirframe | undefined {
+  return MOCK_AIRFRAMES.find((a) => a.listingId === listingId);
+}
+
+export function getMockEngines(listingId: string): MockAircraftEngine[] {
+  return MOCK_ENGINES.filter((e) => e.listingId === listingId);
+}
+
+export function getMockPropellers(listingId: string): MockAircraftPropeller[] {
+  return MOCK_PROPELLERS.filter((p) => p.listingId === listingId);
+}
+
+export function getMockAvionics(listingId: string): MockAircraftAvionics | undefined {
+  return MOCK_AVIONICS.find((a) => a.listingId === listingId);
+}
+
+export function getMockMaintenance(listingId: string): MockAircraftMaintenance | undefined {
+  return MOCK_MAINTENANCE.find((m) => m.listingId === listingId);
+}
+
+export function listingTitle(listing: MockAircraftListing): string {
+  return `${listing.year} ${listing.make} ${listing.model}`.trim();
+}
+
+export function listingLocation(listing: MockAircraftListing): string {
+  return `${listing.airfield}, ${listing.province}`;
+}

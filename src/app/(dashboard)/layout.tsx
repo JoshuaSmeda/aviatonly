@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import NextTopLoader from "nextjs-toploader";
 import { CustomizerContextProvider } from '@/app/context/customizer-context'
 import { ThemeProvider } from '@/components/Themeprovider'
+import { AppToaster } from "@/components/dashboard/shared/app-toaster"
 import '@/utils/i18n'
 import { Geist } from "next/font/google";
 import "@/app/dashboard-globals.css"
@@ -62,7 +63,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <CustomizerContextProvider>{children}</CustomizerContextProvider>
+          <CustomizerContextProvider>
+            {children}
+            <AppToaster />
+          </CustomizerContextProvider>
 
         </ThemeProvider>
       </body>

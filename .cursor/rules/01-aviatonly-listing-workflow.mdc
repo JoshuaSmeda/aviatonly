@@ -1,0 +1,403 @@
+---
+description: "Use when creating or modifying aircraft listing creation, aircraft intake wizard, seller onboarding, listing submission, media upload, document upload, or listing review flows."
+alwaysApply: false
+globs:
+  - "app/**/listings/**"
+  - "app/**/dashboard/**"
+  - "app/**/sell/**"
+  - "components/**/listings/**"
+  - "components/**/intake/**"
+  - "components/**/media/**"
+  - "components/**/documents/**"
+  - "lib/**/listings/**"
+  - "server/**/listings/**"
+  - "actions/**/listings/**"
+---
+
+# AVIATONLY Listing Creation and Intake Workflow
+
+Treat listing creation as aircraft intake.
+
+The wizard should collect enough structured data to create a reviewable aircraft record. It should not immediately publish the aircraft.
+
+Recommended wizard flow:
+
+1. Start / Listing Type
+2. Aircraft Identity
+3. Ownership and Seller Details
+4. Airframe Details
+5. Engine Details
+6. Propeller Details
+7. Avionics and Equipment
+8. Maintenance Status
+9. Guided Photo Upload
+10. Document Vault
+11. Sale Setup
+12. Review and Submit
+
+The final CTA should be:
+
+Submit for AVIATONLY Review
+
+Do not use:
+
+Publish Listing
+
+unless the user explicitly asks to support direct publishing.
+
+## Step 0: Start / Listing Type
+
+Collect:
+
+- Sale intent:
+  - Sell fixed-price
+  - Auction
+  - Not sure, need valuation
+  - Private/off-market listing
+
+- Aircraft type:
+  - Type certified
+  - Non-type certified / experimental
+  - Helicopter
+  - Microlight / LSA
+  - Glider
+  - Other
+
+- Registration type:
+  - ZS
+  - ZU
+  - Foreign registered
+  - Deregistered / project aircraft
+
+The selected aircraft and registration type should influence required fields and document requirements.
+
+## Step 1: Aircraft Identity
+
+Collect:
+
+- Registration number
+- Make
+- Model
+- Variant
+- Year of manufacture
+- Serial number
+- Aircraft category
+- Aircraft class
+- Location / airfield
+- Province
+- Country
+- Hangared or tied down
+
+Show a live aircraft summary preview card where possible.
+
+Example:
+
+ZS-ABC
+1978 Cessna 172N
+Cape Town / Morningstar
+Draft completeness: 12%
+
+## Step 2: Ownership and Seller Details
+
+Collect:
+
+- Seller type:
+  - Private individual
+  - Company
+  - Trust
+  - Broker / agent
+
+- Registered owner name
+- Seller contact person
+- Seller email
+- Seller phone
+- Is the seller the registered owner?
+- If not, require seller mandate / authorization
+- Is the aircraft financed?
+- Any known lien / encumbrance?
+- VAT applicable?
+
+Generate compliance/review flags where appropriate:
+
+- Ownership authorization required
+- Finance settlement letter required
+- VAT status requires manual review
+
+## Step 3: Airframe Details
+
+Collect:
+
+- Total Time Airframe / TTAF
+- Cycles, if relevant
+- Airframe condition summary
+- Damage history
+- Accident history
+- Corrosion notes
+- Paint condition
+- Interior condition
+- Modifications / STCs / approved mods
+- Known defects
+
+For sensitive fields such as damage history, avoid forcing only yes/no answers.
+
+Use options such as:
+
+- None known
+- Minor repaired damage
+- Major repaired damage
+- Unknown
+- Prefer to discuss with AVIATONLY
+
+Always allow notes.
+
+## Step 4: Engine Details
+
+Model engines as repeatable child records.
+
+Support:
+
+- Single engine
+- Multi-engine
+- Non-standard engine layouts
+
+Fields per engine:
+
+- Position:
+  - Single
+  - Left
+  - Right
+  - Front
+  - Rear
+
+- Manufacturer
+- Model
+- Serial number
+- Horsepower / thrust
+- Engine hours
+- Time since overhaul / TSO
+- Time since new / TSN
+- Overhaul date
+- Overhaul facility
+- Calendar life remaining, if applicable
+- Known issues
+
+Do not hardcode engine fields directly onto the main listing model unless explicitly requested for a temporary MVP.
+
+## Step 5: Propeller Details
+
+Model propellers as repeatable child records.
+
+Fields per propeller:
+
+- Manufacturer
+- Model
+- Serial number
+- Blade count
+- Fixed pitch / constant speed
+- Propeller hours
+- Time since overhaul
+- Overhaul date
+- Known damage / nick history
+
+## Step 6: Avionics and Equipment
+
+Use structured fields and tags/chips where possible.
+
+Fields:
+
+- Primary avionics suite
+- Com radios
+- Nav radios
+- Transponder
+- ADS-B
+- GPS
+- Autopilot
+- EFIS / glass cockpit
+- Engine monitor
+- ELT
+- Intercom
+- Other equipment
+
+Common chips/tags may include:
+
+- Garmin G1000
+- Garmin G5
+- GTN 650
+- GTN 750
+- GNS 430
+- GNS 530
+- Dynon SkyView
+- MGL
+- BendixKing
+- S-Tec
+- ADS-B Out
+- Mode S
+
+Allow free text as well.
+
+## Step 7: Maintenance Status
+
+This is one of the most important sections.
+
+Collect:
+
+- Last MPI date
+- Next MPI due date
+- MPI hours remaining
+- Last annual inspection date
+- Maintenance organisation / AMO
+- Logbooks complete?
+- Airframe logs available?
+- Engine logs available?
+- Propeller logs available?
+- AD/SB compliance known?
+- Aircraft currently airworthy?
+- Authority to Fly / Certificate of Airworthiness valid until
+- Known defects
+
+Generate review tasks automatically:
+
+- If logbooks are incomplete, create a review task to confirm logbook gaps.
+- If airworthiness/authority expiry is in the past, create a review task indicating the aircraft is not currently airworthy.
+- If known defects exist, create a review task to review declared defects.
+
+## Step 8: Guided Photo Upload
+
+Use a photo checklist, not a generic upload box.
+
+Recommended photo slots:
+
+- Exterior front 45°
+- Exterior rear 45°
+- Left side profile
+- Right side profile
+- Nose / front view
+- Tail / empennage
+- Wings leading edge
+- Wings trailing edge
+- Undercarriage / landing gear
+- Tyres and brakes
+- Propeller close-up
+- Propeller leading edges
+- Engine cowling open
+- Engine bay
+- Firewall area
+- Oil filter / hoses
+- Exhaust
+- Cockpit panel powered on
+- Avionics close-up
+- Hobbs / tach
+- Seats
+- Seatbelt tags
+- Interior rear/cabin
+- Baggage area
+- Logbook sample page
+- Data plate
+
+Photo statuses:
+
+- EMPTY
+- UPLOADING
+- UPLOADED
+- PROCESSING
+- READY
+- APPROVED
+- REJECTED
+- NEEDS_REPLACEMENT
+
+Admin rejection reasons:
+
+- Blurry
+- Too dark
+- Wrong angle
+- Missing required detail
+- Reflection/glare
+- Cannot read instrument/label
+
+## Step 9: Document Vault
+
+Documents are private by default.
+
+Required or recommended document slots:
+
+- Certificate of Registration
+- Certificate of Airworthiness / Authority to Fly
+- Last MPI stamp
+- Latest logbook entry
+- Airframe logbook summary
+- Engine logbook summary
+- Propeller logbook summary
+- Weight and balance
+- Equipment list
+- AD/SB compliance sheet
+- Proof of ownership
+- Seller authorization / mandate
+- Finance settlement letter, if financed
+- VAT invoice details, if applicable
+
+Document statuses:
+
+- MISSING
+- UPLOADED
+- UNDER_REVIEW
+- ACCEPTED
+- REJECTED
+- EXPIRED
+- NEEDS_REPLACEMENT
+
+Document visibility:
+
+- PRIVATE_INTERNAL
+- AVAILABLE_ON_REQUEST
+- SHARED_WITH_VERIFIED_BUYER
+- PUBLIC_SUMMARY_ONLY
+
+Never make sensitive documents public by default.
+
+## Step 10: Sale Setup
+
+Collect:
+
+- Preferred sale method:
+  - Fixed price
+  - Auction
+  - Let AVIATONLY recommend
+
+- Asking price
+- Reserve price
+- Minimum acceptable offer
+- Currency
+- Is price negotiable?
+- Available for inspection?
+- Demo flight possible?
+- Delivery / ferry options
+- Included extras
+- Excluded extras
+
+Auction flow:
+
+Seller selects auction interest
+→ AVIATONLY reviews aircraft
+→ Reserve confirmed
+→ Auction schedule agreed
+→ Auction goes live
+
+Do not publish auctions directly from the wizard.
+
+## Step 11: Review and Submit
+
+Show a clear submission summary:
+
+- Aircraft identity
+- Technical completeness
+- Required photos uploaded
+- Required documents uploaded
+- Missing recommended information
+- Compliance warnings
+- Next steps
+
+Use this CTA:
+
+Submit for AVIATONLY Review
+
+After submit, redirect to the Listing Workspace overview.

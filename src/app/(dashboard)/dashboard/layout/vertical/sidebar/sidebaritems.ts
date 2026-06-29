@@ -41,9 +41,41 @@ const SidebarContent: MenuItem[] = [
     items: [
       {
         id: uniqueId(),
+        name: "Seller Dashboard",
+        icon: "solar:widget-5-line-duotone",
+        url: "/",
+      },
+      {
+        id: uniqueId(),
         name: "Sell Aircraft",
         icon: "solar:jet-line-duotone",
         url: "/seller/upload",
+      },
+      {
+        id: uniqueId(),
+        name: "My Listings",
+        icon: "solar:clipboard-list-line-duotone",
+        url: "/listings",
+      },
+      {
+        id: uniqueId(),
+        name: "Deal & Escrow Tracker",
+        icon: "solar:wallet-money-line-duotone",
+        url: "/escrow-tracker",
+      },
+      {
+        id: uniqueId(),
+        name: "Review Queue",
+        icon: "solar:clipboard-check-line-duotone",
+        subtitle: "Admin",
+        url: "/admin/review-queue",
+      },
+      {
+        id: uniqueId(),
+        name: "Browse Aircraft",
+        icon: "solar:magnifer-line-duotone",
+        url: "/buy",
+        external: true,
       },
     ],
   },

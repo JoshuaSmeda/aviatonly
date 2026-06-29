@@ -1,0 +1,272 @@
+---
+description: "Use when creating AVIATONLY UI components, pages, layouts, dashboard screens, listing cards, form wizards, tables, status badges, timelines, upload flows, or public listing pages."
+alwaysApply: false
+globs:
+  - "app/**/*.tsx"
+  - "components/**/*.tsx"
+  - "components/**/*.ts"
+---
+
+# AVIATONLY UI Rules
+
+AVIATONLY should feel premium, aviation-specific, operationally clear, and trust-heavy.
+
+Do not make the UI feel like a generic classified ads site.
+
+## Visual Direction
+
+Use:
+
+- Clean layouts
+- Strong spacing
+- Clear hierarchy
+- Professional aviation tone
+- Premium marketplace feel
+- Clear status badges
+- Clear progress indicators
+- Clear next-action cards
+- Tables for admin workflows
+- Cards for seller/buyer workflows
+- Timelines for audit and workflow history
+
+Avoid:
+
+- Gimmicky aviation clichés
+- Overly playful styling
+- Vague statuses
+- Dense forms without guidance
+- Generic upload boxes for aircraft media
+- Public exposure of sensitive documents
+
+## Status Badges
+
+Use explicit status labels.
+
+Good examples:
+
+- Draft
+- Submitted
+- Under Review
+- Needs Changes
+- Valuation Ready
+- Inspection Pending
+- Approved for Listing
+- Live Fixed Price
+- Live Auction
+- Under Offer
+- Under Contract
+- Transfer Pending
+- Sold
+- Withdrawn
+
+Avoid vague labels such as:
+
+- Pending
+- Processing
+- Active
+
+unless there is no better domain-specific label.
+
+## Dashboard Home
+
+The dashboard home should be action-based, not merely navigation-based.
+
+Recommended sections:
+
+- Action Required
+- My Aircraft
+- Buyer Activity
+- Deal Progress
+- Recent Activity
+
+Example layout:
+
+Welcome back
+
+Action Required
+- ZS-ABC Cessna 172N
+  Replace 2 photos and upload latest MPI stamp
+  [Fix now]
+
+- ZU-XYZ Sling 2
+  Confirm reserve price before auction approval
+  [Review pricing]
+
+My Aircraft
+- Image
+- Registration
+- Aircraft
+- Status
+- Completeness
+- Leads
+- Next action
+
+Buyer Activity
+- New enquiries
+- Document access requests
+- Offers pending
+
+Deal Progress
+- Current deal milestone
+- Next required action
+
+## Wizard UX
+
+The wizard must autosave.
+
+Use:
+
+- Step navigation
+- Progress indicator
+- Autosave indicator
+- Clear save states:
+  - Saving...
+  - Saved
+  - Could not save. Retry?
+
+Each step should be independently saveable.
+
+The user should be able to refresh, close browser, and return later.
+
+Avoid keeping critical wizard data only in client state.
+
+## Listing Workspace UX
+
+Use tabs:
+
+- Overview
+- Aircraft Data
+- Media
+- Documents
+- Review Tasks
+- Valuation
+- Inspection
+- Listing Preview
+- Leads & Offers
+- Deal Room
+- Activity
+- Settings
+
+The Overview tab should show:
+
+- Aircraft summary
+- Current status
+- Completeness score
+- Next required action
+- Review notes
+- Timeline
+- Primary CTA
+
+## Guided Photo Upload UX
+
+Use photo slot cards.
+
+Each photo slot should show:
+
+- Slot name
+- Required/recommended status
+- Instructional text
+- Upload control
+- Current image preview
+- Review status
+- Rejection reason, if any
+
+Examples:
+
+Exterior front 45°
+Required
+Stand in front of the aircraft at a 45-degree angle. Capture the full aircraft, including wings and landing gear.
+
+[Upload photo]
+
+## Document Vault UX
+
+Do not present documents as a public media gallery.
+
+Document cards should show:
+
+- Document type
+- Required/recommended status
+- Upload status
+- Review status
+- Visibility
+- Rejection reason, if any
+
+Use clear privacy language.
+
+Examples:
+
+Private internal document
+Shared only with AVIATONLY
+
+or:
+
+Available to verified buyers on request
+
+## Admin UX
+
+Admin screens should favour tables, filters, queues, and bulk operational clarity.
+
+Admin Review Queue columns:
+
+- Submitted date
+- Registration
+- Aircraft
+- Seller
+- Completeness
+- Missing docs
+- Photo issues
+- Risk flags
+- Assigned reviewer
+- Status
+
+Admin actions:
+
+- Approve field
+- Reject field
+- Request change
+- Add internal note
+- Assign reviewer
+- Start valuation
+- Schedule inspection
+- Approve for fixed-price
+- Approve for auction
+
+## Component Naming
+
+Prefer domain-specific component names.
+
+Good:
+
+- AircraftListingCard
+- ListingWorkspaceTabs
+- GuidedPhotoUpload
+- DocumentVault
+- ReviewTaskList
+- ListingStatusBadge
+- DealMilestoneTracker
+- ValuationPanel
+- InspectionStatusPanel
+
+Avoid generic names where domain names are clearer:
+
+- Card
+- Form
+- DataTable
+- UploadBox
+
+Generic shared primitives are fine inside a UI system, but feature components should be domain-specific.
+
+## Accessibility
+
+Use semantic HTML.
+
+Forms must have labels.
+
+Buttons must describe the action.
+
+Status should not rely only on colour.
+
+Tables should have proper headers.
+
+Upload components must support keyboard interaction where possible.

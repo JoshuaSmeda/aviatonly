@@ -49,6 +49,22 @@ export const AIRCRAFT_CATEGORIES = [
   "Other",
 ] as const;
 
+/** Common avionics & equipment shown as checkboxes; anything else goes in a free-text box. */
+export const AVIONICS_OPTIONS = [
+  "IFR certified",
+  "Autopilot",
+  "ADS-B Out",
+  "ADS-B In",
+  "Mode S transponder",
+  "GPS / GNSS navigator",
+  "Glass cockpit (EFIS)",
+  "Engine monitor",
+  "406 MHz ELT",
+  "Audio panel / intercom",
+  "DME",
+  "Standby instruments",
+] as const;
+
 export const MAINTENANCE_STATUSES = [
   "Current — in annual / MPI valid",
   "MPI due within 90 days",

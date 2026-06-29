@@ -13,7 +13,13 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-export function NavSecondary() {
+import type { AuthUser } from "@/lib/auth/session"
+
+interface NavSecondaryProps {
+  user: AuthUser
+}
+
+export function NavSecondary({ user }: NavSecondaryProps) {
 
 
     const navSecondary = [
@@ -43,14 +49,14 @@ export function NavSecondary() {
                     <div className="flex flex-col gap-4 items-center">
                         <div>
                             <p className="text-base font-semibold text-card-foreground text-center">
-                                Grab Pro Now
+                                AVIATONLY
                             </p>
                             <p className="text-sm font-regular text-muted-foreground text-center">
-                                Customize your admin
+                                Signed in as {user.name ?? user.email}
                             </p>
                         </div>
-                        <Link target="_blank" href={"https://shadcnspace.com/admin-dashboard"} className="w-fit px-4 py-2 shadow-none cursor-pointer rounded-lg bg-gray-950 dark:bg-white hover:bg-gray-950/80 hover:dark:bg-white/80 font-medium hover:bg text-white dark:text-gray-950 h-9">
-                            Get Premium
+                        <Link href="/dashboard/settings" className="w-fit px-4 py-2 shadow-none cursor-pointer rounded-lg bg-gray-950 dark:bg-white hover:bg-gray-950/80 hover:dark:bg-white/80 font-medium hover:bg text-white dark:text-gray-950 h-9">
+                            Account settings
                         </Link>
                     </div>
                 </CardContent>

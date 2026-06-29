@@ -16,8 +16,11 @@ import { Cart } from "../../shared/header/cart";
 import { cn } from "@/lib/utils";
 import LightDark from "../../shared/header/light-dark";
 import Navigation from "../navbar";
+import OrganizationSwitcher from "@/components/dashboard/auth/organization-switcher";
 
-const HorizontalHeader = () => {
+import type { AuthUser } from "@/lib/auth/session"
+
+const HorizontalHeader = ({ user }: { user: AuthUser }) => {
   const { setIsCollapse, isCollapse, isLayout, activeMode, setActiveMode } =
     useContext(CustomizerContext);
   const { toggleSidebar, state } = useSidebar();
@@ -60,6 +63,7 @@ const HorizontalHeader = () => {
             </div>
 
             <div className="flex sm:gap-1 gap-0 items-center">
+              <OrganizationSwitcher />
               {/* Theme Toggle */}
               <LightDark />
               {/* Language Dropdown*/}
@@ -74,7 +78,7 @@ const HorizontalHeader = () => {
               <Message />
 
               {/* Profile Dropdown */}
-              <Profile />
+              <Profile user={user} />
             </div>
           </div>
         </nav>

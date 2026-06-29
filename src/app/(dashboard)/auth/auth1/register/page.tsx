@@ -7,31 +7,11 @@ import { Card } from "@/components/ui/card";
 
 import Link from "next/link";
 
-import { useRouter } from "next/navigation";
 import AuthRegister from "../../authforms/auth-register";
 import Footer from "@/app/(dashboard)/dashboard/layout/footer/page";
 import FullLogo from "@/app/(dashboard)/dashboard/layout/shared/logo/full-logo";
 
 const Register = () => {
-  const router = useRouter();
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    const formData = new FormData(e.currentTarget);
-
-    const name = formData.get("name")?.toString().trim();
-    const email = formData.get("email")?.toString().trim();
-    const password = formData.get("password")?.toString().trim();
-
-    if (!name || !email || !password) {
-      alert("Please fill in all fields");
-      return;
-    }
-
-    router.push("/");
-  };
-
   return (
     <>
       <Card className="md:h-[calc(100vh-30px)] bg-transparent flex items-center justify-center px-4 border-none shadow-none">
@@ -44,9 +24,9 @@ const Register = () => {
             </div>
 
             <div className="w-full">
-              <h3 className="text-xl font-bold">Create Your Account</h3>
+              <h3 className="text-xl font-bold">Create your AVIATONLY account</h3>
               <p className="text-muted-foreground text-sm font-medium">
-                Join ShadcnSpace Dashboard and get started
+                Register to list aircraft and manage your seller workspace
               </p>
 
               {/* Social Buttons */}

@@ -27,6 +27,51 @@ export interface MenuItem {
 const Menuitems: MenuItem[] = [
   {
     id: uniqueId(),
+    title: 'AVIATONLY',
+    icon: 'solar:jet-line-duotone',
+    href: '',
+    children: [
+      {
+        title: 'Seller Dashboard',
+        icon: 'solar:widget-5-line-duotone',
+        id: uniqueId(),
+        href: '/',
+      },
+      {
+        title: 'Sell Aircraft',
+        icon: 'solar:jet-line-duotone',
+        id: uniqueId(),
+        href: '/seller/upload',
+      },
+      {
+        title: 'My Listings',
+        icon: 'solar:clipboard-list-line-duotone',
+        id: uniqueId(),
+        href: '/listings',
+      },
+      {
+        title: 'Deal & Escrow Tracker',
+        icon: 'solar:wallet-money-line-duotone',
+        id: uniqueId(),
+        href: '/escrow-tracker',
+      },
+      {
+        title: 'Review Queue',
+        icon: 'solar:clipboard-check-line-duotone',
+        id: uniqueId(),
+        href: '/admin/review-queue',
+      },
+      {
+        title: 'Browse Aircraft',
+        icon: 'solar:magnifer-line-duotone',
+        id: uniqueId(),
+        href: '/buy',
+        external: true,
+      },
+    ],
+  },
+  {
+    id: uniqueId(),
     title: 'Dashboard',
     icon: 'solar:home-linear',
     href: '',

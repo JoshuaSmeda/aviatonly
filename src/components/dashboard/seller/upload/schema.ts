@@ -1,4 +1,7 @@
 import * as z from "zod";
+import { SELLER_ROLES } from "@/lib/aviatonly/domain";
+
+export { SELLER_ROLES };
 
 export const REGISTRATION_TYPES = ["ZU", "ZS"] as const;
 export const SALE_TYPES = ["FIXED_PRICE", "AUCTION"] as const;
@@ -43,6 +46,15 @@ export const aircraftSchema = z
       .min(1, "Base airfield is required."),
     province: z.string({ required_error: "Select a province." }).min(1, "Select a province."),
 
+    // Ownership & seller details
+    ownerName: z.string().trim().optional(),
+    sellerRole: z.string().optional(),
+    authorisedToSell: z
+      .boolean()
+      .refine((val) => val === true, {
+        message: "You must confirm you're authorised to sell this aircraft.",
+      }),
+
     // Step 2 — Technical details
     ttaf: z
       .number({ invalid_type_error: "Total time must be a number." })
@@ -61,6 +73,7 @@ export const aircraftSchema = z
       .number({ invalid_type_error: "Propeller hours must be a number." })
       .min(0, "Propeller hours can't be negative.")
       .optional(),
+    avionicsEquipment: z.array(z.string()).optional(),
     avionics: z.string().trim().optional(),
     maintenanceStatus: z.string().optional(),
     lastMpiDate: z.date().optional(),
@@ -113,12 +126,16 @@ export const aircraftDefaultValues: Partial<AircraftFormValues> = {
   category: "",
   airfield: "",
   province: "",
+  ownerName: "",
+  sellerRole: undefined,
+  authorisedToSell: false,
   ttaf: undefined,
   engineMakeModel: "",
   engineHours: undefined,
   tso: undefined,
   propellerMakeModel: "",
   propellerHours: undefined,
+  avionicsEquipment: [],
   avionics: "",
   maintenanceStatus: undefined,
   lastMpiDate: undefined,
@@ -142,4 +159,23 @@ export const STEP_FIELDS: (keyof AircraftFormValues)[][] = [
   [],
   ["saleType", "askingPrice", "startingBid", "bidIncrement", "reservePrice", "valuationEstimate"],
   [],
+];
+
+/**
+ * Fields validated when advancing past each step of the 12-step intake wizard.
+ * Order matches `INTAKE_STEPS` in `@/lib/aviatonly/domain`. Optional steps are empty.
+ */
+export const INTAKE_STEP_FIELDS: (keyof AircraftFormValues)[][] = [
+  ["saleType"], // 1. Start & listing type
+  ["registration", "registrationType", "make", "model", "year", "category"], // 2. Identity
+  ["authorisedToSell"], // 3. Ownership — must confirm authorisation to sell
+  ["ttaf", "airfield", "province"], // 4. Airframe
+  ["engineMakeModel", "engineHours", "tso"], // 5. Engine
+  ["propellerHours"], // 6. Propeller
+  [], // 7. Avionics
+  [], // 8. Maintenance
+  [], // 9. Photos
+  [], // 10. Documents
+  ["askingPrice", "startingBid", "bidIncrement", "reservePrice", "valuationEstimate"], // 11. Sale
+  [], // 12. Review
 ];

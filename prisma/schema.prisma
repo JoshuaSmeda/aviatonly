@@ -1,4 +1,15 @@
-// AVIATONLY — starter schema. Extend as domain models are implemented.
+// AVIATONLY — domain schema.
+//
+// Design notes:
+// - The aircraft listing is a workflow object, not a flat row. Technical detail
+//   lives in child/domain records (airframe, engines, propellers, avionics,
+//   maintenance) instead of one giant nullable table.
+// - Every status change is recorded in ListingStatusHistory; the activity
+//   timeline is driven by ListingEvent.
+// - Photos and documents carry their own review status; documents are private
+//   by default via DocumentVisibility.
+// - Actor references (changedById, actorId, uploadedById, ...) are scalar IDs
+//   for now and become real User relations when auth + roles land.
 
 generator client {
   provider = "prisma-client-js"
@@ -10,6 +21,10 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
 enum ListingStatus {
   DRAFT
   SUBMITTED
@@ -19,12 +34,13 @@ enum ListingStatus {
   INSPECTION_PENDING
   INSPECTION_PASSED
   INSPECTION_FAILED
+  APPROVED_FOR_LISTING
   LIVE_FIXED_PRICE
   LIVE_AUCTION
   UNDER_OFFER
   DEPOSIT_PENDING
   UNDER_CONTRACT
-  SACAA_TRANSFER_PENDING
+  TRANSFER_PENDING
   SOLD
   WITHDRAWN
   EXPIRED
@@ -35,19 +51,171 @@ enum SaleType {
   AUCTION
 }
 
+enum EnginePosition {
+  SINGLE
+  LEFT
+  RIGHT
+  FRONT
+  REAR
+}
+
+enum PropellerType {
+  FIXED_PITCH
+  CONSTANT_SPEED
+  VARIABLE_PITCH
+  OTHER
+}
+
+enum PhotoStatus {
+  EMPTY
+  UPLOADING
+  UPLOADED
+  PROCESSING
+  READY
+  APPROVED
+  REJECTED
+  NEEDS_REPLACEMENT
+}
+
+enum DocumentStatus {
+  MISSING
+  UPLOADED
+  UNDER_REVIEW
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  NEEDS_REPLACEMENT
+}
+
+enum DocumentVisibility {
+  PRIVATE_INTERNAL
+  AVAILABLE_ON_REQUEST
+  SHARED_WITH_VERIFIED_BUYER
+  PUBLIC_SUMMARY_ONLY
+}
+
+enum ReviewTaskStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_ON_SELLER
+  WAITING_ON_ADMIN
+  DONE
+  CANCELLED
+}
+
+// ---------------------------------------------------------------------------
+// Core
+// ---------------------------------------------------------------------------
+
 model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  roles         String[]  @default(["SELLER"])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions Session[]
+  accounts Account[]
+  listings AircraftListing[]
+  members     Member[]
+  invitations Invitation[]
+}
+
+model Session {
   id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
+  expiresAt DateTime
+  token     String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  listings AircraftListing[]
+  activeOrganizationId String?
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Organization {
+  id               String   @id @default(cuid())
+  name             String
+  slug             String   @unique
+  logo             String?
+  metadata         String?
+  organizationType String?  @default("SELLER")
+  province         String?
+  createdAt        DateTime @default(now())
+
+  members     Member[]
+  invitations Invitation[]
+}
+
+model Member {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String       @default("member")
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([userId])
+}
+
+model Invitation {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  role           String?
+  status         String       @default("pending")
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+  inviterId      String
+  user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([email])
 }
 
 model AircraftListing {
-  id               String   @id @default(cuid())
-  registration     String   @unique
+  id String @id @default(cuid())
+
+  // Identity
+  registration     String @unique
   registrationType String
   make             String
   model            String
@@ -56,19 +224,12 @@ model AircraftListing {
   airfield         String
   province         String
 
-  // Technical
-  ttaf               Float?
-  engineMakeModel    String?
-  engineHours        Float?
-  tso                Float?
-  propellerMakeModel String?
-  propellerHours     Float?
-  avionics           String?
-  maintenanceStatus  String?
-  lastMpiDate        DateTime?
-  knownDefects       String?
+  // Ownership & seller details
+  ownerName        String?
+  sellerRole       String?
+  authorisedToSell Boolean?
 
-  // Pricing (ZAR, whole rand)
+  // Pricing & sale setup (ZAR, whole rand)
   saleType          SaleType @default(FIXED_PRICE)
   valuationEstimate Int?
   askingPrice       Int?
@@ -76,25 +237,163 @@ model AircraftListing {
   startingBid       Int?
   bidIncrement      Int?
 
-  status    ListingStatus @default(DRAFT)
-  sellerId  String
-  seller    User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  photos    AircraftPhoto[]
-  documents AircraftDocument[]
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  // Workflow
+  status            ListingStatus @default(DRAFT)
+  completenessScore Int           @default(0)
+
+  sellerId String
+  seller   User   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  // Domain child records
+  airframe    AircraftAirframe?
+  avionics    AircraftAvionics?
+  maintenance AircraftMaintenance?
+  engines     AircraftEngine[]
+  propellers  AircraftPropeller[]
+  photos      AircraftPhoto[]
+  documents   AircraftDocument[]
+
+  // Workflow records
+  statusHistory ListingStatusHistory[]
+  events        ListingEvent[]
+  reviewTasks   ListingReviewTask[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status])
   @@index([sellerId])
 }
 
+// Holds in-progress wizard data so sellers can autosave and resume an aircraft
+// intake before it becomes a real AircraftListing on submission.
+model ListingDraft {
+  id        String   @id @default(cuid())
+  data      Json
+  step      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Aircraft domain child records
+// ---------------------------------------------------------------------------
+
+model AircraftAirframe {
+  id        String          @id @default(cuid())
+  listingId String          @unique
+  listing   AircraftListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  serialNumber     String?
+  totalTimeAirframe Float? // TTAF (hours)
+  damageHistory    String?
+  notes            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AircraftEngine {
+  id        String          @id @default(cuid())
+  listingId String
+  listing   AircraftListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  position             EnginePosition @default(SINGLE)
+  manufacturer         String?
+  model                String?
+  serialNumber         String?
+  horsepowerOrThrust   String?
+  engineHours          Float?
+  timeSinceOverhaul    Float?
+  timeSinceNew         Float?
+  overhaulDate         DateTime?
+  overhaulFacility     String?
+  calendarLifeRemaining String?
+  knownIssues          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([listingId])
+}
+
+model AircraftPropeller {
+  id        String          @id @default(cuid())
+  listingId String
+  listing   AircraftListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  manufacturer      String?
+  model             String?
+  serialNumber      String?
+  bladeCount        Int?
+  propellerType     PropellerType?
+  propellerHours    Float?
+  timeSinceOverhaul Float?
+  overhaulDate      DateTime?
+  knownDamageNotes  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([listingId])
+}
+
+model AircraftAvionics {
+  id        String          @id @default(cuid())
+  listingId String          @unique
+  listing   AircraftListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  // Common installed equipment (checkbox selections) plus free-text extras.
+  equipment String[]
+  summary   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AircraftMaintenance {
+  id        String          @id @default(cuid())
+  listingId String          @unique
+  listing   AircraftListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  status      String?
+  lastMpiDate DateTime?
+  nextMpiDue  DateTime?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Media & documents
+// ---------------------------------------------------------------------------
+
 model AircraftPhoto {
   id        String          @id @default(cuid())
   listingId String
   listing   AircraftListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  slot      String
+
+  slotKey   String
   fileName  String
-  createdAt DateTime        @default(now())
+  mimeType  String?
+  sizeBytes Int?
+  storageKey String?
+  publicUrl String?
+
+  status          PhotoStatus @default(UPLOADED)
+  rejectionReason String?
+
+  uploadedById String?
+  reviewedById String?
+  uploadedAt   DateTime  @default(now())
+  reviewedAt   DateTime?
+
+  sortOrder           Int     @default(0)
+  isPublicGalleryImage Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([listingId])
 }
@@ -103,9 +402,83 @@ model AircraftDocument {
   id        String          @id @default(cuid())
   listingId String
   listing   AircraftListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  slot      String
-  fileName  String
-  createdAt DateTime        @default(now())
+
+  documentType String // slot key, e.g. "mpi-stamp", "cor"
+  fileName     String
+  mimeType     String?
+  sizeBytes    Int?
+  storageKey   String?
+
+  reviewStatus    DocumentStatus     @default(UPLOADED)
+  visibility      DocumentVisibility @default(PRIVATE_INTERNAL)
+  rejectionReason String?
+
+  uploadedById String?
+  reviewedById String?
+  uploadedAt   DateTime  @default(now())
+  reviewedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([listingId])
+}
+
+// ---------------------------------------------------------------------------
+// Workflow: status history, events, review tasks
+// ---------------------------------------------------------------------------
+
+model ListingStatusHistory {
+  id        String          @id @default(cuid())
+  listingId String
+  listing   AircraftListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  fromStatus  ListingStatus?
+  toStatus    ListingStatus
+  changedById String?
+  reason      String?
+
+  createdAt DateTime @default(now())
+
+  @@index([listingId])
+}
+
+model ListingEvent {
+  id        String          @id @default(cuid())
+  listingId String
+  listing   AircraftListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  actorId  String?
+  type     String // e.g. SELLER_SUBMITTED_LISTING, DOCUMENT_REJECTED, OFFER_RECEIVED
+  message  String?
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([listingId])
+}
+
+model ListingReviewTask {
+  id        String          @id @default(cuid())
+  listingId String
+  listing   AircraftListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+
+  assignedToId String?
+  assignedRole String?
+  status       ReviewTaskStatus @default(OPEN)
+  dueDate      DateTime?
+
+  blockingPublication Boolean @default(false)
+
+  createdById String?
+  resolvedById String?
+  resolvedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([listingId])
 }

@@ -1,6 +1,14 @@
 "use server";
 
+import {
+  DocumentStatus,
+  DocumentVisibility,
+  EnginePosition,
+  ListingStatus,
+  PhotoStatus,
+} from "@/lib/aviatonly/domain";
 import { prisma } from "@/lib/prisma";
+import { computeCompleteness } from "@/lib/completeness";
 import {
   aircraftSchema,
   type AircraftFormValues,
@@ -32,6 +40,17 @@ export async function submitAircraftListing(
   const v = parsed.data;
   const registration = v.registration.toUpperCase();
 
+  const completeness = computeCompleteness({
+    values: v,
+    photoCount: photos.length,
+    documentCount: documents.length,
+  });
+
+  const hasEngine = Boolean(v.engineMakeModel) || v.engineHours != null || v.tso != null;
+  const hasPropeller = Boolean(v.propellerMakeModel) || v.propellerHours != null;
+  const hasAvionics = Boolean(v.avionicsEquipment?.length) || Boolean(v.avionics?.trim());
+  const hasMaintenance = Boolean(v.maintenanceStatus) || v.lastMpiDate != null;
+
   try {
     const seller = await prisma.user.upsert({
       where: { email: DEMO_SELLER_EMAIL },
@@ -62,16 +81,9 @@ export async function submitAircraftListing(
         airfield: v.airfield,
         province: v.province,
 
-        ttaf: v.ttaf,
-        engineMakeModel: v.engineMakeModel,
-        engineHours: v.engineHours,
-        tso: v.tso,
-        propellerMakeModel: v.propellerMakeModel || null,
-        propellerHours: v.propellerHours,
-        avionics: v.avionics || null,
-        maintenanceStatus: v.maintenanceStatus || null,
-        lastMpiDate: v.lastMpiDate,
-        knownDefects: v.knownDefects || null,
+        ownerName: v.ownerName || null,
+        sellerRole: v.sellerRole || null,
+        authorisedToSell: v.authorisedToSell ?? null,
 
         saleType: v.saleType,
         valuationEstimate: v.valuationEstimate,
@@ -81,15 +93,93 @@ export async function submitAircraftListing(
         bidIncrement: v.bidIncrement,
 
         // Submitting moves the listing out of DRAFT into the review queue.
-        status: "SUBMITTED",
+        status: ListingStatus.SUBMITTED,
+        completenessScore: completeness.score,
         sellerId: seller.id,
 
+        airframe: {
+          create: {
+            totalTimeAirframe: v.ttaf ?? null,
+            damageHistory: v.knownDefects || null,
+          },
+        },
+        engines: hasEngine
+          ? {
+              create: [
+                {
+                  position: EnginePosition.SINGLE,
+                  model: v.engineMakeModel || null,
+                  engineHours: v.engineHours ?? null,
+                  timeSinceOverhaul: v.tso ?? null,
+                },
+              ],
+            }
+          : undefined,
+        propellers: hasPropeller
+          ? {
+              create: [
+                {
+                  model: v.propellerMakeModel || null,
+                  propellerHours: v.propellerHours ?? null,
+                },
+              ],
+            }
+          : undefined,
+        avionics: hasAvionics
+          ? {
+              create: {
+                equipment: v.avionicsEquipment ?? [],
+                summary: v.avionics || null,
+              },
+            }
+          : undefined,
+        maintenance: hasMaintenance
+          ? {
+              create: {
+                status: v.maintenanceStatus || null,
+                lastMpiDate: v.lastMpiDate ?? null,
+              },
+            }
+          : undefined,
+
         photos: photos.length
-          ? { createMany: { data: photos.map((p) => ({ slot: p.slot, fileName: p.fileName })) } }
+          ? {
+              createMany: {
+                data: photos.map((p) => ({
+                  slotKey: p.slot,
+                  fileName: p.fileName,
+                  status: PhotoStatus.UPLOADED,
+                })),
+              },
+            }
           : undefined,
         documents: documents.length
-          ? { createMany: { data: documents.map((d) => ({ slot: d.slot, fileName: d.fileName })) } }
+          ? {
+              createMany: {
+                data: documents.map((d) => ({
+                  documentType: d.slot,
+                  fileName: d.fileName,
+                  reviewStatus: DocumentStatus.UPLOADED,
+                  visibility: DocumentVisibility.PRIVATE_INTERNAL,
+                })),
+              },
+            }
           : undefined,
+
+        // Record the DRAFT -> SUBMITTED transition and seed the activity timeline.
+        statusHistory: {
+          create: {
+            fromStatus: ListingStatus.DRAFT,
+            toStatus: ListingStatus.SUBMITTED,
+            reason: "Seller submitted aircraft for AVIATONLY review.",
+          },
+        },
+        events: {
+          create: {
+            type: "SELLER_SUBMITTED_LISTING",
+            message: `${registration} submitted for AVIATONLY review.`,
+          },
+        },
       },
       select: { id: true, registration: true, status: true },
     });

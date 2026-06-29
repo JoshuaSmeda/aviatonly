@@ -16,7 +16,10 @@ import { cn } from "@/lib/utils";
 import LightDark from "../../shared/header/light-dark";
 import { PanelLeft } from 'lucide-react';
 import { Separator } from "@/components/ui/separator";
-const Header = () => {
+import OrganizationSwitcher from "@/components/dashboard/auth/organization-switcher";
+import type { AuthUser } from "@/lib/auth/session"
+
+const Header = ({ user }: { user: AuthUser }) => {
   const { setIsCollapse } =
     useContext(CustomizerContext);
   const { toggleSidebar, state } = useSidebar();
@@ -63,6 +66,7 @@ const Header = () => {
             </div>
 
             <div className="flex sm:gap-1 gap-0 items-center">
+              <OrganizationSwitcher />
               {/* Theme Toggle */}
               <LightDark />
               {/* Language Dropdown*/}
@@ -77,7 +81,7 @@ const Header = () => {
               <Message />
 
               {/* Profile Dropdown */}
-              <Profile />
+              <Profile user={user} />
             </div>
           </div>
         </nav>

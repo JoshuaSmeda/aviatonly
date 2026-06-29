@@ -182,7 +182,16 @@ export function RHFDate({ name, label, description, placeholder = "Pick a date" 
                 }
               />
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={dateValue} onSelect={field.onChange} />
+                <Calendar
+                  mode="single"
+                  selected={dateValue}
+                  onSelect={field.onChange}
+                  captionLayout="dropdown"
+                  defaultMonth={dateValue ?? new Date()}
+                  startMonth={new Date(1950, 0)}
+                  endMonth={new Date()}
+                  disabled={{ after: new Date() }}
+                />
               </PopoverContent>
             </Popover>
             {description && <FieldDescription>{description}</FieldDescription>}

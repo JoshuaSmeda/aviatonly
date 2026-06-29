@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 export const metadata: Metadata = {
-  title: "Side Login Authentication",
-  description: "Log in to your dashboard account.",
+  title: "Sign in | AVIATONLY",
+  description: "Log in to your AVIATONLY dashboard account.",
 };
 
 import Link from "next/link";
@@ -25,14 +26,16 @@ const Login = () => {
             </div>
 
             <div className="w-full">
-              <h3 className="text-xl font-bold">Welcome to ShadcnSpace Dashboard</h3>
+              <h3 className="text-xl font-bold">Welcome to AVIATONLY</h3>
               <p className="text-muted-foreground text-sm font-medium">
-                Your Admin Dashboard
+                Sign in to your seller and operations dashboard
               </p>
               <SocialButtons title="or sign in with" />
-              <AuthLogin />
+              <Suspense fallback={<p className="mt-6 text-sm text-muted-foreground">Loading sign-in form...</p>}>
+                <AuthLogin />
+              </Suspense>
               <div className="flex gap-2 text-base text-muted-foreground font-medium mt-6 items-center">
-                <p>New to ShadcnSpace Dashboard ?</p>
+                <p>New to AVIATONLY?</p>
                 <Link
                   href={"/auth/auth1/register"}
                   className="text-primary text-base font-medium"

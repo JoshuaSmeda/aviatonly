@@ -60,6 +60,7 @@ import {
 import { MOCK_OFFERS } from "../src/lib/aviatonly/mock/offers";
 import { MOCK_PHOTOS } from "../src/lib/aviatonly/mock/photos";
 import { MOCK_REVIEW_TASKS } from "../src/lib/aviatonly/mock/review-tasks";
+import { MOCK_FIELD_REVIEWS } from "../src/lib/aviatonly/mock/field-reviews";
 import { MOCK_USERS } from "../src/lib/aviatonly/mock/users";
 
 const prisma = new PrismaClient();
@@ -98,6 +99,7 @@ async function seedListingChildren(
 
   await prisma.listingEvent.deleteMany({ where: { listingId: { in: dbListingIds } } });
   await prisma.listingReviewTask.deleteMany({ where: { listingId: { in: dbListingIds } } });
+  await prisma.listingFieldReview.deleteMany({ where: { listingId: { in: dbListingIds } } });
   await prisma.aircraftPhoto.deleteMany({ where: { listingId: { in: dbListingIds } } });
   await prisma.aircraftDocument.deleteMany({ where: { listingId: { in: dbListingIds } } });
   await prisma.aircraftEngine.deleteMany({ where: { listingId: { in: dbListingIds } } });
@@ -187,10 +189,11 @@ async function seedListingChildren(
     });
   }
 
+  const photoIdByMockId = new Map<string, string>();
   for (const photo of MOCK_PHOTOS) {
     const listingId = listingIdByMockId.get(photo.listingId);
     if (!listingId) continue;
-    await prisma.aircraftPhoto.create({
+    const created = await prisma.aircraftPhoto.create({
       data: {
         listingId,
         slotKey: photo.slotKey,
@@ -209,12 +212,14 @@ async function seedListingChildren(
         isPublicGalleryImage: photo.isPublicGalleryImage,
       },
     });
+    photoIdByMockId.set(photo.id, created.id);
   }
 
+  const documentIdByMockId = new Map<string, string>();
   for (const document of MOCK_DOCUMENTS) {
     const listingId = listingIdByMockId.get(document.listingId);
     if (!listingId) continue;
-    await prisma.aircraftDocument.create({
+    const created = await prisma.aircraftDocument.create({
       data: {
         listingId,
         documentType: document.documentType,
@@ -231,11 +236,21 @@ async function seedListingChildren(
         reviewedAt: document.reviewedAt ? new Date(document.reviewedAt) : null,
       },
     });
+    documentIdByMockId.set(document.id, created.id);
   }
 
   for (const task of MOCK_REVIEW_TASKS) {
     const listingId = listingIdByMockId.get(task.listingId);
     if (!listingId) continue;
+
+    let sourceKey = task.sourceKey;
+    if (task.sourceType === "photo" && sourceKey) {
+      sourceKey = photoIdByMockId.get(sourceKey) ?? sourceKey;
+    }
+    if (task.sourceType === "document" && sourceKey) {
+      sourceKey = documentIdByMockId.get(sourceKey) ?? sourceKey;
+    }
+
     await prisma.listingReviewTask.create({
       data: {
         listingId,
@@ -246,11 +261,31 @@ async function seedListingChildren(
         status: task.status as ReviewTaskStatus,
         dueDate: task.dueDate ? new Date(task.dueDate) : null,
         blockingPublication: task.blockingPublication,
+        releasedToSeller: task.releasedToSeller,
+        sourceType: task.sourceType,
+        sourceKey,
         createdById: mapOptionalUserId(task.createdById, userIdByMockId),
         resolvedById: mapOptionalUserId(task.resolvedById, userIdByMockId),
         resolvedAt: task.resolvedAt ? new Date(task.resolvedAt) : null,
         createdAt: new Date(task.createdAt),
         updatedAt: new Date(task.updatedAt),
+      },
+    });
+  }
+
+  for (const review of MOCK_FIELD_REVIEWS) {
+    const listingId = listingIdByMockId.get(review.listingId);
+    if (!listingId) continue;
+    await prisma.listingFieldReview.create({
+      data: {
+        listingId,
+        fieldKey: review.fieldKey,
+        label: review.label,
+        status: review.status,
+        rejectionReason: review.rejectionReason,
+        rejectionPreset: review.rejectionPreset,
+        reviewedById: mapOptionalUserId(review.reviewedById, userIdByMockId),
+        reviewedAt: review.reviewedAt ? new Date(review.reviewedAt) : null,
       },
     });
   }

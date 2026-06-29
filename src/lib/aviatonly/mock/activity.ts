@@ -3,6 +3,9 @@ import { DEMO_SELLER_ID } from "./users";
 
 export const ListingEventType = {
   SELLER_SUBMITTED_LISTING: "SELLER_SUBMITTED_LISTING",
+  ADMIN_STARTED_REVIEW: "ADMIN_STARTED_REVIEW",
+  ADMIN_APPROVED_FOR_LISTING: "ADMIN_APPROVED_FOR_LISTING",
+  ADMIN_REVERTED_REVIEW_STEP: "ADMIN_REVERTED_REVIEW_STEP",
   ADMIN_REQUESTED_CHANGES: "ADMIN_REQUESTED_CHANGES",
   PHOTO_REJECTED: "PHOTO_REJECTED",
   DOCUMENT_REJECTED: "DOCUMENT_REJECTED",
@@ -20,6 +23,9 @@ export type ListingEventType = (typeof ListingEventType)[keyof typeof ListingEve
 
 export const LISTING_EVENT_LABELS: Record<ListingEventType, string> = {
   [ListingEventType.SELLER_SUBMITTED_LISTING]: "Submitted for review",
+  [ListingEventType.ADMIN_STARTED_REVIEW]: "Review started",
+  [ListingEventType.ADMIN_APPROVED_FOR_LISTING]: "Approved for listing",
+  [ListingEventType.ADMIN_REVERTED_REVIEW_STEP]: "Review step reverted",
   [ListingEventType.ADMIN_REQUESTED_CHANGES]: "Changes requested",
   [ListingEventType.PHOTO_REJECTED]: "Photo rejected",
   [ListingEventType.DOCUMENT_REJECTED]: "Document rejected",
@@ -48,8 +54,34 @@ export const MOCK_LISTING_EVENTS: MockListingEvent[] = [
     listingId: "zs-abc",
     actorId: "user-admin-reviewer",
     type: ListingEventType.ADMIN_REQUESTED_CHANGES,
-    message: "AVIATONLY requested 2 replacement photos and the latest MPI stamp.",
-    metadata: { taskIds: ["task-zs-abc-photos", "task-zs-abc-cockpit", "task-zs-abc-mpi"] },
+    message:
+      "Fix last MPI\nDoes not match logbook records\n\nReplace photo: prop tips\nLeading edge nicks not visible — upload a closer shot.\n\nReplace photo: cockpit panel\nPanel gauges not readable — photograph with avionics powered on.\n\nFix document: engine logbook\nSummary pages incomplete — include latest overhaul entry.",
+    metadata: {
+      taskIds: [
+        "task-zs-abc-mpi",
+        "task-zs-abc-photos",
+        "task-zs-abc-cockpit",
+        "task-zs-abc-engine-log",
+      ],
+      tasks: [
+        {
+          title: "Fix last MPI",
+          description: "Does not match logbook records",
+        },
+        {
+          title: "Replace photo: prop tips",
+          description: "Leading edge nicks not visible — upload a closer shot.",
+        },
+        {
+          title: "Replace photo: cockpit panel",
+          description: "Panel gauges not readable — photograph with avionics powered on.",
+        },
+        {
+          title: "Fix document: engine logbook",
+          description: "Summary pages incomplete — include latest overhaul entry.",
+        },
+      ],
+    },
     createdAt: "2026-06-28T11:00:00.000Z",
   },
   {

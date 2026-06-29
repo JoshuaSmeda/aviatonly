@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import BreadcrumbComp from "@/app/(dashboard)/dashboard/layout/shared/breadcrumb/breadcrumb-comp";
 import ListingWorkspace from "@/components/dashboard/listings/listing-workspace";
+import ListingWorkspacePageHeader from "@/components/dashboard/listings/listing-workspace-page-header";
 import CardBox from "@/components/dashboard/shared/CardBox";
 import WorkflowPlaceholder from "@/components/dashboard/shared/workflow-placeholder";
 import { Plane } from "lucide-react";
@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { assertCanAccessListing } from "@/lib/aviatonly/server/authorization";
 import { getListingWorkspaceData } from "@/lib/aviatonly/server/listing-workspace";
-import { ADMIN_ROLES, SELLER_ROLES } from "@/lib/auth/roles";
+import { ADMIN_ROLES, hasAnyRole, SELLER_ROLES } from "@/lib/auth/roles";
 import { requireAnyRole } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
@@ -27,7 +27,12 @@ const ListingWorkspacePage = async ({ params }: PageProps) => {
   if (!workspace) {
     return (
       <>
-        <BreadcrumbComp title="Listing Workspace" />
+        <ListingWorkspacePageHeader
+          backHref="/dashboard/listings"
+          backLabel="My aircraft"
+          eyebrow="Listing workspace"
+          title="Listing not found"
+        />
         <CardBox className="p-6">
           <WorkflowPlaceholder
             icon={Plane}
@@ -43,10 +48,19 @@ const ListingWorkspacePage = async ({ params }: PageProps) => {
 
   assertCanAccessListing({ sellerId: workspace.listing.sellerId }, session);
 
+  const canManageReview = hasAnyRole(session.user.roles, ADMIN_ROLES);
+  const { listing } = workspace;
+  const aircraftTitle = `${listing.year} ${listing.make} ${listing.model}`;
+
   return (
     <>
-      <BreadcrumbComp title="Listing Workspace" />
-      <ListingWorkspace workspace={workspace} />
+      <ListingWorkspacePageHeader
+        backHref={canManageReview ? "/dashboard/admin/review-queue" : "/dashboard/listings"}
+        backLabel={canManageReview ? "Review queue" : "My aircraft"}
+        eyebrow={canManageReview ? "Admin · Listing review" : "Listing workspace"}
+        title={`${listing.registration} · ${aircraftTitle}`}
+      />
+      <ListingWorkspace workspace={workspace} canManageReview={canManageReview} />
     </>
   );
 };

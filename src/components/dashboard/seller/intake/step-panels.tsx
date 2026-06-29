@@ -29,6 +29,9 @@ import {
   estimateCommission,
 } from "@/components/dashboard/seller/upload/constants";
 import { SELLER_ROLES } from "@/lib/aviatonly/domain";
+import {
+  useIntakeFieldDisabled,
+} from "@/components/dashboard/seller/intake/intake-fix-mode-context";
 import type { AircraftFormValues } from "@/components/dashboard/seller/upload/schema";
 
 const SectionHeading = ({ title }: { title: string }) => (
@@ -39,6 +42,7 @@ const SectionHeading = ({ title }: { title: string }) => (
 
 export const StepListingType = () => {
   const { control } = useFormContext<AircraftFormValues>();
+  const disabled = useIntakeFieldDisabled("saleType");
   return (
     <Controller
       control={control}
@@ -49,6 +53,7 @@ export const StepListingType = () => {
           <RadioGroup
             value={field.value ?? ""}
             onValueChange={field.onChange}
+            disabled={disabled}
             className="grid gap-4 md:grid-cols-2"
           >
             <FieldLabel htmlFor="sale-fixed" className="font-normal">
@@ -83,6 +88,7 @@ export const StepListingType = () => {
 
 export const StepIdentity = () => {
   const { control } = useFormContext<AircraftFormValues>();
+  const registrationTypeDisabled = useIntakeFieldDisabled("registrationType");
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
       <RHFText
@@ -97,7 +103,12 @@ export const StepIdentity = () => {
         render={({ field, fieldState }) => (
           <Field data-invalid={fieldState.invalid}>
             <FieldLabel>Registration type</FieldLabel>
-            <RadioGroup value={field.value ?? ""} onValueChange={field.onChange} className="flex gap-6">
+            <RadioGroup
+              value={field.value ?? ""}
+              onValueChange={field.onChange}
+              disabled={registrationTypeDisabled}
+              className="flex gap-6"
+            >
               <Field orientation="horizontal" className="w-auto">
                 <RadioGroupItem value="ZS" id="reg-zs" />
                 <FieldLabel htmlFor="reg-zs" className="font-normal">
@@ -130,6 +141,7 @@ export const StepIdentity = () => {
 
 export const StepOwnership = () => {
   const { control } = useFormContext<AircraftFormValues>();
+  const authorisedDisabled = useIntakeFieldDisabled("authorisedToSell");
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -155,6 +167,7 @@ export const StepOwnership = () => {
                 id="authorised-to-sell"
                 checked={field.value === true}
                 onCheckedChange={(value) => field.onChange(value === true)}
+                disabled={authorisedDisabled}
                 aria-invalid={fieldState.invalid}
               />
               <FieldLabel htmlFor="authorised-to-sell" className="font-normal">
@@ -227,6 +240,7 @@ export const StepPropeller = () => (
 
 export const StepAvionics = () => {
   const { control } = useFormContext<AircraftFormValues>();
+  const avionicsDisabled = useIntakeFieldDisabled("avionicsEquipment");
   return (
     <div className="flex flex-col gap-6">
       <Controller
@@ -253,6 +267,7 @@ export const StepAvionics = () => {
                         id={id}
                         checked={selected.includes(option)}
                         onCheckedChange={() => toggle(option)}
+                        disabled={avionicsDisabled}
                       />
                       <FieldLabel htmlFor={id} className="font-normal">
                         {option}

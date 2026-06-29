@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Activity,
@@ -22,20 +23,22 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   getDealStatusMeta,
-  getDocumentStatusMeta,
-  getPhotoStatusMeta,
-  getReviewTaskStatusMeta,
 } from "@/lib/aviatonly/domain";
 import {
   formatTimeAgo,
   formatZar,
   getListingEventLabel,
-  listingLocation,
 } from "@/lib/aviatonly/mock";
+import { parseListingEventTaskSummaries } from "@/lib/aviatonly/domain/listing-event-tasks";
 import type { ListingWorkspaceData } from "@/lib/aviatonly/server/listing-workspace";
 import ListingWorkspaceActivityTimeline from "./listing-workspace-activity-timeline";
 import ListingLeadsOffersPanel from "./listing-leads-offers-panel";
 import ListingWorkspaceOverviewTab from "./listing-workspace-overview";
+import ListingAircraftDataReviewTab from "./listing-aircraft-data-review-tab";
+import ListingMediaReviewTab from "./listing-media-review-tab";
+import ListingDocumentsReviewTab from "./listing-documents-review-tab";
+import ListingReviewTasksAdminPanel from "./listing-review-tasks-admin-panel";
+import ListingSellerReviewTasksPanel from "./listing-seller-review-tasks-panel";
 
 const WORKSPACE_TABS = [
   { value: "overview", label: "Overview", icon: LayoutDashboard },
@@ -64,9 +67,13 @@ function resolveTab(tab: string | null): WorkspaceTabValue {
 
 interface ListingWorkspaceTabsProps {
   workspace: ListingWorkspaceData;
+  canManageReview?: boolean;
 }
 
-const ListingWorkspaceTabs = ({ workspace }: ListingWorkspaceTabsProps) => {
+const ListingWorkspaceTabs = ({
+  workspace,
+  canManageReview = false,
+}: ListingWorkspaceTabsProps) => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -75,13 +82,6 @@ const ListingWorkspaceTabs = ({ workspace }: ListingWorkspaceTabsProps) => {
   const {
     listing,
     overview,
-    airframe,
-    engines,
-    propellers,
-    avionics,
-    maintenance,
-    photos,
-    documents,
     openTasks,
     deal,
     events,
@@ -93,10 +93,19 @@ const ListingWorkspaceTabs = ({ workspace }: ListingWorkspaceTabsProps) => {
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash) return;
+    const target = document.getElementById(hash.slice(1));
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [activeTab]);
+
   return (
     <Tabs value={activeTab} onValueChange={setTab} className="w-full items-start">
-      <div className="overflow-x-auto">
-        <TabsList variant="line" className="w-max">
+      <div className="overflow-x-auto overflow-y-hidden">
+        <TabsList variant="line" className="w-max flex-nowrap">
           {WORKSPACE_TABS.map((tab) => (
             <TabsTrigger key={tab.value} value={tab.value}>
               <tab.icon />
@@ -107,174 +116,39 @@ const ListingWorkspaceTabs = ({ workspace }: ListingWorkspaceTabsProps) => {
       </div>
 
       <TabsContent value="overview" className="w-full flex-none pt-6">
-        <ListingWorkspaceOverviewTab listing={listing} overview={overview} />
+        <ListingWorkspaceOverviewTab
+          listing={listing}
+          overview={overview}
+          canManageReview={canManageReview}
+        />
       </TabsContent>
 
       <TabsContent value="aircraft-data" className="w-full flex-none pt-6">
-        <dl className="grid gap-4 text-sm md:grid-cols-2">
-          <div>
-            <dt className="text-muted-foreground">Registration</dt>
-            <dd className="font-medium">{listing.registration}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Registration type</dt>
-            <dd className="font-medium">{listing.registrationType}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Make / model</dt>
-            <dd className="font-medium">{listing.make} {listing.model}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Year</dt>
-            <dd className="font-medium">{listing.year}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Category</dt>
-            <dd className="font-medium">{listing.category}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Location</dt>
-            <dd className="font-medium">{listingLocation(listing)}</dd>
-          </div>
-          {airframe?.totalTimeAirframe != null && (
-            <div>
-              <dt className="text-muted-foreground">TTAF</dt>
-              <dd className="font-medium">{airframe.totalTimeAirframe.toLocaleString()} hrs</dd>
-            </div>
-          )}
-          {airframe?.damageHistory && (
-            <div className="md:col-span-2">
-              <dt className="text-muted-foreground">Damage history</dt>
-              <dd className="font-medium">{airframe.damageHistory}</dd>
-            </div>
-          )}
-          {engines[0] && (
-            <div>
-              <dt className="text-muted-foreground">Engine</dt>
-              <dd className="font-medium">
-                {engines[0].manufacturer} {engines[0].model} · {engines[0].engineHours} hrs
-                {engines[0].timeSinceOverhaul != null && ` · TSO ${engines[0].timeSinceOverhaul} hrs`}
-              </dd>
-            </div>
-          )}
-          {propellers[0] && (
-            <div>
-              <dt className="text-muted-foreground">Propeller</dt>
-              <dd className="font-medium">
-                {propellers[0].manufacturer} {propellers[0].model}
-                {propellers[0].propellerHours != null && ` · ${propellers[0].propellerHours} hrs`}
-              </dd>
-            </div>
-          )}
-          {avionics && (
-            <div className="md:col-span-2">
-              <dt className="text-muted-foreground">Avionics</dt>
-              <dd className="font-medium">{avionics.equipment.join(", ")}</dd>
-            </div>
-          )}
-          {maintenance && (
-            <>
-              <div>
-                <dt className="text-muted-foreground">Maintenance status</dt>
-                <dd className="font-medium">{maintenance.status}</dd>
-              </div>
-              {maintenance.lastMpiDate && (
-                <div>
-                  <dt className="text-muted-foreground">Last MPI</dt>
-                  <dd className="font-medium">
-                    {new Date(maintenance.lastMpiDate).toLocaleDateString("en-ZA")}
-                  </dd>
-                </div>
-              )}
-              {maintenance.notes && (
-                <div className="md:col-span-2">
-                  <dt className="text-muted-foreground">Maintenance notes</dt>
-                  <dd className="font-medium">{maintenance.notes}</dd>
-                </div>
-              )}
-            </>
-          )}
-        </dl>
+        <ListingAircraftDataReviewTab
+          workspace={workspace}
+          canManageReview={canManageReview}
+        />
       </TabsContent>
 
       <TabsContent value="media" className="w-full flex-none pt-6">
-        {photos.length === 0 ? (
-          <WorkflowPlaceholder
-            icon={Images}
-            title="No photos uploaded"
-            description="Guided photo slots from intake will appear here with review status per angle."
-          />
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {photos.map((photo) => (
-              <li
-                key={photo.id}
-                className="flex items-center justify-between rounded-lg border border-border px-4 py-3 text-sm"
-              >
-                <span>
-                  {photo.slotKey.replace(/-/g, " ")} · {photo.fileName}
-                </span>
-                <Badge variant={getPhotoStatusMeta(photo.status).badgeVariant}>
-                  {getPhotoStatusMeta(photo.status).label}
-                </Badge>
-              </li>
-            ))}
-          </ul>
-        )}
+        <ListingMediaReviewTab workspace={workspace} canManageReview={canManageReview} />
       </TabsContent>
 
       <TabsContent value="documents" className="w-full flex-none pt-6">
-        {documents.length === 0 ? (
-          <WorkflowPlaceholder
-            icon={FileText}
-            title="No documents uploaded"
-            description="Private document vault slots will appear here once uploaded during intake."
-          />
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {documents.map((doc) => (
-              <li
-                key={doc.id}
-                className="flex items-center justify-between rounded-lg border border-border px-4 py-3 text-sm"
-              >
-                <span>
-                  {doc.documentType.replace(/-/g, " ")} · {doc.fileName}
-                </span>
-                <Badge variant={getDocumentStatusMeta(doc.reviewStatus).badgeVariant}>
-                  {getDocumentStatusMeta(doc.reviewStatus).label}
-                </Badge>
-              </li>
-            ))}
-          </ul>
-        )}
+        <ListingDocumentsReviewTab workspace={workspace} canManageReview={canManageReview} />
       </TabsContent>
 
       <TabsContent value="review-tasks" className="w-full flex-none pt-6">
-        {openTasks.length === 0 ? (
+        {canManageReview ? (
+          <ListingReviewTasksAdminPanel workspace={workspace} />
+        ) : openTasks.length === 0 ? (
           <WorkflowPlaceholder
             icon={ClipboardCheck}
             title="No open review tasks"
             description="AVIATONLY review tasks will appear here when action is required from you or operations."
           />
         ) : (
-          <ul className="flex flex-col gap-2">
-            {openTasks.map((task) => (
-              <li key={task.id} className="rounded-lg border border-border p-4 text-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-medium">{task.title}</span>
-                  <div className="flex items-center gap-2">
-                    {task.blockingPublication && (
-                      <Badge variant="destructive">Blocks publication</Badge>
-                    )}
-                    <Badge variant="outline">{getReviewTaskStatusMeta(task.status).label}</Badge>
-                  </div>
-                </div>
-                {task.description && (
-                  <p className="mt-2 text-muted-foreground">{task.description}</p>
-                )}
-              </li>
-            ))}
-          </ul>
+          <ListingSellerReviewTasksPanel workspace={workspace} />
         )}
       </TabsContent>
 
@@ -361,6 +235,9 @@ const ListingWorkspaceTabs = ({ workspace }: ListingWorkspaceTabsProps) => {
               registration: listing.registration,
               message: event.message ?? "",
               timeAgo: formatTimeAgo(event.createdAt),
+              tasks: parseListingEventTaskSummaries(
+                (event.metadata as Record<string, unknown> | null) ?? null,
+              ),
             }))}
           />
         )}

@@ -5,7 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { getListingStatusMeta, getReviewTaskStatusMeta } from "@/lib/aviatonly/domain";
+import {
+  buildReviewTaskFixHref,
+  deriveAdminNextAction,
+  deriveAdminPrimaryCta,
+  getListingStatusMeta,
+  getReviewTaskStatusMeta,
+  ReviewTaskStatus,
+} from "@/lib/aviatonly/domain";
 import type { ListingWorkspaceOverview } from "@/lib/aviatonly/mock/types";
 import type { MockAircraftListing } from "@/lib/aviatonly/mock/types";
 import ListingWorkspaceActivityTimeline from "./listing-workspace-activity-timeline";
@@ -13,21 +20,39 @@ import ListingWorkspaceActivityTimeline from "./listing-workspace-activity-timel
 interface ListingWorkspaceOverviewProps {
   listing: MockAircraftListing;
   overview: ListingWorkspaceOverview;
+  canManageReview?: boolean;
 }
 
-const ListingWorkspaceOverviewTab = ({ listing, overview }: ListingWorkspaceOverviewProps) => {
+const ListingWorkspaceOverviewTab = ({
+  listing,
+  overview,
+  canManageReview = false,
+}: ListingWorkspaceOverviewProps) => {
   const statusMeta = getListingStatusMeta(listing.status);
+  const blockingTasksForView = canManageReview
+    ? overview.blockingTasks
+    : overview.blockingTasks.filter(
+        (task) => task.status === ReviewTaskStatus.WAITING_ON_SELLER,
+      );
+  const nextAction = canManageReview
+    ? deriveAdminNextAction(listing.status)
+    : overview.nextAction;
+  const primaryCta = canManageReview
+    ? deriveAdminPrimaryCta(listing.id, listing.status)
+    : overview.primaryCta;
 
   return (
     <div className="space-y-6">
       <div className="rounded-lg border border-primary/20 bg-primary/5 p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-1">
-            <p className="text-sm font-medium text-primary">Next required action</p>
-            <p className="text-base font-semibold">{overview.nextAction}</p>
+            <p className="text-sm font-medium text-primary">
+              {canManageReview ? "Admin next action" : "Next required action"}
+            </p>
+            <p className="text-base font-semibold">{nextAction}</p>
           </div>
-          <Button render={<Link href={overview.primaryCta.href} />}>
-            {overview.primaryCta.label}
+          <Button render={<Link href={primaryCta.href} />}>
+            {primaryCta.label}
             <ArrowRight data-icon="inline-end" />
           </Button>
         </div>
@@ -84,16 +109,16 @@ const ListingWorkspaceOverviewTab = ({ listing, overview }: ListingWorkspaceOver
         </div>
       </div>
 
-      {overview.blockingTasks.length > 0 && (
+      {blockingTasksForView.length > 0 && (
         <div>
           <div className="mb-3 flex items-center gap-2">
             <AlertTriangle className="size-4 text-destructive" />
             <h6 className="text-sm font-semibold">
-              Blocking review tasks ({overview.blockingTasks.length})
+              Blocking review tasks ({blockingTasksForView.length})
             </h6>
           </div>
           <ul className="flex flex-col gap-2">
-            {overview.blockingTasks.map((task) => (
+            {blockingTasksForView.map((task) => (
               <li
                 key={task.id}
                 className="flex flex-col gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-4 sm:flex-row sm:items-start sm:justify-between"
@@ -112,9 +137,20 @@ const ListingWorkspaceOverviewTab = ({ listing, overview }: ListingWorkspaceOver
                     )}
                   </div>
                 </div>
-                <Badge variant="outline">
-                  {getReviewTaskStatusMeta(task.status).label}
-                </Badge>
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <Badge variant="outline">
+                    {getReviewTaskStatusMeta(task.status).label}
+                  </Badge>
+                  {!canManageReview ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      render={<Link href={buildReviewTaskFixHref(listing.id, task)} />}
+                    >
+                      Fix
+                    </Button>
+                  ) : null}
+                </div>
               </li>
             ))}
           </ul>

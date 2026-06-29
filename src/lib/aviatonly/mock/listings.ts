@@ -404,10 +404,4 @@ export function getMockMaintenance(listingId: string): MockAircraftMaintenance |
   return MOCK_MAINTENANCE.find((m) => m.listingId === listingId);
 }
 
-export function listingTitle(listing: MockAircraftListing): string {
-  return `${listing.year} ${listing.make} ${listing.model}`.trim();
-}
-
-export function listingLocation(listing: MockAircraftListing): string {
-  return `${listing.airfield}, ${listing.province}`;
-}
+export { listingTitle, listingLocation } from "./listing-display";

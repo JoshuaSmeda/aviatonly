@@ -103,6 +103,12 @@ enum ReviewTaskStatus {
   CANCELLED
 }
 
+enum FieldReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum LeadType {
   GENERAL_ENQUIRY
   VIEWING_REQUEST
@@ -339,6 +345,8 @@ model AircraftListing {
   // Workflow
   status            ListingStatus @default(DRAFT)
   completenessScore Int           @default(0)
+  intakeReviewFinalizedAt   DateTime?
+  intakeReviewTasksReleasedAt DateTime?
 
   sellerId String
   seller   User   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
@@ -356,6 +364,7 @@ model AircraftListing {
   statusHistory ListingStatusHistory[]
   events        ListingEvent[]
   reviewTasks   ListingReviewTask[]
+  fieldReviews  ListingFieldReview[]
   leads         Lead[]
   offers        Offer[]
   deals         Deal[]
@@ -574,6 +583,10 @@ model ListingReviewTask {
   dueDate      DateTime?
 
   blockingPublication Boolean @default(false)
+  releasedToSeller    Boolean @default(false)
+
+  sourceType String? // field | photo | document
+  sourceKey  String?
 
   createdById String?
   resolvedById String?
@@ -582,6 +595,28 @@ model ListingReviewTask {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([listingId])
+}
+
+model ListingFieldReview {
+  id        String          @id @default(cuid())
+  listingId String
+  listing   AircraftListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  fieldKey String
+  label    String
+  status   FieldReviewStatus @default(PENDING)
+
+  rejectionReason String?
+  rejectionPreset String?
+
+  reviewedById String?
+  reviewedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([listingId, fieldKey])
   @@index([listingId])
 }
 

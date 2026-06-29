@@ -13,6 +13,7 @@ const listingDetailInclude = {
   photos: { orderBy: { sortOrder: "asc" as const } },
   documents: true,
   reviewTasks: true,
+  fieldReviews: true,
   events: { orderBy: { createdAt: "desc" as const } },
   deals: { orderBy: { createdAt: "desc" as const }, take: 1 },
   seller: { select: { id: true, name: true, email: true } },

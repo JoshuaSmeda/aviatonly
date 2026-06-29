@@ -7,6 +7,7 @@ import {
 } from "@/lib/aviatonly/domain";
 import { getListingEventLabel } from "@/lib/aviatonly/mock/activity";
 import { formatTimeAgo } from "@/lib/aviatonly/mock/format";
+import { parseListingEventTaskSummaries } from "@/lib/aviatonly/domain/listing-event-tasks";
 import type {
   ListingWorkspaceOverview,
   MockAircraftAirframe,
@@ -19,6 +20,7 @@ import type {
   MockAircraftPropeller,
   MockDeal,
   MockListingEvent,
+  MockListingFieldReview,
   MockListingReviewTask,
   WorkspacePrimaryCta,
 } from "@/lib/aviatonly/mock/types";
@@ -28,6 +30,7 @@ import {
   mapDealRecord,
   mapDocumentRecord,
   mapEngineRecord,
+  mapFieldReviewRecord,
   mapListingEventRecord,
   mapListingRecord,
   mapMaintenanceRecord,
@@ -49,6 +52,10 @@ export interface ListingWorkspaceData {
   photos: MockAircraftPhoto[];
   documents: MockAircraftDocument[];
   openTasks: MockListingReviewTask[];
+  draftTasks: MockListingReviewTask[];
+  fieldReviews: MockListingFieldReview[];
+  intakeReviewFinalizedAt: string | null;
+  intakeReviewTasksReleasedAt: string | null;
   deal: MockDeal | null;
   events: MockListingEvent[];
 }
@@ -133,22 +140,14 @@ function derivePrimaryCta(
   const base = `/dashboard/listings/${listing.id}`;
 
   if (listing.status === ListingStatus.DRAFT) {
-    return { label: "Resume intake wizard", href: "/dashboard/seller/upload" };
+    return {
+      label: "Resume intake wizard",
+      href: `/dashboard/seller/upload?listingId=${listing.id}`,
+    };
   }
 
   if (blockingSellerTasks.length > 0 || listing.status === ListingStatus.NEEDS_CHANGES) {
-    const firstTask = blockingSellerTasks[0];
-    const title = firstTask?.title.toLowerCase() ?? "";
-    const tab =
-      title.includes("photo") || title.includes("cockpit") || title.includes("propeller")
-        ? "media"
-        : title.includes("document") ||
-            title.includes("mpi") ||
-            title.includes("logbook") ||
-            title.includes("stamp")
-          ? "documents"
-          : "review-tasks";
-    return { label: "Resolve blocking tasks", href: `${base}?tab=${tab}` };
+    return { label: "Fix review items", href: `${base}?tab=review-tasks` };
   }
 
   if (offerCount > 0) {
@@ -189,7 +188,7 @@ function buildOverviewFromRecord(
 ): ListingWorkspaceOverview {
   const documents = record.documents.map(mapDocumentRecord);
   const blockingTasks = record.reviewTasks
-    .filter((t) => t.blockingPublication)
+    .filter((t) => t.blockingPublication && t.releasedToSeller)
     .map(mapReviewTaskRecord);
   const blockingSellerTasks = blockingTasks.filter(
     (t) => t.status === ReviewTaskStatus.WAITING_ON_SELLER,
@@ -202,6 +201,9 @@ function buildOverviewFromRecord(
     registration: listing.registration,
     message: event.message ?? "",
     timeAgo: formatTimeAgo(event.createdAt.toISOString()),
+    tasks: parseListingEventTaskSummaries(
+      (event.metadata as Record<string, unknown> | null) ?? null,
+    ),
   }));
 
   return {
@@ -231,11 +233,14 @@ export async function getListingWorkspaceData(
     countActiveOffers(listing.id),
   ]);
 
-  const openTasks = record.reviewTasks
-    .filter(
-      (t) => t.status !== ReviewTaskStatus.DONE && t.status !== ReviewTaskStatus.CANCELLED,
-    )
-    .map(mapReviewTaskRecord);
+  const allTasks = record.reviewTasks.map(mapReviewTaskRecord);
+  const openTasks = allTasks.filter(
+    (t) =>
+      t.releasedToSeller &&
+      t.status !== ReviewTaskStatus.DONE &&
+      t.status !== ReviewTaskStatus.CANCELLED,
+  );
+  const draftTasks = allTasks.filter((t) => !t.releasedToSeller);
 
   const deal = record.deals[0]
     ? mapDealRecord(record.deals[0])
@@ -252,6 +257,10 @@ export async function getListingWorkspaceData(
     photos: record.photos.map(mapPhotoRecord),
     documents: record.documents.map(mapDocumentRecord),
     openTasks,
+    draftTasks,
+    fieldReviews: record.fieldReviews.map(mapFieldReviewRecord),
+    intakeReviewFinalizedAt: record.intakeReviewFinalizedAt?.toISOString() ?? null,
+    intakeReviewTasksReleasedAt: record.intakeReviewTasksReleasedAt?.toISOString() ?? null,
     deal,
     events: record.events.map(mapListingEventRecord),
   };

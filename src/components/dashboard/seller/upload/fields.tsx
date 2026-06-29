@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import { useIntakeFieldDisabled } from "@/components/dashboard/seller/intake/intake-fix-mode-context";
 import { cn } from "@/lib/utils";
 import type { AircraftFormValues } from "./schema";
 
@@ -30,6 +31,7 @@ interface BaseProps {
 
 export function RHFText({ name, label, description, placeholder, type = "text" }: BaseProps & { type?: string }) {
   const { control } = useFormContext<AircraftFormValues>();
+  const disabled = useIntakeFieldDisabled(name);
   return (
     <Controller
       control={control}
@@ -42,6 +44,7 @@ export function RHFText({ name, label, description, placeholder, type = "text" }
             type={type}
             placeholder={placeholder}
             aria-invalid={fieldState.invalid}
+            disabled={disabled}
             {...field}
             value={(field.value as string) ?? ""}
           />
@@ -55,6 +58,7 @@ export function RHFText({ name, label, description, placeholder, type = "text" }
 
 export function RHFTextarea({ name, label, description, placeholder, rows = 3 }: BaseProps & { rows?: number }) {
   const { control } = useFormContext<AircraftFormValues>();
+  const disabled = useIntakeFieldDisabled(name);
   return (
     <Controller
       control={control}
@@ -67,6 +71,7 @@ export function RHFTextarea({ name, label, description, placeholder, rows = 3 }:
             rows={rows}
             placeholder={placeholder}
             aria-invalid={fieldState.invalid}
+            disabled={disabled}
             {...field}
             value={(field.value as string) ?? ""}
           />
@@ -80,6 +85,7 @@ export function RHFTextarea({ name, label, description, placeholder, rows = 3 }:
 
 export function RHFNumber({ name, label, description, placeholder, suffix, step }: BaseProps & { suffix?: string; step?: string }) {
   const { control } = useFormContext<AircraftFormValues>();
+  const disabled = useIntakeFieldDisabled(name);
   return (
     <Controller
       control={control}
@@ -95,6 +101,7 @@ export function RHFNumber({ name, label, description, placeholder, suffix, step 
               step={step}
               placeholder={placeholder}
               aria-invalid={fieldState.invalid}
+              disabled={disabled}
               className={cn(suffix && "pr-14")}
               name={field.name}
               ref={field.ref}
@@ -126,6 +133,7 @@ export function RHFSelect({
   options,
 }: BaseProps & { options: readonly string[] }) {
   const { control } = useFormContext<AircraftFormValues>();
+  const disabled = useIntakeFieldDisabled(name);
   return (
     <Controller
       control={control}
@@ -133,7 +141,7 @@ export function RHFSelect({
       render={({ field, fieldState }) => (
         <Field data-invalid={fieldState.invalid}>
           <FieldLabel htmlFor={`field-${name}`}>{label}</FieldLabel>
-          <Select value={(field.value as string) || null} onValueChange={field.onChange}>
+          <Select value={(field.value as string) || null} onValueChange={field.onChange} disabled={disabled}>
             <SelectTrigger id={`field-${name}`} className="w-full" aria-invalid={fieldState.invalid}>
               <SelectValue placeholder={placeholder} />
             </SelectTrigger>
@@ -155,6 +163,7 @@ export function RHFSelect({
 
 export function RHFDate({ name, label, description, placeholder = "Pick a date" }: BaseProps) {
   const { control } = useFormContext<AircraftFormValues>();
+  const disabled = useIntakeFieldDisabled(name);
   return (
     <Controller
       control={control}
@@ -171,6 +180,7 @@ export function RHFDate({ name, label, description, placeholder = "Pick a date" 
                     id={`field-${name}`}
                     type="button"
                     variant="outline"
+                    disabled={disabled}
                     className={cn(
                       "w-full justify-start text-left font-normal",
                       !dateValue && "text-muted-foreground",

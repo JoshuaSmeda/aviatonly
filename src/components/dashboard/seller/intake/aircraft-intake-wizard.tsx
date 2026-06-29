@@ -1,12 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, Send } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, Info, Send } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import AutosaveIndicator, { type AutosaveStatus } from "./autosave-indicator";
+import { IntakeFixModeProvider, useIntakeFixMode } from "./intake-fix-mode-context";
 import { INTAKE_STEPS } from "@/lib/aviatonly/domain";
+import { formatFieldFixValue, type IntakeFixContext } from "@/lib/aviatonly/domain/intake-fix-mode";
 import {
   StepAirframe,
   StepAvionics,
@@ -28,7 +31,17 @@ import {
   INTAKE_STEP_FIELDS,
   type AircraftFormValues,
 } from "@/components/dashboard/seller/upload/schema";
-import { submitAircraftListing } from "@/app/(dashboard)/dashboard/seller/upload/actions";
+import {
+  getListingIntakePrefill,
+  getListingUploadPrefill,
+  saveDraftListingFromIntake,
+  submitAircraftListing,
+} from "@/app/(dashboard)/dashboard/seller/upload/actions";
+import {
+  sellerFixListingDocumentAction,
+  sellerFixListingFieldAction,
+  sellerFixListingPhotoAction,
+} from "@/app/(dashboard)/dashboard/seller/listings/review-fix-actions";
 import {
   deleteDraft,
   loadDraft,
@@ -36,12 +49,14 @@ import {
 } from "@/app/(dashboard)/dashboard/seller/upload/draft-actions";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Progress } from "@/components/ui/progress";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
 const DRAFT_KEY = "aviatonly:intake:draftId";
+const LISTING_KEY = "aviatonly:intake:listingId";
 
 type UploadMap = Record<string, UploadedFile>;
 
@@ -60,7 +75,18 @@ function reviveDraftValues(data: Record<string, unknown>): Partial<AircraftFormV
   return values as Partial<AircraftFormValues>;
 }
 
-const AircraftIntakeWizard = () => {
+interface AircraftIntakeWizardProps {
+  listingId?: string;
+  initialStep?: number;
+  fixContext?: IntakeFixContext | null;
+}
+
+const AircraftIntakeWizard = ({
+  listingId: initialListingId,
+  initialStep,
+  fixContext = null,
+}: AircraftIntakeWizardProps) => {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const [visited, setVisited] = useState<Set<number>>(new Set([0]));
   const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>("idle");
@@ -68,8 +94,12 @@ const AircraftIntakeWizard = () => {
   const [, setDraftId] = useState<string | null>(null);
   const [photos, setPhotos] = useState<UploadMap>({});
   const [documents, setDocuments] = useState<UploadMap>({});
+  const [activeListingId, setActiveListingId] = useState<string | null>(initialListingId ?? null);
   const [confirmed, setConfirmed] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [savingFix, setSavingFix] = useState(false);
+  const fixModeActive = Boolean(fixContext);
 
   const form = useForm<AircraftFormValues>({
     resolver: zodResolver(aircraftSchema),
@@ -78,16 +108,17 @@ const AircraftIntakeWizard = () => {
   });
 
   const draftIdRef = useRef<string | null>(null);
+  const listingIdRef = useRef<string | null>(initialListingId ?? null);
   const stepRef = useRef(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isApplyingDraft = useRef(false);
   const savingRef = useRef(false);
   const pendingRef = useRef(false);
 
-  const doSave = useCallback(async () => {
+  const doSave = useCallback(async (): Promise<boolean> => {
     if (savingRef.current) {
       pendingRef.current = true;
-      return;
+      return false;
     }
     savingRef.current = true;
     setAutosaveStatus("saving");
@@ -106,8 +137,10 @@ const AircraftIntakeWizard = () => {
       }
       setLastSavedAt(new Date());
       setAutosaveStatus("saved");
+      return true;
     } catch {
       setAutosaveStatus("error");
+      return false;
     } finally {
       savingRef.current = false;
       if (pendingRef.current) {
@@ -122,44 +155,103 @@ const AircraftIntakeWizard = () => {
     saveTimer.current = setTimeout(() => void doSave(), 1000);
   }, [doSave]);
 
-  // Resume an existing draft from a previous session.
+  // Resume an existing draft from a previous session or listing workspace.
   useEffect(() => {
-    const stored = typeof window !== "undefined" ? localStorage.getItem(DRAFT_KEY) : null;
-    if (!stored) return;
-    (async () => {
-      const draft = await loadDraft(stored);
-      if (!draft) {
-        localStorage.removeItem(DRAFT_KEY);
-        return;
+    const storedDraft =
+      !fixModeActive && typeof window !== "undefined" ? localStorage.getItem(DRAFT_KEY) : null;
+    const storedListing =
+      typeof window !== "undefined" ? localStorage.getItem(LISTING_KEY) : null;
+    const listingId = initialListingId ?? storedListing;
+
+    if (listingId) {
+      listingIdRef.current = listingId;
+      setActiveListingId(listingId);
+      try {
+        localStorage.setItem(LISTING_KEY, listingId);
+      } catch {
+        // ignore
       }
+    }
+
+    (async () => {
+      if (storedDraft) {
+        const draft = await loadDraft(storedDraft);
+        if (draft) {
+          isApplyingDraft.current = true;
+          form.reset({
+            ...(aircraftDefaultValues as AircraftFormValues),
+            ...reviveDraftValues(draft.data),
+          });
+          const resumedStep = Math.min(Math.max(draft.step, 0), INTAKE_STEPS.length - 1);
+          stepRef.current = resumedStep;
+          draftIdRef.current = storedDraft;
+          setDraftId(storedDraft);
+          setCurrentStep(resumedStep);
+          setVisited(new Set(Array.from({ length: resumedStep + 1 }, (_, i) => i)));
+          setLastSavedAt(new Date());
+          setAutosaveStatus("saved");
+          setTimeout(() => {
+            isApplyingDraft.current = false;
+          }, 0);
+          return;
+        }
+        localStorage.removeItem(DRAFT_KEY);
+      }
+
+      if (!listingId) return;
+
+      const prefill = await getListingIntakePrefill(listingId);
+      if (!prefill) return;
+
       isApplyingDraft.current = true;
       form.reset({
         ...(aircraftDefaultValues as AircraftFormValues),
-        ...reviveDraftValues(draft.data),
+        ...prefill,
       });
-      const resumedStep = Math.min(Math.max(draft.step, 0), INTAKE_STEPS.length - 1);
-      stepRef.current = resumedStep;
-      draftIdRef.current = stored;
-      setDraftId(stored);
-      setCurrentStep(resumedStep);
-      setVisited(new Set(Array.from({ length: resumedStep + 1 }, (_, i) => i)));
-      setLastSavedAt(new Date());
-      setAutosaveStatus("saved");
+
+      const targetStep =
+        fixContext?.step ??
+        (initialStep != null && initialStep >= 0 && initialStep < INTAKE_STEPS.length
+          ? initialStep
+          : 0);
+
+      stepRef.current = targetStep;
+      setCurrentStep(targetStep);
+      setVisited(new Set([targetStep]));
+
+      if (fixModeActive || listingId) {
+        const uploads = await getListingUploadPrefill(listingId);
+        setPhotos(
+          Object.fromEntries(
+            Object.entries(uploads.photos).map(([slot, file]) => [
+              slot,
+              {
+                ...file,
+                status: "on-file" as const,
+              },
+            ]),
+          ),
+        );
+        setDocuments(uploads.documents);
+      }
+
+      setAutosaveStatus(fixModeActive ? "idle" : "saved");
       setTimeout(() => {
         isApplyingDraft.current = false;
       }, 0);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initialListingId, initialStep, fixContext, fixModeActive]);
 
-  // Debounced autosave on any field change.
+  // Debounced autosave on any field change (skipped in review-fix mode).
   useEffect(() => {
+    if (fixModeActive) return;
     const subscription = form.watch(() => {
       if (isApplyingDraft.current) return;
       scheduleSave();
     });
     return () => subscription.unsubscribe();
-  }, [form, scheduleSave]);
+  }, [form, scheduleSave, fixModeActive]);
 
   useEffect(() => {
     return () => {
@@ -169,21 +261,187 @@ const AircraftIntakeWizard = () => {
 
   const goTo = useCallback(
     (index: number) => {
+      if (fixModeActive && fixContext && index !== fixContext.step) return;
       if (index < 0 || index > INTAKE_STEPS.length - 1) return;
       stepRef.current = index;
       setConfirmed(false);
       setVisited((prev) => new Set(prev).add(index));
       setCurrentStep(index);
-      // Each step is independently saved as we move.
-      void doSave();
+      if (!fixModeActive) {
+        void doSave();
+      }
     },
-    [doSave],
+    [doSave, fixContext, fixModeActive],
   );
 
   const handleNext = async () => {
     const fields = INTAKE_STEP_FIELDS[currentStep];
     const valid = fields.length === 0 ? true : await form.trigger(fields);
     if (valid) goTo(currentStep + 1);
+  };
+
+  const handleSaveFix = async () => {
+    if (!fixContext || !listingIdRef.current) return;
+
+    setSavingFix(true);
+    try {
+      const listingId = listingIdRef.current;
+
+      if (fixContext.type === "field" && fixContext.fieldKey) {
+        const fields = fixContext.editableFields;
+        const valid = fields.length === 0 ? true : await form.trigger(fields);
+        if (!valid) {
+          toast.error("Fix the highlighted field before saving.");
+          return;
+        }
+
+        const value = formatFieldFixValue(form.getValues(), fixContext.fieldKey);
+        const result = await sellerFixListingFieldAction({
+          listingId,
+          fieldKey: fixContext.fieldKey,
+          value,
+        });
+        if (!result.ok) {
+          toast.error(result.error);
+          return;
+        }
+        toast.success(
+          result.allFixesSubmitted
+            ? "All fixes saved — AVIATONLY will re-review your listing."
+            : "Fix saved. Continue with the remaining items.",
+        );
+        router.push(`/dashboard/listings/${listingId}?tab=review-tasks`);
+        return;
+      }
+
+      if (fixContext.type === "photo" && fixContext.photoId && fixContext.photoSlot) {
+        const upload = photos[fixContext.photoSlot];
+        if (!upload || upload.status === "on-file") {
+          toast.error("Upload a replacement photo before saving.");
+          return;
+        }
+        const result = await sellerFixListingPhotoAction({
+          listingId,
+          photoId: fixContext.photoId,
+          fileName: upload.name,
+        });
+        if (!result.ok) {
+          toast.error(result.error);
+          return;
+        }
+        toast.success(
+          result.allFixesSubmitted
+            ? "All fixes saved — AVIATONLY will re-review your listing."
+            : "Photo fix saved. Continue with the remaining items.",
+        );
+        router.push(`/dashboard/listings/${listingId}?tab=media`);
+        return;
+      }
+
+      if (fixContext.type === "document" && fixContext.documentId && fixContext.documentSlot) {
+        const upload = documents[fixContext.documentSlot];
+        if (!upload || upload.sizeLabel === "On file") {
+          toast.error("Upload a replacement document before saving.");
+          return;
+        }
+        const result = await sellerFixListingDocumentAction({
+          listingId,
+          documentId: fixContext.documentId,
+          fileName: upload.name,
+        });
+        if (!result.ok) {
+          toast.error(result.error);
+          return;
+        }
+        toast.success(
+          result.allFixesSubmitted
+            ? "All fixes saved — AVIATONLY will re-review your listing."
+            : "Document fix saved. Continue with the remaining items.",
+        );
+        router.push(`/dashboard/listings/${listingId}?tab=documents`);
+        return;
+      }
+
+      toast.error("Could not determine what to fix. Return to your listing and try again.");
+    } finally {
+      setSavingFix(false);
+    }
+  };
+
+  const handleSaveAndClose = async () => {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    setClosing(true);
+    try {
+      while (savingRef.current) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+
+      const values = form.getValues();
+      const photoMeta = Object.entries(photos).map(([slot, file]) => ({
+        slot,
+        fileName: file.name,
+        storageKey: file.storageKey,
+        photoId: file.photoId,
+      }));
+      const documentMeta = Object.entries(documents).map(([slot, file]) => ({
+        slot,
+        fileName: file.name,
+      }));
+
+      const listingResult = await saveDraftListingFromIntake(
+        values,
+        photoMeta,
+        documentMeta,
+        listingIdRef.current,
+      );
+
+      if (!listingResult.ok) {
+        if (listingResult.field) {
+          const stepWithField = INTAKE_STEP_FIELDS.findIndex((fields) =>
+            fields.includes(listingResult.field!),
+          );
+          if (stepWithField >= 0) goTo(stepWithField);
+          form.setError(listingResult.field, { type: "server", message: listingResult.error });
+        }
+        toast.error(listingResult.error);
+        return;
+      }
+
+      listingIdRef.current = listingResult.id;
+      try {
+        localStorage.setItem(LISTING_KEY, listingResult.id);
+      } catch {
+        // ignore
+      }
+
+      const res = await saveDraft({
+        draftId: draftIdRef.current,
+        data: {
+          ...(values as Record<string, unknown>),
+          listingId: listingResult.id,
+        },
+        step: stepRef.current,
+      });
+      draftIdRef.current = res.id;
+      setDraftId(res.id);
+      try {
+        localStorage.setItem(DRAFT_KEY, res.id);
+      } catch {
+        // ignore storage failures
+      }
+      setLastSavedAt(new Date());
+      setAutosaveStatus("saved");
+      toast.success("Draft saved to your listing workspace.");
+      router.push(`/dashboard/listings/${listingResult.id}`);
+    } catch {
+      setAutosaveStatus("error");
+      toast.error("Could not save your draft. Please try again.");
+    } finally {
+      setClosing(false);
+    }
   };
 
   const makeUploadHandler =
@@ -217,7 +475,12 @@ const AircraftIntakeWizard = () => {
   const onValid = async (values: AircraftFormValues) => {
     if (!confirmed) return;
 
-    const photoMeta = Object.entries(photos).map(([slot, file]) => ({ slot, fileName: file.name }));
+    const photoMeta = Object.entries(photos).map(([slot, file]) => ({
+      slot,
+      fileName: file.name,
+      storageKey: file.storageKey,
+      photoId: file.photoId,
+    }));
     const documentMeta = Object.entries(documents).map(([slot, file]) => ({
       slot,
       fileName: file.name,
@@ -288,71 +551,245 @@ const AircraftIntakeWizard = () => {
     );
   }
 
+  const handlePhotoChange = (slotId: string, value: UploadedFile | null) => {
+    setPhotos((prev) => {
+      const previous = prev[slotId];
+      if (previous?.previewUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(previous.previewUrl);
+      }
+      if (!value) {
+        const next = { ...prev };
+        delete next[slotId];
+        return next;
+      }
+      return { ...prev, [slotId]: value };
+    });
+  };
+
+  const handleListingIdChange = (listingId: string) => {
+    listingIdRef.current = listingId;
+    setActiveListingId(listingId);
+    try {
+      localStorage.setItem(LISTING_KEY, listingId);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handlePhotoSelect = makeUploadHandler(setPhotos, true);
+  const handlePhotoRemove = makeRemoveHandler(setPhotos);
+  const handleDocumentSelect = makeUploadHandler(setDocuments, false);
+  const handleDocumentRemove = makeRemoveHandler(setDocuments);
+
+  const handleBackToListing = () => {
+    if (listingIdRef.current) {
+      router.push(`/dashboard/listings/${listingIdRef.current}?tab=review-tasks`);
+    }
+  };
+
+  return (
+    <IntakeFixModeProvider fix={fixContext}>
+      <AircraftIntakeWizardForm
+        fixModeActive={fixModeActive}
+        form={form}
+        currentStep={currentStep}
+        visited={visited}
+        autosaveStatus={autosaveStatus}
+        lastSavedAt={lastSavedAt}
+        photos={photos}
+        documents={documents}
+        confirmed={confirmed}
+        closing={closing}
+        savingFix={savingFix}
+        goTo={goTo}
+        doSave={doSave}
+        handleNext={handleNext}
+        handleSaveAndClose={handleSaveAndClose}
+        handleSaveFix={handleSaveFix}
+        onPhotoSelect={handlePhotoSelect}
+        onPhotoRemove={handlePhotoRemove}
+        onPhotoChange={handlePhotoChange}
+        listingId={activeListingId}
+        getFormValues={() => form.getValues()}
+        onListingIdChange={handleListingIdChange}
+        onDocumentSelect={handleDocumentSelect}
+        onDocumentRemove={handleDocumentRemove}
+        onBackToListing={handleBackToListing}
+        setConfirmed={setConfirmed}
+        onValid={onValid}
+        onInvalid={onInvalid}
+      />
+    </IntakeFixModeProvider>
+  );
+};
+
+interface AircraftIntakeWizardFormProps {
+  fixModeActive: boolean;
+  form: ReturnType<typeof useForm<AircraftFormValues>>;
+  currentStep: number;
+  visited: Set<number>;
+  autosaveStatus: AutosaveStatus;
+  lastSavedAt: Date | null;
+  photos: UploadMap;
+  documents: UploadMap;
+  confirmed: boolean;
+  closing: boolean;
+  savingFix: boolean;
+  goTo: (index: number) => void;
+  doSave: () => Promise<boolean>;
+  handleNext: () => Promise<void>;
+  handleSaveAndClose: () => Promise<void>;
+  handleSaveFix: () => Promise<void>;
+  onPhotoSelect: (slotId: string, file: File) => void;
+  onPhotoRemove: (slotId: string) => void;
+  onPhotoChange: (slotId: string, value: UploadedFile | null) => void;
+  listingId: string | null;
+  getFormValues: () => AircraftFormValues;
+  onListingIdChange: (listingId: string) => void;
+  onDocumentSelect: (slotId: string, file: File) => void;
+  onDocumentRemove: (slotId: string) => void;
+  onBackToListing: () => void;
+  setConfirmed: (value: boolean) => void;
+  onValid: (values: AircraftFormValues) => Promise<void>;
+  onInvalid: (errors: Record<string, unknown>) => void;
+}
+
+const AircraftIntakeWizardForm = ({
+  fixModeActive,
+  form,
+  currentStep,
+  visited,
+  autosaveStatus,
+  lastSavedAt,
+  photos,
+  documents,
+  confirmed,
+  closing,
+  savingFix,
+  goTo,
+  doSave,
+  handleNext,
+  handleSaveAndClose,
+  handleSaveFix,
+  onPhotoSelect,
+  onPhotoRemove,
+  onPhotoChange,
+  listingId,
+  getFormValues,
+  onListingIdChange,
+  onDocumentSelect,
+  onDocumentRemove,
+  onBackToListing,
+  setConfirmed,
+  onValid,
+  onInvalid,
+}: AircraftIntakeWizardFormProps) => {
+  const { fix } = useIntakeFixMode();
   const step = INTAKE_STEPS[currentStep];
   const totalSteps = INTAKE_STEPS.length;
   const isFirst = currentStep === 0;
   const isLast = currentStep === totalSteps - 1;
   const progress = Math.round(((currentStep + 1) / totalSteps) * 100);
 
+  const fixTargetLabel =
+    fix?.type === "field"
+      ? fix.fieldKey?.replace(/-/g, " ")
+      : fix?.type === "photo"
+        ? "guided photo"
+        : fix?.type === "document"
+          ? "document"
+          : null;
+
   return (
     <>
       <Toaster richColors position="top-right" />
       <FormProvider {...form}>
-        <form onSubmit={form.handleSubmit(onValid, onInvalid)} className="flex flex-col gap-6 lg:flex-row">
-          {/* Step navigation */}
-          <aside className="shrink-0 lg:w-72">
-            <ol className="hidden flex-col gap-1 lg:flex">
-              {INTAKE_STEPS.map((s, index) => {
-                const isActive = index === currentStep;
-                const isComplete = visited.has(index) && !isActive;
-                return (
-                  <li key={s.id}>
-                    <button
-                      type="button"
-                      onClick={() => goTo(index)}
-                      aria-current={isActive ? "step" : undefined}
-                      className={cn(
-                        "flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors",
-                        isActive ? "border-primary bg-primary/5" : "border-transparent hover:bg-muted",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
-                          isComplete && "border-primary bg-primary text-primary-foreground",
-                          isActive && "border-primary bg-background text-primary",
-                          !isComplete && !isActive && "border-border bg-background text-muted-foreground",
-                        )}
-                      >
-                        {isComplete ? <Check className="size-4" /> : index + 1}
-                      </span>
-                      <span
-                        className={cn(
-                          "text-sm",
-                          isActive ? "font-medium text-foreground" : "text-muted-foreground",
-                        )}
-                      >
-                        {s.title}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
+        <div className="flex flex-col gap-6">
+          {fixModeActive ? (
+            <Alert>
+              <Info />
+              <AlertTitle>Fix requested by AVIATONLY</AlertTitle>
+              <AlertDescription>
+                {fixTargetLabel
+                  ? `Update the ${fixTargetLabel} below. All other fields are locked — approved data stays unchanged.`
+                  : "Only the flagged item is editable. Update it and save."}
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
-            <div className="flex flex-col gap-2 lg:hidden">
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-medium">{step.title}</span>
-                <span className="text-muted-foreground">
-                  Step {currentStep + 1} of {totalSteps}
-                </span>
+          <form
+            onSubmit={form.handleSubmit(onValid, onInvalid)}
+            className={cn("flex flex-col gap-6", !fixModeActive && "lg:flex-row")}
+          >
+            {!fixModeActive ? (
+              <aside className="shrink-0 lg:w-72">
+                <ol className="hidden flex-col gap-1 lg:flex">
+                  {INTAKE_STEPS.map((s, index) => {
+                    const isActive = index === currentStep;
+                    const isComplete = visited.has(index) && !isActive;
+                    return (
+                      <li key={s.id}>
+                        <button
+                          type="button"
+                          onClick={() => goTo(index)}
+                          aria-current={isActive ? "step" : undefined}
+                          className={cn(
+                            "flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors",
+                            isActive
+                              ? "border-primary bg-primary/5"
+                              : "border-transparent hover:bg-muted",
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
+                              isComplete && "border-primary bg-primary text-primary-foreground",
+                              isActive && "border-primary bg-background text-primary",
+                              !isComplete &&
+                                !isActive &&
+                                "border-border bg-background text-muted-foreground",
+                            )}
+                          >
+                            {isComplete ? <Check /> : index + 1}
+                          </span>
+                          <span
+                            className={cn(
+                              "text-sm",
+                              isActive ? "font-medium text-foreground" : "text-muted-foreground",
+                            )}
+                          >
+                            {s.title}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ol>
+
+                <div className="flex flex-col gap-2 lg:hidden">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">{step.title}</span>
+                    <span className="text-muted-foreground">
+                      Step {currentStep + 1} of {totalSteps}
+                    </span>
+                  </div>
+                  <Progress value={progress} />
+                </div>
+              </aside>
+            ) : (
+              <div className="flex flex-col gap-2 lg:hidden">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">{step.title}</span>
+                  <span className="text-muted-foreground">
+                    Step {currentStep + 1} of {totalSteps}
+                  </span>
+                </div>
+                <Progress value={progress} />
               </div>
-              <Progress value={progress} />
-            </div>
-          </aside>
+            )}
 
-          {/* Step panel */}
-          <div className="flex min-w-0 flex-1 flex-col gap-6">
+            {/* Step panel */}
+            <div className="flex min-w-0 flex-1 flex-col gap-6">
             <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex flex-col gap-1">
                 <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -365,7 +802,7 @@ const AircraftIntakeWizard = () => {
                 status={autosaveStatus}
                 lastSavedAt={lastSavedAt}
                 onRetry={doSave}
-                className="shrink-0"
+                className={cn("shrink-0", fixModeActive && "hidden")}
               />
             </div>
 
@@ -383,10 +820,14 @@ const AircraftIntakeWizard = () => {
                   variant="photo"
                   slots={PHOTO_SLOTS}
                   values={photos}
-                  onSelect={makeUploadHandler(setPhotos, true)}
-                  onRemove={makeRemoveHandler(setPhotos)}
-                  alertTitle="Guided photos are optional for now"
-                  alertDescription="You can skip this step and add photos later, but listings with the full guided set are verified faster."
+                  onSelect={onPhotoSelect}
+                  onRemove={onPhotoRemove}
+                  onPhotoChange={onPhotoChange}
+                  listingId={listingId}
+                  getFormValues={getFormValues}
+                  onListingIdChange={onListingIdChange}
+                  alertTitle="Guided photo angles"
+                  alertDescription="Upload each required angle so buyers can assess condition, gauges, and wear points. Photos upload directly to secure storage as you add them."
                 />
               )}
               {currentStep === 9 && (
@@ -394,8 +835,8 @@ const AircraftIntakeWizard = () => {
                   variant="document"
                   slots={DOCUMENT_SLOTS}
                   values={documents}
-                  onSelect={makeUploadHandler(setDocuments, false)}
-                  onRemove={makeRemoveHandler(setDocuments)}
+                  onSelect={onDocumentSelect}
+                  onRemove={onDocumentRemove}
                   alertTitle="Documents are private and optional for now"
                   alertDescription="Logbooks and certificates are stored privately and only released after authorization. You can skip and upload them during review."
                 />
@@ -409,7 +850,7 @@ const AircraftIntakeWizard = () => {
               )}
             </div>
 
-            {isLast && (
+            {isLast && !fixModeActive && (
               <Field orientation="horizontal" className="rounded-lg border border-border p-4">
                 <Checkbox
                   id="confirm-accuracy"
@@ -424,28 +865,61 @@ const AircraftIntakeWizard = () => {
             )}
 
             <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
-              <Button type="button" variant="outline" onClick={() => goTo(currentStep - 1)} disabled={isFirst}>
-                <ArrowLeft data-icon="inline-start" />
-                Back
-              </Button>
+              {fixModeActive ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onBackToListing}
+                  >
+                    <ArrowLeft data-icon="inline-start" />
+                    Back to listing
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => void handleSaveFix()}
+                    disabled={savingFix}
+                  >
+                    {savingFix && <Spinner />}
+                    Save fix
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button type="button" variant="outline" onClick={() => goTo(currentStep - 1)} disabled={isFirst}>
+                    <ArrowLeft data-icon="inline-start" />
+                    Back
+                  </Button>
 
-              <div className="flex items-center gap-3">
-                {isLast ? (
-                  <Button type="submit" disabled={!confirmed || form.formState.isSubmitting}>
-                    {form.formState.isSubmitting && <Spinner />}
-                    <Send data-icon="inline-start" />
-                    Submit for AVIATONLY review
-                  </Button>
-                ) : (
-                  <Button type="button" onClick={handleNext}>
-                    Next
-                    <ArrowRight data-icon="inline-end" />
-                  </Button>
-                )}
-              </div>
+                  <div className="flex flex-wrap items-center justify-end gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => void handleSaveAndClose()}
+                      disabled={closing || form.formState.isSubmitting}
+                    >
+                      {closing && <Spinner />}
+                      Save & close
+                    </Button>
+                    {isLast ? (
+                      <Button type="submit" disabled={!confirmed || form.formState.isSubmitting || closing}>
+                        {form.formState.isSubmitting && <Spinner />}
+                        <Send data-icon="inline-start" />
+                        Submit for AVIATONLY review
+                      </Button>
+                    ) : (
+                      <Button type="button" onClick={handleNext} disabled={closing}>
+                        Next
+                        <ArrowRight data-icon="inline-end" />
+                      </Button>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
-          </div>
-        </form>
+            </div>
+          </form>
+        </div>
       </FormProvider>
     </>
   );

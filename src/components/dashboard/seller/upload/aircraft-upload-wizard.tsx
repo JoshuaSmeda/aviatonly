@@ -59,12 +59,28 @@ const AircraftUploadWizard = () => {
   const [confirmed, setConfirmed] = useState(false);
   const [photos, setPhotos] = useState<UploadMap>({});
   const [documents, setDocuments] = useState<UploadMap>({});
+  const [listingId, setListingId] = useState<string | null>(null);
 
   const form = useForm<AircraftFormValues>({
     resolver: zodResolver(aircraftSchema),
     defaultValues: aircraftDefaultValues as AircraftFormValues,
     mode: "onTouched",
   });
+
+  const handlePhotoChange = (slotId: string, value: UploadedFile | null) => {
+    setPhotos((prev) => {
+      const previous = prev[slotId];
+      if (previous?.previewUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(previous.previewUrl);
+      }
+      if (!value) {
+        const next = { ...prev };
+        delete next[slotId];
+        return next;
+      }
+      return { ...prev, [slotId]: value };
+    });
+  };
 
   const makeUploadHandler =
     (setter: React.Dispatch<React.SetStateAction<UploadMap>>, withPreview: boolean) =>
@@ -112,6 +128,8 @@ const AircraftUploadWizard = () => {
     const photoMeta = Object.entries(photos).map(([slot, file]) => ({
       slot,
       fileName: file.name,
+      storageKey: file.storageKey,
+      photoId: file.photoId,
     }));
     const documentMeta = Object.entries(documents).map(([slot, file]) => ({
       slot,
@@ -273,8 +291,12 @@ const AircraftUploadWizard = () => {
                 values={photos}
                 onSelect={makeUploadHandler(setPhotos, true)}
                 onRemove={makeRemoveHandler(setPhotos)}
-                alertTitle="Guided photos are optional for now"
-                alertDescription="You can skip this step and add photos later, but listings with the full guided set are verified faster."
+                onPhotoChange={handlePhotoChange}
+                listingId={listingId}
+                getFormValues={() => form.getValues()}
+                onListingIdChange={setListingId}
+                alertTitle="Guided photo angles"
+                alertDescription="Upload each required angle so buyers can assess condition, gauges, and wear points. Photos upload directly to secure storage as you add them."
               />
             )}
             {currentStep === 3 && (

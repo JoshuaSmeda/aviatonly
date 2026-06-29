@@ -9,6 +9,7 @@ import type {
   AircraftPropeller,
   Deal,
   ListingEvent,
+  ListingFieldReview,
   ListingReviewTask,
 } from "@prisma/client";
 import type {
@@ -33,6 +34,7 @@ import type {
   MockAircraftPropeller,
   MockDeal,
   MockListingEvent,
+  MockListingFieldReview,
   MockListingReviewTask,
 } from "@/lib/aviatonly/mock/types";
 
@@ -207,11 +209,28 @@ export function mapReviewTaskRecord(record: ListingReviewTask): MockListingRevie
     status: record.status as ReviewTaskStatus,
     dueDate: toIso(record.dueDate),
     blockingPublication: record.blockingPublication,
+    releasedToSeller: record.releasedToSeller,
+    sourceType: record.sourceType,
+    sourceKey: record.sourceKey,
     createdById: record.createdById,
     resolvedById: record.resolvedById,
     resolvedAt: toIso(record.resolvedAt),
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
+  };
+}
+
+export function mapFieldReviewRecord(record: ListingFieldReview): MockListingFieldReview {
+  return {
+    id: record.id,
+    listingId: record.listingId,
+    fieldKey: record.fieldKey,
+    label: record.label,
+    status: record.status as MockListingFieldReview["status"],
+    rejectionReason: record.rejectionReason,
+    rejectionPreset: record.rejectionPreset,
+    reviewedById: record.reviewedById,
+    reviewedAt: toIso(record.reviewedAt),
   };
 }
 

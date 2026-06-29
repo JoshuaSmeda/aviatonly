@@ -157,11 +157,26 @@ export interface MockListingReviewTask {
   status: ReviewTaskStatus;
   dueDate: MockTimestamp | null;
   blockingPublication: boolean;
+  releasedToSeller: boolean;
+  sourceType: string | null;
+  sourceKey: string | null;
   createdById: string | null;
   resolvedById: string | null;
   resolvedAt: MockTimestamp | null;
   createdAt: MockTimestamp;
   updatedAt: MockTimestamp;
+}
+
+export interface MockListingFieldReview {
+  id: string;
+  listingId: string;
+  fieldKey: string;
+  label: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  rejectionReason: string | null;
+  rejectionPreset: string | null;
+  reviewedById: string | null;
+  reviewedAt: MockTimestamp | null;
 }
 
 export interface MockLead {
@@ -267,6 +282,7 @@ export interface ActivityFeedItem {
   registration: string;
   message: string;
   timeAgo: string;
+  tasks?: Array<{ title: string; description: string | null }>;
 }
 
 export interface ReviewQueueRow {

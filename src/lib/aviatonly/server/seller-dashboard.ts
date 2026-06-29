@@ -166,7 +166,10 @@ export async function queryActionRequiredItems(sellerId: string): Promise<Action
         title,
         description: blockingTasks.map((t) => t.title).join(" · "),
         ctaLabel: listing.status === ListingStatus.DRAFT ? "Resume wizard" : "Fix now",
-        href: listing.status === ListingStatus.DRAFT ? "/dashboard/seller/upload" : href,
+        href:
+          listing.status === ListingStatus.DRAFT
+            ? `/dashboard/seller/upload?listingId=${listing.id}`
+            : href,
         urgent: listing.status === ListingStatus.NEEDS_CHANGES,
       });
     }
@@ -215,7 +218,7 @@ export async function queryActionRequiredItems(sellerId: string): Promise<Action
       title: `${draft.registration} · ${listingTitle(draft)}`,
       description: `Draft listing is ${draft.completenessScore}% complete. Finish the wizard to submit for review.`,
       ctaLabel: "Resume wizard",
-      href: "/dashboard/seller/upload",
+      href: `/dashboard/seller/upload?listingId=${draft.id}`,
     });
   }
 

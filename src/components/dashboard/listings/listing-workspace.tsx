@@ -10,6 +10,7 @@ import ListingWorkspaceTabs from "./listing-workspace-tabs";
 
 interface ListingWorkspaceProps {
   workspace: ListingWorkspaceData;
+  canManageReview?: boolean;
 }
 
 const ListingWorkspaceTabsFallback = () => (
@@ -18,7 +19,7 @@ const ListingWorkspaceTabsFallback = () => (
   </div>
 );
 
-const ListingWorkspace = ({ workspace }: ListingWorkspaceProps) => {
+const ListingWorkspace = ({ workspace, canManageReview = false }: ListingWorkspaceProps) => {
   const { listing } = workspace;
 
   return (
@@ -32,7 +33,7 @@ const ListingWorkspace = ({ workspace }: ListingWorkspaceProps) => {
 
       <CardBox className="p-6">
         <Suspense fallback={<ListingWorkspaceTabsFallback />}>
-          <ListingWorkspaceTabs workspace={workspace} />
+          <ListingWorkspaceTabs workspace={workspace} canManageReview={canManageReview} />
         </Suspense>
       </CardBox>
     </>

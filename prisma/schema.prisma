@@ -227,6 +227,7 @@ model User {
   sellerDeals      Deal[]         @relation("DealSeller")
   leadActivities   LeadActivity[]
   offerActivities  OfferActivity[]
+  listingDrafts    ListingDraft[]
 }
 
 model Session {
@@ -369,6 +370,8 @@ model AircraftListing {
   offers        Offer[]
   deals         Deal[]
 
+  intakeDrafts ListingDraft[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -380,10 +383,17 @@ model AircraftListing {
 // intake before it becomes a real AircraftListing on submission.
 model ListingDraft {
   id        String   @id @default(cuid())
+  sellerId  String
+  seller    User     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  listingId String?
+  listing   AircraftListing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
   data      Json
   step      Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([sellerId, updatedAt])
+  @@index([sellerId, listingId])
 }
 
 // ---------------------------------------------------------------------------

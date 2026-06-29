@@ -32,8 +32,6 @@ import {
   type AircraftFormValues,
 } from "@/components/dashboard/seller/upload/schema";
 import {
-  getListingIntakePrefill,
-  getListingUploadPrefill,
   saveDraftListingFromIntake,
   submitAircraftListing,
 } from "@/app/(dashboard)/dashboard/seller/upload/actions";
@@ -44,9 +42,10 @@ import {
 } from "@/app/(dashboard)/dashboard/seller/listings/review-fix-actions";
 import {
   deleteDraft,
-  loadDraft,
+  loadIntakeWizardState,
   saveDraft,
 } from "@/app/(dashboard)/dashboard/seller/upload/draft-actions";
+import IntakeWizardLoading from "./intake-wizard-loading";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -54,9 +53,6 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Progress } from "@/components/ui/progress";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
-
-const DRAFT_KEY = "aviatonly:intake:draftId";
-const LISTING_KEY = "aviatonly:intake:listingId";
 
 type UploadMap = Record<string, UploadedFile>;
 
@@ -99,6 +95,7 @@ const AircraftIntakeWizard = ({
   const [submitted, setSubmitted] = useState(false);
   const [closing, setClosing] = useState(false);
   const [savingFix, setSavingFix] = useState(false);
+  const [isLoadingInitial, setIsLoadingInitial] = useState(true);
   const fixModeActive = Boolean(fixContext);
 
   const form = useForm<AircraftFormValues>({
@@ -125,16 +122,15 @@ const AircraftIntakeWizard = ({
     try {
       const res = await saveDraft({
         draftId: draftIdRef.current,
-        data: form.getValues() as Record<string, unknown>,
+        data: {
+          ...(form.getValues() as Record<string, unknown>),
+          listingId: listingIdRef.current ?? undefined,
+        },
         step: stepRef.current,
+        listingId: listingIdRef.current,
       });
       draftIdRef.current = res.id;
       setDraftId(res.id);
-      try {
-        localStorage.setItem(DRAFT_KEY, res.id);
-      } catch {
-        // ignore storage failures (private mode, etc.)
-      }
       setLastSavedAt(new Date());
       setAutosaveStatus("saved");
       return true;
@@ -155,91 +151,79 @@ const AircraftIntakeWizard = ({
     saveTimer.current = setTimeout(() => void doSave(), 1000);
   }, [doSave]);
 
-  // Resume an existing draft from a previous session or listing workspace.
+  // Resume draft or listing data from the database (no localStorage).
   useEffect(() => {
-    const storedDraft =
-      !fixModeActive && typeof window !== "undefined" ? localStorage.getItem(DRAFT_KEY) : null;
-    const storedListing =
-      typeof window !== "undefined" ? localStorage.getItem(LISTING_KEY) : null;
-    const listingId = initialListingId ?? storedListing;
-
-    if (listingId) {
-      listingIdRef.current = listingId;
-      setActiveListingId(listingId);
-      try {
-        localStorage.setItem(LISTING_KEY, listingId);
-      } catch {
-        // ignore
-      }
-    }
+    let cancelled = false;
 
     (async () => {
-      if (storedDraft) {
-        const draft = await loadDraft(storedDraft);
-        if (draft) {
+      setIsLoadingInitial(true);
+
+      try {
+        const loaded = await loadIntakeWizardState({
+          listingId: initialListingId,
+          initialStep:
+            fixContext?.step ??
+            (initialStep != null && initialStep >= 0 ? initialStep : undefined),
+          preferListing: fixModeActive,
+        });
+
+        if (cancelled) return;
+
+        const effectiveListingId = loaded.listingId ?? initialListingId ?? null;
+        if (effectiveListingId) {
+          listingIdRef.current = effectiveListingId;
+          setActiveListingId(effectiveListingId);
+        }
+
+        if (loaded.formData) {
           isApplyingDraft.current = true;
           form.reset({
             ...(aircraftDefaultValues as AircraftFormValues),
-            ...reviveDraftValues(draft.data),
+            ...reviveDraftValues(loaded.formData),
           });
-          const resumedStep = Math.min(Math.max(draft.step, 0), INTAKE_STEPS.length - 1);
+
+          const resumedStep = Math.min(
+            Math.max(loaded.step, 0),
+            INTAKE_STEPS.length - 1,
+          );
           stepRef.current = resumedStep;
-          draftIdRef.current = storedDraft;
-          setDraftId(storedDraft);
           setCurrentStep(resumedStep);
           setVisited(new Set(Array.from({ length: resumedStep + 1 }, (_, i) => i)));
-          setLastSavedAt(new Date());
-          setAutosaveStatus("saved");
+        }
+
+        if (loaded.draftId) {
+          draftIdRef.current = loaded.draftId;
+          setDraftId(loaded.draftId);
+        }
+
+        setPhotos(loaded.photos);
+        setDocuments(loaded.documents);
+
+        if (loaded.updatedAt) {
+          setLastSavedAt(new Date(loaded.updatedAt));
+        }
+
+        setAutosaveStatus(
+          fixModeActive ? "idle" : loaded.source === "empty" ? "idle" : "saved",
+        );
+      } catch {
+        if (!cancelled) {
+          toast.error("Could not load your intake draft. Please refresh and try again.");
+          setAutosaveStatus("error");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingInitial(false);
           setTimeout(() => {
             isApplyingDraft.current = false;
           }, 0);
-          return;
         }
-        localStorage.removeItem(DRAFT_KEY);
       }
-
-      if (!listingId) return;
-
-      const prefill = await getListingIntakePrefill(listingId);
-      if (!prefill) return;
-
-      isApplyingDraft.current = true;
-      form.reset({
-        ...(aircraftDefaultValues as AircraftFormValues),
-        ...prefill,
-      });
-
-      const targetStep =
-        fixContext?.step ??
-        (initialStep != null && initialStep >= 0 && initialStep < INTAKE_STEPS.length
-          ? initialStep
-          : 0);
-
-      stepRef.current = targetStep;
-      setCurrentStep(targetStep);
-      setVisited(new Set([targetStep]));
-
-      if (fixModeActive || listingId) {
-        const uploads = await getListingUploadPrefill(listingId);
-        setPhotos(
-          Object.fromEntries(
-            Object.entries(uploads.photos).map(([slot, file]) => [
-              slot,
-              {
-                ...file,
-                status: "on-file" as const,
-              },
-            ]),
-          ),
-        );
-        setDocuments(uploads.documents);
-      }
-
-      setAutosaveStatus(fixModeActive ? "idle" : "saved");
-      setTimeout(() => {
-        isApplyingDraft.current = false;
-      }, 0);
     })();
+
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialListingId, initialStep, fixContext, fixModeActive]);
 
@@ -411,11 +395,7 @@ const AircraftIntakeWizard = ({
       }
 
       listingIdRef.current = listingResult.id;
-      try {
-        localStorage.setItem(LISTING_KEY, listingResult.id);
-      } catch {
-        // ignore
-      }
+      setActiveListingId(listingResult.id);
 
       const res = await saveDraft({
         draftId: draftIdRef.current,
@@ -424,14 +404,10 @@ const AircraftIntakeWizard = ({
           listingId: listingResult.id,
         },
         step: stepRef.current,
+        listingId: listingResult.id,
       });
       draftIdRef.current = res.id;
       setDraftId(res.id);
-      try {
-        localStorage.setItem(DRAFT_KEY, res.id);
-      } catch {
-        // ignore storage failures
-      }
       setLastSavedAt(new Date());
       setAutosaveStatus("saved");
       toast.success("Draft saved to your listing workspace.");
@@ -497,11 +473,6 @@ const AircraftIntakeWizard = ({
     }
 
     if (draftIdRef.current) await deleteDraft(draftIdRef.current);
-    try {
-      localStorage.removeItem(DRAFT_KEY);
-    } catch {
-      // ignore
-    }
     toast.success(`${result.registration} submitted for valuation & review.`);
     setSubmitted(true);
   };
@@ -511,6 +482,49 @@ const AircraftIntakeWizard = ({
     if (firstStep >= 0) goTo(firstStep);
     toast.error("Please fix the highlighted fields before submitting.");
   };
+
+  const handlePhotoChange = useCallback((slotId: string, value: UploadedFile | null) => {
+    setPhotos((prev) => {
+      const previous = prev[slotId];
+      if (previous?.previewUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(previous.previewUrl);
+      }
+      if (!value) {
+        const next = { ...prev };
+        delete next[slotId];
+        return next;
+      }
+      return { ...prev, [slotId]: value };
+    });
+  }, []);
+
+  const handleListingIdChange = useCallback((nextListingId: string) => {
+    listingIdRef.current = nextListingId;
+    setActiveListingId(nextListingId);
+    void saveDraft({
+      draftId: draftIdRef.current,
+      data: {
+        ...(form.getValues() as Record<string, unknown>),
+        listingId: nextListingId,
+      },
+      step: stepRef.current,
+      listingId: nextListingId,
+    }).then((res) => {
+      draftIdRef.current = res.id;
+      setDraftId(res.id);
+    });
+  }, [form]);
+
+  const getFormValues = useCallback(() => form.getValues(), [form]);
+
+  if (isLoadingInitial) {
+    return (
+      <>
+        <Toaster richColors position="top-right" />
+        <IntakeWizardLoading />
+      </>
+    );
+  }
 
   if (submitted) {
     const reg = form.getValues("registration");
@@ -551,31 +565,6 @@ const AircraftIntakeWizard = ({
     );
   }
 
-  const handlePhotoChange = (slotId: string, value: UploadedFile | null) => {
-    setPhotos((prev) => {
-      const previous = prev[slotId];
-      if (previous?.previewUrl?.startsWith("blob:")) {
-        URL.revokeObjectURL(previous.previewUrl);
-      }
-      if (!value) {
-        const next = { ...prev };
-        delete next[slotId];
-        return next;
-      }
-      return { ...prev, [slotId]: value };
-    });
-  };
-
-  const handleListingIdChange = (listingId: string) => {
-    listingIdRef.current = listingId;
-    setActiveListingId(listingId);
-    try {
-      localStorage.setItem(LISTING_KEY, listingId);
-    } catch {
-      // ignore
-    }
-  };
-
   const handlePhotoSelect = makeUploadHandler(setPhotos, true);
   const handlePhotoRemove = makeRemoveHandler(setPhotos);
   const handleDocumentSelect = makeUploadHandler(setDocuments, false);
@@ -610,7 +599,7 @@ const AircraftIntakeWizard = ({
         onPhotoRemove={handlePhotoRemove}
         onPhotoChange={handlePhotoChange}
         listingId={activeListingId}
-        getFormValues={() => form.getValues()}
+        getFormValues={getFormValues}
         onListingIdChange={handleListingIdChange}
         onDocumentSelect={handleDocumentSelect}
         onDocumentRemove={handleDocumentRemove}

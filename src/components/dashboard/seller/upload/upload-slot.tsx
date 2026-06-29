@@ -92,7 +92,7 @@ const UploadSlot = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
   const filled = Boolean(value);
-  const showProgress = isUploading || value?.status === "uploading";
+  const showProgress = Boolean(isUploading && progress != null);
 
   const handleFiles = (files: FileList | null) => {
     const file = files?.[0];

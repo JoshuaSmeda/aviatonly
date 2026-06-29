@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast, Toaster } from "sonner";
@@ -30,6 +30,7 @@ import {
 import { PHOTO_SLOTS, DOCUMENT_SLOTS } from "./constants";
 import type { UploadedFile } from "./upload-slot";
 import { submitAircraftListing } from "@/app/(dashboard)/dashboard/seller/upload/actions";
+import { loadGuidedPhotosForListing } from "@/app/(dashboard)/dashboard/seller/upload/photo-actions";
 import StepBasicDetails from "./steps/step-basic-details";
 import StepTechnical from "./steps/step-technical";
 import StepUploads from "./steps/step-uploads";
@@ -67,7 +68,7 @@ const AircraftUploadWizard = () => {
     mode: "onTouched",
   });
 
-  const handlePhotoChange = (slotId: string, value: UploadedFile | null) => {
+  const handlePhotoChange = useCallback((slotId: string, value: UploadedFile | null) => {
     setPhotos((prev) => {
       const previous = prev[slotId];
       if (previous?.previewUrl?.startsWith("blob:")) {
@@ -80,7 +81,24 @@ const AircraftUploadWizard = () => {
       }
       return { ...prev, [slotId]: value };
     });
-  };
+  }, []);
+
+  const getFormValues = useCallback(() => form.getValues(), [form]);
+
+  useEffect(() => {
+    if (!listingId) return;
+    void loadGuidedPhotosForListing(listingId).then((resolved) => {
+      setPhotos((prev) => {
+        const next: UploadMap = { ...resolved };
+        for (const [slotId, file] of Object.entries(prev)) {
+          if (file.status === "uploading") {
+            next[slotId] = file;
+          }
+        }
+        return next;
+      });
+    });
+  }, [listingId]);
 
   const makeUploadHandler =
     (setter: React.Dispatch<React.SetStateAction<UploadMap>>, withPreview: boolean) =>
@@ -293,7 +311,7 @@ const AircraftUploadWizard = () => {
                 onRemove={makeRemoveHandler(setPhotos)}
                 onPhotoChange={handlePhotoChange}
                 listingId={listingId}
-                getFormValues={() => form.getValues()}
+                getFormValues={getFormValues}
                 onListingIdChange={setListingId}
                 alertTitle="Guided photo angles"
                 alertDescription="Upload each required angle so buyers can assess condition, gauges, and wear points. Photos upload directly to secure storage as you add them."

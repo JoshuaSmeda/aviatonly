@@ -1,6 +1,8 @@
 import { PhotoStatus } from "@/lib/aviatonly/domain";
 import { prisma } from "@/lib/prisma";
-import { isGuidedPhotoSlotKey } from "@/lib/upload/photo-slot-keys";
+import { getGuidedPhotoSlotLabel, isGuidedPhotoSlotKey } from "@/lib/upload/photo-slot-keys";
+import { deleteGuidedPhotoObject } from "@/lib/upload/guided-photo-access";
+import { isRemoteStorageKey } from "@/lib/upload/r2-storage";
 
 export interface PersistAircraftPhotoInput {
   listingId: string;
@@ -38,8 +40,29 @@ export async function persistAircraftPhotoUpload(input: PersistAircraftPhotoInpu
       listingId: input.listingId,
       slotKey: input.slotKey,
     },
-    select: { id: true },
+    select: { id: true, storageKey: true, fileName: true },
   });
+
+  // Idempotent retry when upload completion fires more than once for the same object.
+  if (existing?.storageKey === input.storageKey) {
+    return {
+      id: existing.id,
+      slotKey: input.slotKey,
+      fileName: existing.fileName ?? input.fileName,
+    };
+  }
+
+  if (
+    existing?.storageKey &&
+    isRemoteStorageKey(existing.storageKey) &&
+    existing.storageKey !== input.storageKey
+  ) {
+    try {
+      await deleteGuidedPhotoObject(existing.storageKey);
+    } catch (error) {
+      console.warn("Could not delete replaced photo object from R2", error);
+    }
+  }
 
   const data = {
     fileName: input.fileName,
@@ -70,12 +93,15 @@ export async function persistAircraftPhotoUpload(input: PersistAircraftPhotoInpu
         select: { id: true, slotKey: true, fileName: true },
       });
 
+  const slotLabel = getGuidedPhotoSlotLabel(input.slotKey);
+  const isReplacement = Boolean(existing);
+
   await prisma.listingEvent.create({
     data: {
       listingId: input.listingId,
       actorId: input.uploadedById,
-      type: "PHOTO_UPLOADED",
-      message: `Guided photo uploaded: ${input.slotKey.replace(/-/g, " ")}.`,
+      type: isReplacement ? "PHOTO_REPLACED" : "PHOTO_UPLOADED",
+      message: slotLabel,
       metadata: {
         photoId: photo.id,
         slotKey: input.slotKey,

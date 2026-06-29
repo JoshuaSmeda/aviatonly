@@ -1,9 +1,9 @@
-import { createUploadConfig } from "pushduck/server";
 import { auth } from "@/lib/auth";
 import { hasAnyRole, parseRoles, SELLER_ROLES } from "@/lib/auth/roles";
 import { persistAircraftPhotoUpload } from "@/lib/upload/persist-aircraft-photo";
 import { isGuidedPhotoSlotKey } from "@/lib/upload/photo-slot-keys";
-import { getR2Config, isR2UploadConfigured } from "@/lib/upload/r2-env";
+import { getUploadKit, setR2ObjectMetadata } from "@/lib/upload/r2-storage";
+import { isR2UploadConfigured } from "@/lib/upload/r2-env";
 
 function randomSuffix() {
   return Math.random().toString(36).slice(2, 10);
@@ -15,23 +15,12 @@ function sanitizeExtension(fileName: string) {
 }
 
 function buildUploadRouter() {
-  const r2 = getR2Config();
+  const kit = getUploadKit();
+  if (!kit) {
+    throw new Error("R2 upload is not configured.");
+  }
 
-  const { s3 } = createUploadConfig()
-    .provider("cloudflareR2", {
-      accountId: r2.accountId,
-      accessKeyId: r2.accessKeyId,
-      secretAccessKey: r2.secretAccessKey,
-      bucket: r2.bucket,
-      region: "auto" as const,
-    })
-    .defaults({
-      maxFileSize: "12MB",
-    })
-    .paths({
-      prefix: "aviatonly",
-    })
-    .build();
+  const { s3 } = kit;
 
   const router = s3.createRouter({
     guidedPhoto: s3
@@ -74,6 +63,13 @@ function buildUploadRouter() {
       })
       .onUploadComplete(async ({ file, key, metadata }) => {
         if (!key) return;
+
+        await setR2ObjectMetadata(key, {
+          uploadedById: metadata.userId,
+          listingId: metadata.listingId,
+          slotKey: metadata.slotKey,
+          fileName: file.name,
+        });
 
         await persistAircraftPhotoUpload({
           listingId: metadata.listingId,

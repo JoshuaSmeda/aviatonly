@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import type { AircraftFormValues } from "@/components/dashboard/seller/upload/schema";
 import {
   ensureListingForPhotoUpload,
+  getGuidedPhotoSlotAfterUpload,
   isGuidedPhotoUploadAvailable,
   refreshListingCompleteness,
   registerLocalGuidedPhoto,
@@ -42,8 +43,19 @@ const GuidedPhotoUploadGrid = ({
   const [r2Enabled, setR2Enabled] = useState(false);
   const [ensuringListing, setEnsuringListing] = useState(false);
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
+  const [slotProgress, setSlotProgress] = useState<Record<string, number>>({});
   const activeSlotRef = useRef<string | null>(null);
   const listingIdRef = useRef<string | null>(listingId);
+  const localPreviewRef = useRef<Map<string, string>>(new Map());
+  const onChangeRef = useRef(onChange);
+  const valuesRef = useRef(values);
+  const getFormValuesRef = useRef(getFormValues);
+  const onListingIdChangeRef = useRef(onListingIdChange);
+
+  onChangeRef.current = onChange;
+  valuesRef.current = values;
+  getFormValuesRef.current = getFormValues;
+  onListingIdChangeRef.current = onListingIdChange;
 
   useEffect(() => {
     listingIdRef.current = listingId;
@@ -53,36 +65,77 @@ const GuidedPhotoUploadGrid = ({
     void isGuidedPhotoUploadAvailable().then(setR2Enabled);
   }, []);
 
-  const { uploadFiles, files, isUploading } = aircraftUpload.guidedPhoto({
+  useEffect(() => {
+    return () => {
+      for (const previewUrl of localPreviewRef.current.values()) {
+        if (previewUrl.startsWith("blob:")) {
+          URL.revokeObjectURL(previewUrl);
+        }
+      }
+      localPreviewRef.current.clear();
+    };
+  }, []);
+
+  const { uploadFiles, isUploading } = aircraftUpload.guidedPhoto({
+    onProgress: (progress) => {
+      const slotKey = activeSlotRef.current;
+      if (!slotKey) return;
+      setSlotProgress((prev) => ({ ...prev, [slotKey]: progress }));
+    },
     onSuccess: async (results) => {
       const slotKey = activeSlotRef.current;
       const result = results[0];
       if (!slotKey || !result || result.status !== "success") return;
 
-      onChange(slotKey, {
+      const localPreview = localPreviewRef.current.get(slotKey);
+      const listing = listingIdRef.current;
+
+      let nextValue: UploadedFile = {
         name: result.name,
         sizeLabel: formatBytes(result.size),
-        previewUrl: result.url,
+        previewUrl: localPreview,
         status: "uploaded",
-        progress: 100,
         storageKey: result.key,
-      });
+      };
 
-      if (listingIdRef.current) {
-        await refreshListingCompleteness(listingIdRef.current);
+      if (listing) {
+        const details = await getGuidedPhotoSlotAfterUpload(listing, slotKey);
+        if (details.ok) {
+          nextValue = {
+            ...nextValue,
+            photoId: details.photoId,
+            previewUrl: localPreview ?? details.previewUrl ?? undefined,
+            storageKey: details.storageKey ?? result.key,
+            name: details.fileName,
+            sizeLabel: details.sizeLabel,
+          };
+        }
+      }
+
+      onChangeRef.current(slotKey, nextValue);
+
+      if (listing) {
+        await refreshListingCompleteness(listing);
       }
 
       activeSlotRef.current = null;
       setActiveSlotId(null);
+      setSlotProgress((prev) => {
+        const next = { ...prev };
+        delete next[slotKey];
+        return next;
+      });
       toast.success("Photo uploaded");
     },
     onError: (error) => {
       const slotKey = activeSlotRef.current;
       if (slotKey) {
-        onChange(slotKey, {
-          ...values[slotKey],
-          name: values[slotKey]?.name ?? "Upload failed",
-          sizeLabel: values[slotKey]?.sizeLabel ?? "",
+        const localPreview = localPreviewRef.current.get(slotKey);
+        const current = valuesRef.current[slotKey];
+        onChangeRef.current(slotKey, {
+          name: current?.name ?? "Upload failed",
+          sizeLabel: current?.sizeLabel ?? "",
+          previewUrl: localPreview,
           status: "error",
           error: error.message,
         });
@@ -93,44 +146,49 @@ const GuidedPhotoUploadGrid = ({
     },
   });
 
-  const activeUpload = useMemo(() => {
-    if (!activeSlotId) return null;
-    return files.find((file) => file.status === "uploading" || file.status === "pending") ?? null;
-  }, [activeSlotId, files]);
-
   const resolveListingId = useCallback(async () => {
     if (listingIdRef.current) return listingIdRef.current;
 
     setEnsuringListing(true);
     try {
-      const result = await ensureListingForPhotoUpload(getFormValues(), listingIdRef.current);
+      const result = await ensureListingForPhotoUpload(
+        getFormValuesRef.current(),
+        listingIdRef.current,
+      );
       if (!result.ok) {
         toast.error(result.error);
         return null;
       }
 
       listingIdRef.current = result.listingId;
-      onListingIdChange?.(result.listingId);
+      onListingIdChangeRef.current?.(result.listingId);
       return result.listingId;
     } finally {
       setEnsuringListing(false);
     }
-  }, [getFormValues, onListingIdChange]);
+  }, []);
 
   const handleSelect = useCallback(
     async (slotId: string, file: File) => {
+      const previousPreview = localPreviewRef.current.get(slotId);
+      if (previousPreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(previousPreview);
+      }
+
       const previewUrl = URL.createObjectURL(file);
-      onChange(slotId, {
+      localPreviewRef.current.set(slotId, previewUrl);
+      setSlotProgress((prev) => ({ ...prev, [slotId]: 0 }));
+
+      onChangeRef.current(slotId, {
         name: file.name,
         sizeLabel: formatBytes(file.size),
         previewUrl,
         status: "uploading",
-        progress: 0,
       });
 
       const resolvedListingId = await resolveListingId();
       if (!resolvedListingId) {
-        onChange(slotId, {
+        onChangeRef.current(slotId, {
           name: file.name,
           sizeLabel: formatBytes(file.size),
           previewUrl,
@@ -160,7 +218,7 @@ const GuidedPhotoUploadGrid = ({
       });
 
       if (!registered.ok) {
-        onChange(slotId, {
+        onChangeRef.current(slotId, {
           name: file.name,
           sizeLabel: formatBytes(file.size),
           previewUrl,
@@ -171,51 +229,61 @@ const GuidedPhotoUploadGrid = ({
         return;
       }
 
-      onChange(slotId, {
+      onChangeRef.current(slotId, {
         name: file.name,
         sizeLabel: formatBytes(file.size),
         previewUrl,
         status: "uploaded",
-        progress: 100,
         photoId: registered.photoId,
         storageKey: `local/${resolvedListingId}/${slotId}/${file.name}`,
       });
+      setSlotProgress((prev) => {
+        const next = { ...prev };
+        delete next[slotId];
+        return next;
+      });
+      activeSlotRef.current = null;
+      setActiveSlotId(null);
       await refreshListingCompleteness(resolvedListingId);
       toast.success("Photo saved locally — connect R2 to upload to cloud storage.");
     },
-    [onChange, r2Enabled, resolveListingId, uploadFiles],
+    [r2Enabled, resolveListingId, uploadFiles],
   );
 
-  const handleRemove = useCallback(
-    async (slotId: string) => {
-      const previous = values[slotId];
-      if (previous?.previewUrl?.startsWith("blob:")) {
-        URL.revokeObjectURL(previous.previewUrl);
-      }
+  const handleRemove = useCallback(async (slotId: string) => {
+    const localPreview = localPreviewRef.current.get(slotId);
+    if (localPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(localPreview);
+    }
+    localPreviewRef.current.delete(slotId);
 
-      onChange(slotId, null);
+    onChangeRef.current(slotId, null);
+    setSlotProgress((prev) => {
+      const next = { ...prev };
+      delete next[slotId];
+      return next;
+    });
 
-      if (listingIdRef.current) {
-        const result = await removeGuidedPhotoForSlot(listingIdRef.current, slotId);
-        if (!result.ok) {
-          toast.error(result.error);
-          return;
-        }
-        await refreshListingCompleteness(listingIdRef.current);
+    if (listingIdRef.current) {
+      const result = await removeGuidedPhotoForSlot(listingIdRef.current, slotId);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
       }
-    },
-    [onChange, values],
-  );
+      await refreshListingCompleteness(listingIdRef.current);
+    }
+  }, []);
+
+  const uploadingSlotId = useMemo(() => {
+    if (!isUploading && !ensuringListing) return null;
+    return activeSlotId;
+  }, [activeSlotId, ensuringListing, isUploading]);
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       {slots.map((slot) => {
         const value = values[slot.id];
-        const isActiveSlot = activeSlotId === slot.id;
-        const progress =
-          isActiveSlot && activeUpload
-            ? activeUpload.progress
-            : value?.progress;
+        const isActiveSlot = uploadingSlotId === slot.id;
 
         return (
           <UploadSlot
@@ -223,8 +291,8 @@ const GuidedPhotoUploadGrid = ({
             slot={slot}
             variant="photo"
             value={value}
-            progress={progress}
-            isUploading={(isUploading || ensuringListing) && isActiveSlot}
+            progress={isActiveSlot ? slotProgress[slot.id] ?? 0 : undefined}
+            isUploading={isActiveSlot}
             onSelect={(file) => void handleSelect(slot.id, file)}
             onRemove={() => void handleRemove(slot.id)}
             disabled={isSlotDisabled?.(slot.id)}

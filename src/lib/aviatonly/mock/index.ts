@@ -47,12 +47,13 @@ export {
   getMockEventsForSeller,
   getListingEventLabel,
 } from "./activity";
-export { MOCK_LEADS, getMockLeadsForListing, countLeadsForListing, getMockLeadsForSeller } from "./leads";
+export { MOCK_LEADS, getMockLeadsForListing, countLeadsForListing, getMockLeadsForSeller, getMockLeadById } from "./leads";
 export {
   MOCK_OFFERS,
   getMockOffersForListing,
   countActiveOffersForListing,
   getMockOffersForSeller,
+  getMockOfferById,
 } from "./offers";
 export {
   MOCK_DEALS,
@@ -69,5 +70,13 @@ export {
   buildListingWorkspaceOverview,
   buildRecentActivityFeed,
   buildReviewQueueRows,
+  buildLeadTableRows,
+  buildOfferTableRows,
   countOpenSellerTasks,
 } from "./selectors";
+export type { BuildLeadTableRowsOptions, BuildOfferTableRowsOptions } from "./selectors";
+
+export {
+  getIntakePrefillFromListing,
+  DEMO_DRAFT_LISTING_ID,
+} from "./intake-prefill";

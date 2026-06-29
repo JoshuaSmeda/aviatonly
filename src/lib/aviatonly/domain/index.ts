@@ -61,6 +61,17 @@ export {
 } from "./offer-status";
 
 export {
+  LeadStatus,
+  LeadType,
+  LEAD_STATUS_META,
+  LEAD_TYPE_META,
+  OPEN_LEAD_STATUSES,
+  getLeadStatusMeta,
+  getLeadTypeMeta,
+  isOpenLeadStatus,
+} from "./lead-status";
+
+export {
   DealStatus,
   DEAL_STATUS_META,
   DEAL_SELLER_MILESTONES,

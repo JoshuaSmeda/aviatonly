@@ -205,6 +205,16 @@ export const MOCK_AIRFRAMES: MockAircraftAirframe[] = [
     createdAt: T,
     updatedAt: T,
   },
+  {
+    id: "af-zs-ghi",
+    listingId: "zs-ghi",
+    serialNumber: "28-79901",
+    totalTimeAirframe: 4100,
+    damageHistory: null,
+    notes: "Draft intake — airframe details partially captured.",
+    createdAt: T,
+    updatedAt: T,
+  },
 ];
 
 export const MOCK_ENGINES: MockAircraftEngine[] = [

@@ -11,6 +11,8 @@ export const ListingEventType = {
   LISTING_PUBLISHED: "LISTING_PUBLISHED",
   OFFER_RECEIVED: "OFFER_RECEIVED",
   OFFER_ACCEPTED: "OFFER_ACCEPTED",
+  LEAD_RECEIVED: "LEAD_RECEIVED",
+  VIEWING_REQUESTED: "VIEWING_REQUESTED",
   DEPOSIT_PENDING: "DEPOSIT_PENDING",
 } as const;
 
@@ -26,6 +28,8 @@ export const LISTING_EVENT_LABELS: Record<ListingEventType, string> = {
   [ListingEventType.LISTING_PUBLISHED]: "Listing published",
   [ListingEventType.OFFER_RECEIVED]: "Offer received",
   [ListingEventType.OFFER_ACCEPTED]: "Offer accepted",
+  [ListingEventType.LEAD_RECEIVED]: "Lead received",
+  [ListingEventType.VIEWING_REQUESTED]: "Viewing requested",
   [ListingEventType.DEPOSIT_PENDING]: "Deposit pending",
 };
 
@@ -92,6 +96,42 @@ export const MOCK_LISTING_EVENTS: MockListingEvent[] = [
     message: "Offer of R6,100,000 submitted — cash buyer.",
     metadata: { offerId: "offer-2", amount: 6100000 },
     createdAt: "2026-06-27T10:00:00.000Z",
+  },
+  {
+    id: "ev-8",
+    listingId: "zs-def",
+    actorId: "user-buyer-sarah",
+    type: ListingEventType.LEAD_RECEIVED,
+    message: "Document access requested — engine logbook review before offer.",
+    metadata: { leadId: "lead-2", leadType: "DOCUMENT_ACCESS" },
+    createdAt: "2026-06-25T08:30:00.000Z",
+  },
+  {
+    id: "ev-9",
+    listingId: "zu-xyz",
+    actorId: "user-buyer-sarah",
+    type: ListingEventType.VIEWING_REQUESTED,
+    message: "Viewing requested at FATA for Saturday morning.",
+    metadata: { leadId: "lead-7" },
+    createdAt: "2026-06-24T07:30:00.000Z",
+  },
+  {
+    id: "ev-10",
+    listingId: "zu-xyz",
+    actorId: "user-buyer-james",
+    type: ListingEventType.LEAD_RECEIVED,
+    message: "New enquiry about hangarage at Tedderfield.",
+    metadata: { leadId: "lead-5", leadType: "GENERAL_ENQUIRY" },
+    createdAt: "2026-06-27T16:00:00.000Z",
+  },
+  {
+    id: "ev-11",
+    listingId: "zs-abc",
+    actorId: "user-buyer-sarah",
+    type: ListingEventType.VIEWING_REQUESTED,
+    message: "Viewing requested at Lanseria for next week.",
+    metadata: { leadId: "lead-9" },
+    createdAt: "2026-06-26T09:00:00.000Z",
   },
 ];
 

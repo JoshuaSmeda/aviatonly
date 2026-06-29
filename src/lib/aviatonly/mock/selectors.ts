@@ -2,6 +2,8 @@ import {
   BuyerActivityType,
   DocumentStatus,
   isLiveStatus,
+  LeadStatus,
+  LeadType,
   ListingStatus,
   OfferStatus,
   ReviewTaskStatus,
@@ -11,14 +13,14 @@ import { countMissingDocumentsForListing } from "./documents";
 import { getMockDealsForSeller } from "./deals";
 import { getMockDealForListing } from "./deals";
 import { formatTimeAgo, formatZar } from "./format";
-import { getMockLeadsForSeller, countLeadsForListing } from "./leads";
+import { getMockLeadsForSeller, countLeadsForListing, MOCK_LEADS, getMockLeadsForListing } from "./leads";
 import {
   getMockListingsForSeller,
   listingLocation,
   listingTitle,
   MOCK_LISTINGS,
 } from "./listings";
-import { countActiveOffersForListing, getMockOffersForSeller } from "./offers";
+import { countActiveOffersForListing, getMockOffersForSeller, MOCK_OFFERS } from "./offers";
 import { countPhotoIssuesForListing } from "./photos";
 import { getMockEventsForSeller } from "./activity";
 import { getOpenReviewTasksForListing, MOCK_REVIEW_TASKS } from "./review-tasks";
@@ -27,7 +29,9 @@ import type {
   ActivityFeedItem,
   BuyerActivityFeedItem,
   DealProgressSummary,
+  LeadTableRow,
   ListingWorkspaceOverview,
+  OfferTableRow,
   ReviewQueueRow,
   SellerAircraftSummary,
   WorkspacePrimaryCta,
@@ -151,8 +155,24 @@ export function buildActionRequiredItems(sellerId = DEMO_SELLER_ID): ActionRequi
         title,
         description: `${pendingOffers} buyer offer${pendingOffers === 1 ? "" : "s"} awaiting your response.`,
         ctaLabel: "View offers",
-        href,
+        href: `${href}?tab=leads-offers`,
         urgent: true,
+      });
+    }
+
+    const newLeads = getMockLeadsForListing(listing.id).filter((l) => l.status === LeadStatus.NEW);
+    if (
+      newLeads.length > 0 &&
+      (listing.status === ListingStatus.LIVE_FIXED_PRICE ||
+        listing.status === ListingStatus.LIVE_AUCTION)
+    ) {
+      items.push({
+        id: `act-${listing.id}-leads`,
+        registration: listing.registration,
+        title,
+        description: `${newLeads.length} new buyer enquir${newLeads.length === 1 ? "y" : "ies"} to review.`,
+        ctaLabel: "View leads",
+        href: `${href}?tab=leads-offers`,
       });
     }
   }
@@ -189,15 +209,17 @@ export function buildBuyerActivityFeed(sellerId = DEMO_SELLER_ID): BuyerActivity
       createdAt: o.createdAt,
     }));
 
-  const leadItems = getMockLeadsForSeller(sellerId).map((l) => {
-    const isDocRequest =
-      l.message.toLowerCase().includes("logbook") ||
-      l.message.toLowerCase().includes("document") ||
-      l.message.toLowerCase().includes("access");
+  const leadItems = getMockLeadsForSeller(sellerId)
+    .filter((l) => l.status !== LeadStatus.CLOSED && l.status !== LeadStatus.UNQUALIFIED)
+    .map((l) => {
+    const activityType =
+      l.type === LeadType.DOCUMENT_ACCESS
+        ? BuyerActivityType.DOC_REQUEST
+        : BuyerActivityType.ENQUIRY;
     return {
       item: {
         id: `ba-lead-${l.id}`,
-        type: isDocRequest ? BuyerActivityType.DOC_REQUEST : BuyerActivityType.ENQUIRY,
+        type: activityType,
         registration: regByListingId[l.listingId] ?? "",
         message: l.message,
         timeAgo: formatTimeAgo(l.createdAt),
@@ -367,4 +389,101 @@ export function countOpenSellerTasks(sellerId = DEMO_SELLER_ID): number {
       t.status !== ReviewTaskStatus.DONE &&
       t.status !== ReviewTaskStatus.CANCELLED,
   ).length;
+}
+
+function mapLeadToTableRow(lead: (typeof MOCK_LEADS)[number]): LeadTableRow {
+  const listing = MOCK_LISTINGS.find((l) => l.id === lead.listingId);
+  const buyer = getMockUserById(lead.buyerId);
+  const seller = getMockUserById(lead.sellerId);
+
+  return {
+    id: lead.id,
+    listingId: lead.listingId,
+    registration: listing?.registration ?? "",
+    aircraftTitle: listing ? listingTitle(listing) : "",
+    sellerName: seller?.name ?? "Unknown seller",
+    buyerName: buyer?.name ?? "Buyer",
+    buyerEmail: buyer?.email ?? "",
+    buyerVerification: buyer?.verificationStatus ?? lead.verificationStatus,
+    type: lead.type,
+    status: lead.status,
+    message: lead.message,
+    createdAt: lead.createdAt,
+    listingHref: `/dashboard/listings/${lead.listingId}?tab=leads-offers`,
+  };
+}
+
+function mapOfferToTableRow(offer: (typeof MOCK_OFFERS)[number]): OfferTableRow {
+  const listing = MOCK_LISTINGS.find((l) => l.id === offer.listingId);
+  const buyer = getMockUserById(offer.buyerId);
+  const seller = getMockUserById(offer.sellerId);
+
+  return {
+    id: offer.id,
+    listingId: offer.listingId,
+    registration: listing?.registration ?? "",
+    aircraftTitle: listing ? listingTitle(listing) : "",
+    sellerName: seller?.name ?? "Unknown seller",
+    buyerName: buyer?.name ?? "Buyer",
+    buyerEmail: buyer?.email ?? "",
+    amount: offer.amount,
+    status: offer.status,
+    message: offer.message,
+    expiresAt: offer.expiresAt,
+    createdAt: offer.createdAt,
+    listingHref: `/dashboard/listings/${offer.listingId}?tab=leads-offers`,
+  };
+}
+
+export interface BuildLeadTableRowsOptions {
+  sellerId?: string;
+  listingId?: string;
+  includeClosed?: boolean;
+}
+
+export function buildLeadTableRows(options: BuildLeadTableRowsOptions = {}): LeadTableRow[] {
+  const { sellerId, listingId, includeClosed = true } = options;
+  let leads = sellerId ? getMockLeadsForSeller(sellerId) : [...MOCK_LEADS];
+
+  if (listingId) {
+    leads = leads.filter((l) => l.listingId === listingId);
+  }
+
+  if (!includeClosed) {
+    leads = leads.filter(
+      (l) => l.status !== LeadStatus.CLOSED && l.status !== LeadStatus.UNQUALIFIED,
+    );
+  }
+
+  return leads
+    .map(mapLeadToTableRow)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export interface BuildOfferTableRowsOptions {
+  sellerId?: string;
+  listingId?: string;
+  activeOnly?: boolean;
+}
+
+export function buildOfferTableRows(options: BuildOfferTableRowsOptions = {}): OfferTableRow[] {
+  const { sellerId, listingId, activeOnly = false } = options;
+  let offers = sellerId ? getMockOffersForSeller(sellerId) : [...MOCK_OFFERS];
+
+  if (listingId) {
+    offers = offers.filter((o) => o.listingId === listingId);
+  }
+
+  if (activeOnly) {
+    offers = offers.filter(
+      (o) =>
+        o.status === OfferStatus.RECEIVED ||
+        o.status === OfferStatus.UNDER_REVIEW ||
+        o.status === OfferStatus.SELLER_COUNTERED,
+    );
+  }
+
+  return offers
+    .map(mapOfferToTableRow)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }

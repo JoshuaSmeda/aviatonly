@@ -23,7 +23,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   getDealStatusMeta,
   getDocumentStatusMeta,
-  getOfferStatusMeta,
   getPhotoStatusMeta,
   getReviewTaskStatusMeta,
 } from "@/lib/aviatonly/domain";
@@ -38,17 +37,15 @@ import {
   getMockDocumentsForListing,
   getMockEngines,
   getMockEventsForListing,
-  getMockLeadsForListing,
   getMockMaintenance,
-  getMockOffersForListing,
   getMockPhotosForListing,
   getMockPropellers,
   getOpenReviewTasksForListing,
   listingLocation,
 } from "@/lib/aviatonly/mock";
 import type { MockAircraftListing } from "@/lib/aviatonly/mock/types";
-import { getMockUserById } from "@/lib/aviatonly/mock/users";
 import ListingWorkspaceActivityTimeline from "./listing-workspace-activity-timeline";
+import ListingLeadsOffersPanel from "./listing-leads-offers-panel";
 import ListingWorkspaceOverviewTab from "./listing-workspace-overview";
 
 const WORKSPACE_TABS = [
@@ -99,8 +96,6 @@ const ListingWorkspaceTabs = ({ listing }: ListingWorkspaceTabsProps) => {
   const photos = getMockPhotosForListing(listing.id);
   const documents = getMockDocumentsForListing(listing.id);
   const openTasks = getOpenReviewTasksForListing(listing.id);
-  const leads = getMockLeadsForListing(listing.id);
-  const offers = getMockOffersForListing(listing.id);
   const deal = getMockDealForListing(listing.id);
   const events = getMockEventsForListing(listing.id);
 
@@ -111,7 +106,7 @@ const ListingWorkspaceTabs = ({ listing }: ListingWorkspaceTabsProps) => {
   };
 
   return (
-    <Tabs value={activeTab} onValueChange={setTab}>
+    <Tabs value={activeTab} onValueChange={setTab} className="w-full items-start">
       <div className="overflow-x-auto">
         <TabsList variant="line" className="w-max">
           {WORKSPACE_TABS.map((tab) => (
@@ -123,11 +118,11 @@ const ListingWorkspaceTabs = ({ listing }: ListingWorkspaceTabsProps) => {
         </TabsList>
       </div>
 
-      <TabsContent value="overview" className="pt-6">
+      <TabsContent value="overview" className="w-full flex-none pt-6">
         <ListingWorkspaceOverviewTab listing={listing} overview={overview} />
       </TabsContent>
 
-      <TabsContent value="aircraft-data" className="pt-6">
+      <TabsContent value="aircraft-data" className="w-full flex-none pt-6">
         <dl className="grid gap-4 text-sm md:grid-cols-2">
           <div>
             <dt className="text-muted-foreground">Registration</dt>
@@ -214,7 +209,7 @@ const ListingWorkspaceTabs = ({ listing }: ListingWorkspaceTabsProps) => {
         </dl>
       </TabsContent>
 
-      <TabsContent value="media" className="pt-6">
+      <TabsContent value="media" className="w-full flex-none pt-6">
         {photos.length === 0 ? (
           <WorkflowPlaceholder
             icon={Images}
@@ -240,7 +235,7 @@ const ListingWorkspaceTabs = ({ listing }: ListingWorkspaceTabsProps) => {
         )}
       </TabsContent>
 
-      <TabsContent value="documents" className="pt-6">
+      <TabsContent value="documents" className="w-full flex-none pt-6">
         {documents.length === 0 ? (
           <WorkflowPlaceholder
             icon={FileText}
@@ -266,7 +261,7 @@ const ListingWorkspaceTabs = ({ listing }: ListingWorkspaceTabsProps) => {
         )}
       </TabsContent>
 
-      <TabsContent value="review-tasks" className="pt-6">
+      <TabsContent value="review-tasks" className="w-full flex-none pt-6">
         {openTasks.length === 0 ? (
           <WorkflowPlaceholder
             icon={ClipboardCheck}
@@ -295,7 +290,7 @@ const ListingWorkspaceTabs = ({ listing }: ListingWorkspaceTabsProps) => {
         )}
       </TabsContent>
 
-      <TabsContent value="valuation" className="pt-6">
+      <TabsContent value="valuation" className="w-full flex-none pt-6">
         {listing.valuationEstimate ? (
           <div className="space-y-4">
             <p className="text-sm">
@@ -322,7 +317,7 @@ const ListingWorkspaceTabs = ({ listing }: ListingWorkspaceTabsProps) => {
         )}
       </TabsContent>
 
-      <TabsContent value="inspection" className="pt-6">
+      <TabsContent value="inspection" className="w-full flex-none pt-6">
         <WorkflowPlaceholder
           icon={ShieldCheck}
           title="Inspection not scheduled"
@@ -330,7 +325,7 @@ const ListingWorkspaceTabs = ({ listing }: ListingWorkspaceTabsProps) => {
         />
       </TabsContent>
 
-      <TabsContent value="preview" className="pt-6">
+      <TabsContent value="preview" className="w-full flex-none pt-6">
         <WorkflowPlaceholder
           icon={Eye}
           title="Listing preview"
@@ -338,56 +333,11 @@ const ListingWorkspaceTabs = ({ listing }: ListingWorkspaceTabsProps) => {
         />
       </TabsContent>
 
-      <TabsContent value="leads-offers" className="pt-6 space-y-6">
-        <div>
-          <h6 className="mb-3 text-sm font-semibold">Leads ({leads.length})</h6>
-          {leads.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No buyer enquiries yet.</p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {leads.map((lead) => {
-                const buyer = getMockUserById(lead.buyerId);
-                return (
-                  <li key={lead.id} className="rounded-lg border border-border p-4 text-sm">
-                    <span className="font-medium">{buyer?.name ?? "Buyer"}</span>
-                    <p className="mt-1 text-muted-foreground">{lead.message}</p>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-        <div>
-          <h6 className="mb-3 text-sm font-semibold">Offers ({offers.length})</h6>
-          {offers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No offers received yet.</p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {offers.map((offer) => {
-                const buyer = getMockUserById(offer.buyerId);
-                return (
-                  <li
-                    key={offer.id}
-                    className="flex items-center justify-between rounded-lg border border-border px-4 py-3 text-sm"
-                  >
-                    <div>
-                      <span className="font-medium">{formatZar(offer.amount)}</span>
-                      {buyer?.name && (
-                        <span className="text-muted-foreground"> · {buyer.name}</span>
-                      )}
-                    </div>
-                    <Badge variant={getOfferStatusMeta(offer.status).badgeVariant}>
-                      {getOfferStatusMeta(offer.status).label}
-                    </Badge>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
+      <TabsContent value="leads-offers" className="w-full flex-none pt-6">
+        <ListingLeadsOffersPanel listingId={listing.id} />
       </TabsContent>
 
-      <TabsContent value="deal-room" className="pt-6">
+      <TabsContent value="deal-room" className="w-full flex-none pt-6">
         {deal ? (
           <div className="space-y-4 rounded-lg border border-border p-5 text-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -412,7 +362,7 @@ const ListingWorkspaceTabs = ({ listing }: ListingWorkspaceTabsProps) => {
         )}
       </TabsContent>
 
-      <TabsContent value="activity" className="pt-6">
+      <TabsContent value="activity" className="w-full flex-none pt-6">
         {events.length === 0 ? (
           <p className="text-sm text-muted-foreground">No workflow events recorded yet.</p>
         ) : (

@@ -70,7 +70,8 @@ html {
   /* Firefox */
 }
 
-section {
+/* Marketing site only — dashboard also uses <section> for layout */
+.site-layout section {
   @apply py-24
 }
 

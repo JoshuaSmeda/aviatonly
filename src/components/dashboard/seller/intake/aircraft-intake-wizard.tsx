@@ -8,6 +8,10 @@ import { toast, Toaster } from "sonner";
 import AutosaveIndicator, { type AutosaveStatus } from "./autosave-indicator";
 import { INTAKE_STEPS } from "@/lib/aviatonly/domain";
 import {
+  DEMO_DRAFT_LISTING_ID,
+  getIntakePrefillFromListing,
+} from "@/lib/aviatonly/mock";
+import {
   StepAirframe,
   StepAvionics,
   StepEngine,
@@ -125,7 +129,21 @@ const AircraftIntakeWizard = () => {
   // Resume an existing draft from a previous session.
   useEffect(() => {
     const stored = typeof window !== "undefined" ? localStorage.getItem(DRAFT_KEY) : null;
-    if (!stored) return;
+    if (!stored) {
+      const mockPrefill = getIntakePrefillFromListing(DEMO_DRAFT_LISTING_ID);
+      if (mockPrefill) {
+        isApplyingDraft.current = true;
+        form.reset({
+          ...(aircraftDefaultValues as AircraftFormValues),
+          ...mockPrefill,
+        });
+        setAutosaveStatus("saved");
+        setTimeout(() => {
+          isApplyingDraft.current = false;
+        }, 0);
+      }
+      return;
+    }
     (async () => {
       const draft = await loadDraft(stored);
       if (!draft) {

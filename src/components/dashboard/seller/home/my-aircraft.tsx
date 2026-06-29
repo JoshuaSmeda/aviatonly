@@ -8,7 +8,7 @@ const MyAircraft = () => {
   const aircraft = buildSellerAircraftSummaries();
 
   return (
-    <section className="flex flex-col gap-4">
+    <section className="flex flex-col gap-4 py-0">
       <div className="flex items-center justify-between">
         <h5 className="text-lg font-semibold">My aircraft</h5>
         <Button size="sm" render={<Link href="/dashboard/seller/upload" />}>

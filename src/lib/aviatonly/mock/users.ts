@@ -59,6 +59,17 @@ export const MOCK_USERS: MockUser[] = [
     updatedAt: "2026-06-25T08:45:00.000Z",
   },
   {
+    id: "user-buyer-peter",
+    email: "peter.n@example.co.za",
+    name: "Peter Naidoo",
+    roles: [UserRole.BUYER],
+    phone: "+27 79 112 4455",
+    province: "Gauteng",
+    verificationStatus: "VERIFIED",
+    createdAt: "2026-03-08T10:00:00.000Z",
+    updatedAt: "2026-06-28T12:00:00.000Z",
+  },
+  {
     id: "user-admin-reviewer",
     email: "review@aviatonly.co.za",
     name: "AVIATONLY Ops",

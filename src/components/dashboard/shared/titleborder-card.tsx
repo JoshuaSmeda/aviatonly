@@ -13,7 +13,7 @@ const TitleCard: React.FC<MyAppProps> = ({ children, className, title }) => {
     useContext(CustomizerContext);
   return (
     <Card
-      className={`card no-inset no-ring gap-0  ${className} ${isCardShadow
+      className={`card no-inset no-ring min-w-0 gap-0 !overflow-x-auto ${className} ${isCardShadow
         ? "dark:shadow-dark-md shadow-md p-0"
         : "shadow-none border border-border p-0"
         } `}
@@ -21,16 +21,18 @@ const TitleCard: React.FC<MyAppProps> = ({ children, className, title }) => {
         borderRadius: `${isBorderRadius}px`,
       }}
     >
-      <CardHeader className="p-0">
-        <CardTitle>
-          <div className="border-b border-border py-4 p-6">
-            <h5 >{title}</h5>
-          </div>
-        </CardTitle>
-      </CardHeader>
+      {title ? (
+        <CardHeader className="p-0">
+          <CardTitle>
+            <div className="border-b border-border p-6 py-4">
+              <h5>{title}</h5>
+            </div>
+          </CardTitle>
+        </CardHeader>
+      ) : null}
 
-      <CardContent>
-        <div className="py-4 ">{children}</div>
+      <CardContent className="min-w-0">
+        <div className={title ? "py-4" : "p-6"}>{children}</div>
       </CardContent>
     </Card>
   );

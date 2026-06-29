@@ -1,17 +1,28 @@
-import { HandCoins } from "lucide-react"
-import {
-  RoleWorkspacePage,
-  createRoleWorkspaceMetadata,
-} from "@/components/dashboard/shared/role-workspace-page"
+import type { Metadata } from "next";
+import BreadcrumbComp from "@/app/(dashboard)/dashboard/layout/shared/breadcrumb/breadcrumb-comp";
+import OffersTable from "@/components/dashboard/offers/offers-table";
+import TitleCard from "@/components/dashboard/shared/titleborder-card";
+import { buildOfferTableRows } from "@/lib/aviatonly/mock";
 
-export const metadata = createRoleWorkspaceMetadata("Offers")
+export const metadata: Metadata = {
+  title: "Offers | AVIATONLY Admin",
+};
 
-export default function AdminOffersPage() {
+const AdminOffersPage = () => {
+  const activeCount = buildOfferTableRows({ activeOnly: true }).length;
+
   return (
-    <RoleWorkspacePage
-      title="Offers"
-      icon={HandCoins}
-      description="Review fixed-price offers, counters, and acceptance decisions across active deals."
-    />
-  )
-}
+    <>
+      <BreadcrumbComp title="Offers" />
+      <TitleCard title="Admin · Offers">
+        <p className="mb-4 text-sm text-muted-foreground">
+          {activeCount} active offer{activeCount === 1 ? "" : "s"} across all listings requiring
+          seller or AVIATONLY review.
+        </p>
+        <OffersTable showSeller />
+      </TitleCard>
+    </>
+  );
+};
+
+export default AdminOffersPage;

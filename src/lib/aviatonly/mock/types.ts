@@ -1,4 +1,4 @@
-import type { BuyerActivityType, DealStatus, DocumentStatus, DocumentVisibility, EnginePosition, ListingStatus, OfferStatus, PhotoStatus, PropellerType, ReviewTaskStatus, SaleType, UserRole } from "@/lib/aviatonly/domain";
+import type { BuyerActivityType, DealStatus, DocumentStatus, DocumentVisibility, EnginePosition, LeadStatus, LeadType, ListingStatus, OfferStatus, PhotoStatus, PropellerType, ReviewTaskStatus, SaleType, UserRole } from "@/lib/aviatonly/domain";
 
 /** ISO timestamp string used across mock records. */
 export type MockTimestamp = string;
@@ -164,22 +164,14 @@ export interface MockListingReviewTask {
   updatedAt: MockTimestamp;
 }
 
-export type MockLeadStatus =
-  | "NEW"
-  | "CONTACTED"
-  | "QUALIFIED"
-  | "UNQUALIFIED"
-  | "VIEWING_REQUESTED"
-  | "OFFER_MADE"
-  | "CLOSED";
-
 export interface MockLead {
   id: string;
   listingId: string;
   buyerId: string;
   sellerId: string;
+  type: LeadType;
   message: string;
-  status: MockLeadStatus;
+  status: LeadStatus;
   verificationStatus: "UNVERIFIED" | "PENDING" | "VERIFIED";
   createdAt: MockTimestamp;
   updatedAt: MockTimestamp;
@@ -308,4 +300,36 @@ export interface ListingWorkspaceOverview {
   photoCount: number;
   documentCount: number;
   hasActiveDeal: boolean;
+}
+
+export interface LeadTableRow {
+  id: string;
+  listingId: string;
+  registration: string;
+  aircraftTitle: string;
+  sellerName: string;
+  buyerName: string;
+  buyerEmail: string;
+  buyerVerification: "UNVERIFIED" | "PENDING" | "VERIFIED";
+  type: LeadType;
+  status: LeadStatus;
+  message: string;
+  createdAt: MockTimestamp;
+  listingHref: string;
+}
+
+export interface OfferTableRow {
+  id: string;
+  listingId: string;
+  registration: string;
+  aircraftTitle: string;
+  sellerName: string;
+  buyerName: string;
+  buyerEmail: string;
+  amount: number;
+  status: OfferStatus;
+  message: string | null;
+  expiresAt: MockTimestamp | null;
+  createdAt: MockTimestamp;
+  listingHref: string;
 }

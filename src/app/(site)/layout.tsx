@@ -9,7 +9,7 @@ export default function SiteLayout({
   children: React.ReactNode
 }>) {
   return (
-    <div className="font-sans bg-white dark:bg-black antialiased">
+    <div className="site-layout font-sans bg-white dark:bg-black antialiased">
       <ThemeProvider attribute="class" enableSystem defaultTheme="light">
         <Header />
         {children}

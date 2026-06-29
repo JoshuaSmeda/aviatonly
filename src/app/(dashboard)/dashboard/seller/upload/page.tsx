@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import BreadcrumbComp from "@/app/(dashboard)/dashboard/layout/shared/breadcrumb/breadcrumb-comp";
 import TitleCard from "@/components/dashboard/shared/titleborder-card";
 import AircraftIntakeWizard from "@/components/dashboard/seller/intake/aircraft-intake-wizard";
+import IntakeResumeBanner from "@/components/dashboard/seller/intake/intake-resume-banner";
 
 export const metadata: Metadata = {
   title: "Sell Your Aircraft | AVIATONLY",
@@ -12,6 +13,7 @@ const SellAircraftPage = () => {
     <>
       <BreadcrumbComp title="Sell Your Aircraft" />
       <TitleCard title="Aircraft intake — submit for AVIATONLY review">
+        <IntakeResumeBanner />
         <AircraftIntakeWizard />
       </TitleCard>
     </>

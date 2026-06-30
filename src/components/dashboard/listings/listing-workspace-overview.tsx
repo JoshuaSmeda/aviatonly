@@ -16,7 +16,6 @@ import {
 } from "@/lib/aviatonly/domain";
 import type { ListingWorkspaceOverview } from "@/lib/aviatonly/mock/types";
 import type { MockAircraftListing } from "@/lib/aviatonly/mock/types";
-import { cn } from "@/lib/utils";
 import ListingWorkspaceActivityTimeline from "./listing-workspace-activity-timeline";
 import ListingPublishPanel from "./listing-publish-panel";
 
@@ -44,46 +43,31 @@ const ListingWorkspaceOverviewTab = ({
     : overview.nextStep;
 
   return (
-    <div className="space-y-6">
-      <div
-        className={cn(
-          "rounded-lg border p-5",
-          nextStep.actionRequired
-            ? "border-primary/20 bg-primary/5"
-            : "border-border bg-muted/30",
-        )}
-      >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-col gap-1">
-            <p
-              className={cn(
-                "text-sm font-medium",
-                nextStep.actionRequired ? "text-primary" : "text-muted-foreground",
-              )}
-            >
-              {nextStep.sectionLabel}
-            </p>
-            <p className="text-base font-semibold">{nextStep.message}</p>
-            {!nextStep.actionRequired ? (
-              <p className="text-sm text-muted-foreground">No action needed from you right now.</p>
+    <div className="flex flex-col gap-6">
+      {nextStep.actionRequired ? (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-medium text-primary">{nextStep.sectionLabel}</p>
+              <p className="text-base font-semibold">{nextStep.message}</p>
+            </div>
+            {nextStep.primaryCta ? (
+              <Button className="shrink-0" render={<Link href={nextStep.primaryCta.href} />}>
+                {nextStep.primaryCta.label}
+                <ArrowRight data-icon="inline-end" />
+              </Button>
             ) : null}
           </div>
-          {nextStep.actionRequired && nextStep.primaryCta ? (
-            <Button className="shrink-0" render={<Link href={nextStep.primaryCta.href} />}>
-              {nextStep.primaryCta.label}
-              <ArrowRight data-icon="inline-end" />
-            </Button>
-          ) : null}
         </div>
-      </div>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-lg border border-border p-4">
-          <p className="text-sm text-muted-foreground">Current status</p>
-          <div className="mt-2 flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2 text-sm">
+            <span className="text-muted-foreground">Current status</span>
             <ListingStatusBadge status={listing.status} />
           </div>
-          <p className="mt-2 text-sm text-muted-foreground">{statusMeta.description}</p>
+          <p className="mt-3 text-sm text-muted-foreground">{statusMeta.description}</p>
         </div>
 
         <div className="rounded-lg border border-border p-4">

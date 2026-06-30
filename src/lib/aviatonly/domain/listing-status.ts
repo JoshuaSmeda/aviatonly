@@ -33,12 +33,12 @@ export const LISTING_STATUS_META: Record<ListingStatus, StatusMeta> = {
   },
   [ListingStatus.SUBMITTED]: {
     label: "Submitted",
-    description: "Submitted to AVIATONLY and waiting to enter the review queue.",
+    description: "Waiting to enter the review queue.",
     badgeVariant: "secondary",
   },
   [ListingStatus.UNDER_REVIEW]: {
     label: "Under Review",
-    description: "AVIATONLY is reviewing the aircraft data, photos, and documents.",
+    description: "AVIATONLY is reviewing your aircraft data, photos, and documents.",
     badgeVariant: "outline",
   },
   [ListingStatus.NEEDS_CHANGES]: {

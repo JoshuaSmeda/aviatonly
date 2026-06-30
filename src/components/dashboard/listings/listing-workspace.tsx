@@ -27,8 +27,10 @@ const ListingWorkspace = ({ workspace, canManageReview = false }: ListingWorkspa
       <ListingWorkspaceHeader listing={listing} />
 
       <CardBox className="mb-6 p-6">
-        <h6 className="mb-4 text-sm font-semibold">Workflow progress</h6>
-        <ListingStatusProgress status={listing.status} />
+        <div className="flex flex-col gap-4">
+          <h6 className="text-sm font-semibold">Workflow progress</h6>
+          <ListingStatusProgress status={listing.status} />
+        </div>
       </CardBox>
 
       <CardBox className="p-6">

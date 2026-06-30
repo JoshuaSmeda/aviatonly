@@ -105,48 +105,34 @@ export function deriveSellerListingNextStep(
 
   switch (input.status) {
     case ListingStatus.SUBMITTED:
-      return waitState(
-        "Your submission is in the queue. Nothing needed from you.",
-      );
+      return waitState("In the review queue");
     case ListingStatus.UNDER_REVIEW:
-      return waitState(
-        "Our team is reviewing your aircraft data, photos, and documents. Nothing needed from you.",
-      );
+      return waitState("Under AVIATONLY review");
     case ListingStatus.INSPECTION_PENDING:
-      return waitState(
-        "An independent inspection is scheduled or underway. Nothing needed from you.",
-      );
+      return waitState("Inspection scheduled or in progress");
     case ListingStatus.INSPECTION_PASSED:
-      return waitState(
-        "Inspection passed — AVIATONLY is finalizing your listing. Nothing needed from you.",
-      );
+      return waitState("Inspection passed — listing being finalised");
     case ListingStatus.INSPECTION_FAILED:
-      return waitState(
-        "Inspection found issues — AVIATONLY will send fix instructions if anything is required from you.",
-      );
+      return waitState("Inspection found issues — we'll be in touch if action is needed");
     case ListingStatus.APPROVED_FOR_LISTING:
-      return waitState(
-        "Your listing is approved — AVIATONLY will publish when ready. Nothing needed from you.",
-      );
+      return waitState("Approved — AVIATONLY will publish when ready");
     case ListingStatus.LIVE_FIXED_PRICE:
     case ListingStatus.LIVE_AUCTION:
-      return waitState(
-        "Your aircraft is live — we'll notify you when buyers enquire or make offers.",
-      );
+      return waitState("Live on the catalog — we'll notify you of buyer activity");
     case ListingStatus.UNDER_OFFER:
     case ListingStatus.DEPOSIT_PENDING:
-      return waitState("Buyer activity is in progress. Nothing needed from you right now.");
+      return waitState("Buyer activity in progress");
     case ListingStatus.UNDER_CONTRACT:
-      return waitState("The deal is under contract — deposit and verification are in progress.");
+      return waitState("Under contract — deposit and verification in progress");
     case ListingStatus.TRANSFER_PENDING:
-      return waitState("SACAA ownership transfer is in progress. Nothing needed from you.");
+      return waitState("SACAA ownership transfer in progress");
     case ListingStatus.SOLD:
-      return waitState("Sale completed — no further action required.");
+      return waitState("Sale completed");
     case ListingStatus.WITHDRAWN:
-      return waitState("This listing was withdrawn and is no longer active.");
+      return waitState("Listing withdrawn");
     case ListingStatus.EXPIRED:
-      return waitState("This listing has expired and is no longer active.");
+      return waitState("Listing expired");
     default:
-      return waitState("Nothing required from you — AVIATONLY will update you when needed.");
+      return waitState("AVIATONLY will update you when needed");
   }
 }

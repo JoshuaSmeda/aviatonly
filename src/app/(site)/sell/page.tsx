@@ -52,7 +52,7 @@ const SellLandingPage = () => {
             Start the intake wizard
           </Link>
           <Link
-            href="/buy"
+            href="/dashboard/buy"
             className="px-8 py-4 rounded-full border border-black/10 dark:border-white/20 text-base font-semibold text-black dark:text-white hover:border-primary duration-300"
           >
             Browse aircraft

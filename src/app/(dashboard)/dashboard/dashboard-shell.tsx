@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useContext } from "react"
+import { usePathname } from "next/navigation"
 import Header from "./layout/vertical/header"
 import { Customizer } from "./layout/shared/customizer"
 import { CustomizerContext } from "@/app/context/customizer-context"
@@ -25,6 +26,8 @@ export default function DashboardShell({
   user,
 }: DashboardShellProps) {
   const { activeLayout, isLayout, isCollapse } = useContext(CustomizerContext)
+  const pathname = usePathname()
+  const isFullWidthRoute = pathname === "/dashboard/buy"
 
   return (
     <SidebarProvider
@@ -44,17 +47,22 @@ export default function DashboardShell({
         ) : (
           <HorizontalHeader user={user} />
         )}
-        <div className="flex flex-1 flex-col gap-4 p-4">
+        <div className={cn("flex flex-1 flex-col gap-4", isFullWidthRoute ? "p-0" : "p-4")}>
           <div
             className={cn(
-              isLayout === "full" ? "w-full px-5" : "container mx-auto",
+              isLayout === "full" || isFullWidthRoute ? "w-full" : "container mx-auto",
+              isFullWidthRoute && "px-0",
               activeLayout === "horizontal" ? "xl:mt-3" : "",
             )}
           >
-            <div className="min-h-[calc(100vh-140px)]">{children}</div>
-            <div className="pt-6">
-              <Footer />
+            <div className={cn("min-h-[calc(100vh-140px)]", isFullWidthRoute && "min-h-[calc(100vh-120px)]")}>
+              {children}
             </div>
+            {!isFullWidthRoute ? (
+              <div className="pt-6">
+                <Footer />
+              </div>
+            ) : null}
           </div>
           <Customizer />
         </div>

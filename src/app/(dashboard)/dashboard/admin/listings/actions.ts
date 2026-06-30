@@ -35,8 +35,8 @@ function toErrorResult(error: unknown): ListingReviewActionResult {
 function revalidateListingPaths(listingId: string, options?: { full?: boolean; registration?: string }) {
   revalidatePath(`/dashboard/listings/${listingId}`);
   if (options?.registration) {
-    revalidatePath(`/buy/${options.registration}`);
-    revalidatePath("/buy");
+    revalidatePath(`/dashboard/buy/${options.registration}`);
+    revalidatePath("/dashboard/buy");
   }
   if (options?.full) {
     revalidatePath("/dashboard/admin/review-queue");

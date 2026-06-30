@@ -1,0 +1,14 @@
+Audit the `/buy` and `/buy/[listingSlug]` implementation against `.cursor/rules/05-aviatonly-buy-pages.mdc`.
+
+Do not write code yet.
+
+Tell me:
+
+1. Which parts match the spec.
+2. Which parts are missing.
+3. Which components are too generic.
+4. Which text still sounds like real estate or generic marketplace copy.
+5. Whether sensitive document data is accidentally exposed.
+6. Whether internal statuses are accidentally exposed.
+7. Whether the mobile layout is acceptable.
+8. The next 10 fixes in priority order.

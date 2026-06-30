@@ -30,6 +30,7 @@ loadEnvLocal();
 
 import {
   BuyerVerificationStatus,
+  DealSource,
   DealStatus,
   DocumentStatus,
   DocumentVisibility,
@@ -62,6 +63,7 @@ import { MOCK_PHOTOS } from "../src/lib/aviatonly/mock/photos";
 import { MOCK_REVIEW_TASKS } from "../src/lib/aviatonly/mock/review-tasks";
 import { MOCK_FIELD_REVIEWS } from "../src/lib/aviatonly/mock/field-reviews";
 import { MOCK_USERS } from "../src/lib/aviatonly/mock/users";
+import { seedAuctions } from "./seed-auctions";
 
 const prisma = new PrismaClient();
 
@@ -461,6 +463,7 @@ async function main() {
         listingId,
         buyerId,
         sellerId,
+        source: DealSource.FIXED_PRICE_OFFER,
         acceptedOfferId,
         agreedPrice: deal.agreedPrice,
         currency: deal.currency,
@@ -475,15 +478,18 @@ async function main() {
     });
   }
 
-  const [listingCount, leadCount, offerCount, dealCount] = await Promise.all([
+  await seedAuctions(prisma, userIdByMockId);
+
+  const [listingCount, leadCount, offerCount, dealCount, auctionCount] = await Promise.all([
     prisma.aircraftListing.count(),
     prisma.lead.count(),
     prisma.offer.count(),
     prisma.deal.count(),
+    prisma.auction.count(),
   ]);
 
   console.log(
-    `Done. ${listingCount} listings, ${leadCount} leads, ${offerCount} offers, ${dealCount} deals.`,
+    `Done. ${listingCount} listings, ${leadCount} leads, ${offerCount} offers, ${dealCount} deals, ${auctionCount} auctions.`,
   );
   console.log("\nDemo login (all seeded users share this password):");
   console.log(`  Password: ${DEMO_USER_PASSWORD}`);

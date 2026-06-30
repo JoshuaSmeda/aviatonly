@@ -196,6 +196,83 @@ enum DealStatus {
   CANCELLED
 }
 
+enum DealSource {
+  FIXED_PRICE_OFFER
+  AUCTION
+}
+
+enum AuctionStatus {
+  DRAFT
+  SCHEDULED
+  LIVE
+  CLOSING
+  CLOSED
+  CANCELLED
+}
+
+enum AuctionCloseOutcome {
+  RESERVE_MET
+  RESERVE_NOT_MET
+  NO_BIDS
+  CANCELLED
+  VOIDED
+}
+
+enum BidStatus {
+  ACCEPTED
+  REJECTED
+  SUPERSEDED
+  WINNING_AT_CLOSE
+  BINDING
+  DEFAULTED
+  VOIDED
+}
+
+enum BidRejectedReason {
+  AUCTION_NOT_LIVE
+  AUCTION_ENDED
+  BELOW_MINIMUM
+  NOT_REGISTERED
+  SELLER_CANNOT_BID
+  COMPLIANCE_HOLD
+  RATE_LIMITED
+  DUPLICATE_IN_FLIGHT
+  OTHER
+}
+
+enum AuctionRegistrationStatus {
+  PENDING
+  APPROVED
+  DENIED
+  REVOKED
+}
+
+enum AuctionBidderDisplayMode {
+  ANONYMOUS
+  PADDLE_NUMBER
+  VERIFIED_INITIALS
+}
+
+enum AuctionEventType {
+  AUCTION_CREATED
+  AUCTION_CONFIGURED
+  AUCTION_SCHEDULED
+  AUCTION_OPENED
+  AUCTION_EXTENDED
+  AUCTION_CLOSING_STARTED
+  AUCTION_CLOSED
+  AUCTION_CANCELLED
+  AUCTION_END_TIME_OVERRIDDEN
+  BID_PLACED
+  BID_REJECTED
+  BID_VOIDED
+  WINNER_CONFIRMED
+  WINNER_DEFAULTED
+  SECOND_CHANCE_OFFERED
+  RESULT_VOIDED
+  ADMIN_NOTE
+}
+
 // ---------------------------------------------------------------------------
 // Core
 // ---------------------------------------------------------------------------
@@ -228,6 +305,15 @@ model User {
   leadActivities   LeadActivity[]
   offerActivities  OfferActivity[]
   listingDrafts    ListingDraft[]
+
+  auctionRegistrations AuctionRegistration[]
+  bids                 Bid[]                 @relation("BidBidder")
+  auctionWatches       AuctionWatch[]
+  configuredAuctions   Auction[]             @relation("AuctionConfiguredBy")
+  cancelledAuctions    Auction[]             @relation("AuctionCancelledBy")
+
+  buyerBidBlockedAt   DateTime?
+  buyerBidBlockReason String?
 }
 
 model Session {
@@ -369,6 +455,7 @@ model AircraftListing {
   leads         Lead[]
   offers        Offer[]
   deals         Deal[]
+  auctions      Auction[]
 
   intakeDrafts ListingDraft[]
 
@@ -662,6 +749,9 @@ model Lead {
   convertedOfferId String? @unique
   convertedOffer   Offer?  @relation("LeadConvertedOffer", fields: [convertedOfferId], references: [id], onDelete: SetNull)
 
+  auctionId String?
+  auction   Auction? @relation(fields: [auctionId], references: [id], onDelete: SetNull)
+
   closedReason String?
 
   activities LeadActivity[]
@@ -675,6 +765,7 @@ model Lead {
   @@index([status])
   @@index([assignedToId])
   @@index([nextFollowUpAt])
+  @@index([auctionId])
 }
 
 model LeadActivity {
@@ -771,16 +862,27 @@ model Deal {
   sellerId String
   seller   User   @relation("DealSeller", fields: [sellerId], references: [id], onDelete: Cascade)
 
-  acceptedOfferId String @unique
-  offer           Offer  @relation(fields: [acceptedOfferId], references: [id], onDelete: Restrict)
+  source DealSource @default(FIXED_PRICE_OFFER)
 
-  agreedPrice      Int
-  currency         String     @default("ZAR")
-  depositAmount    Int?
-  commissionAmount Int?
-  vatAmount        Int?
-  status           DealStatus @default(OFFER_ACCEPTED)
-  nextAction       String?
+  acceptedOfferId String? @unique
+  offer           Offer?  @relation(fields: [acceptedOfferId], references: [id], onDelete: Restrict)
+
+  acceptedBidId String? @unique
+  acceptedBid   Bid?    @relation("DealWinningBid", fields: [acceptedBidId], references: [id], onDelete: Restrict)
+
+  auctionId String?
+  auction   Auction? @relation(fields: [auctionId], references: [id], onDelete: SetNull)
+
+  agreedPrice          Int
+  hammerPrice          Int?
+  currency             String @default("ZAR")
+  depositAmount        Int?
+  commissionAmount     Int?
+  vatAmount            Int?
+  buyerPremiumAmount   Int?
+  buyerPremiumBps      Int?
+  status               DealStatus @default(OFFER_ACCEPTED)
+  nextAction           String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -789,4 +891,189 @@ model Deal {
   @@index([buyerId])
   @@index([sellerId])
   @@index([status])
+  @@index([auctionId])
+}
+
+// ---------------------------------------------------------------------------
+// Auctions & bidding
+// ---------------------------------------------------------------------------
+
+model Auction {
+  id        String          @id @default(cuid())
+  listingId String
+  listing   AircraftListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  status       AuctionStatus        @default(DRAFT)
+  closeOutcome AuctionCloseOutcome?
+
+  startsAt         DateTime
+  endsAt           DateTime
+  effectiveEndsAt  DateTime
+  openedAt         DateTime?
+  closingStartedAt DateTime?
+  closedAt         DateTime?
+
+  currency     String @default("ZAR")
+  startingBid  Int
+  bidIncrement Int
+  reservePrice Int
+  noReserveConfirmed Boolean @default(false)
+
+  currentHighBidId     String? @unique
+  currentHighBid       Bid?    @relation("AuctionCurrentHighBid", fields: [currentHighBidId], references: [id], onDelete: SetNull)
+  currentHighBidAmount Int?
+  bidCount             Int     @default(0)
+  reserveMet           Boolean @default(false)
+
+  winningBidId      String? @unique
+  winningBid        Bid?    @relation("AuctionWinningBid", fields: [winningBidId], references: [id], onDelete: SetNull)
+  winnerId          String?
+  winnerConfirmedAt DateTime?
+  winnerDefaultedAt DateTime?
+  secondChanceBidId String? @unique
+  secondChanceBid   Bid?    @relation("AuctionSecondChanceBid", fields: [secondChanceBidId], references: [id], onDelete: SetNull)
+
+  showReserveStatus Boolean @default(false)
+  showReservePrice  Boolean @default(false)
+  showBidHistory    Boolean @default(true)
+
+  buyerPremiumBps Int @default(0)
+
+  antiSnipeWindowMinutes    Int @default(5)
+  antiSnipeExtensionMinutes Int @default(5)
+  maxExtensions             Int @default(12)
+  extensionCount            Int @default(0)
+
+  bidderDisplayMode AuctionBidderDisplayMode @default(PADDLE_NUMBER)
+
+  configuredById String?
+  configuredBy   User? @relation("AuctionConfiguredBy", fields: [configuredById], references: [id], onDelete: SetNull)
+  cancelledById  String?
+  cancelledBy    User? @relation("AuctionCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
+  cancelledAt    DateTime?
+  cancelReason   String?
+
+  bids          Bid[]
+  registrations AuctionRegistration[]
+  events        AuctionEvent[]
+  watches       AuctionWatch[]
+  deals         Deal[]
+  leads         Lead[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([listingId])
+  @@index([status])
+  @@index([status, effectiveEndsAt])
+  @@index([listingId, status])
+  @@index([startsAt])
+  @@index([effectiveEndsAt])
+  @@index([closedAt])
+}
+
+model Bid {
+  id        String  @id @default(cuid())
+  auctionId String
+  auction   Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+
+  bidderId String
+  bidder   User   @relation("BidBidder", fields: [bidderId], references: [id], onDelete: Cascade)
+
+  amount         Int
+  status         BidStatus          @default(ACCEPTED)
+  rejectedReason BidRejectedReason?
+
+  sequence     Int
+  paddleNumber Int?
+
+  ipHash    String?
+  userAgent String?
+
+  voidedAt   DateTime?
+  voidedById String?
+  voidReason String?
+
+  currentHighForAuction  Auction? @relation("AuctionCurrentHighBid")
+  winningForAuction      Auction? @relation("AuctionWinningBid")
+  secondChanceForAuction Auction? @relation("AuctionSecondChanceBid")
+  deal                   Deal?    @relation("DealWinningBid")
+
+  createdAt DateTime @default(now())
+
+  @@unique([auctionId, sequence])
+  @@index([auctionId, status])
+  @@index([auctionId, amount])
+  @@index([auctionId, createdAt])
+  @@index([bidderId])
+  @@index([bidderId, auctionId])
+  @@index([status])
+}
+
+model AuctionRegistration {
+  id        String  @id @default(cuid())
+  auctionId String
+  auction   Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  status AuctionRegistrationStatus @default(PENDING)
+
+  termsAcceptedAt            DateTime
+  termsVersion               String?
+  verificationAtRegistration BuyerVerificationStatus
+
+  paddleNumber Int?
+
+  approvedAt    DateTime?
+  deniedAt      DateTime?
+  deniedReason  String?
+  revokedAt     DateTime?
+  revokedReason String?
+
+  reviewedById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([auctionId, userId])
+  @@index([auctionId, status])
+  @@index([userId])
+}
+
+model AuctionEvent {
+  id        String  @id @default(cuid())
+  auctionId String
+  auction   Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+
+  type     AuctionEventType
+  actorId  String?
+  message  String?
+  metadata Json?
+  adminNote String?
+
+  createdAt DateTime @default(now())
+
+  @@index([auctionId])
+  @@index([auctionId, createdAt])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model AuctionWatch {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  auctionId String
+  auction   Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+
+  notifyOnExtension  Boolean @default(true)
+  notifyOnEndingSoon Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, auctionId])
+  @@index([userId])
+  @@index([auctionId])
 }

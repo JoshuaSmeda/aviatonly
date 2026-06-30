@@ -41,12 +41,6 @@ export const AVIATONLY_NAV_SECTIONS: NavSection[] = [
         roles: SELLER_ACCESS,
       },
       {
-        name: "Create Listing",
-        icon: "solar:jet-line-duotone",
-        url: "/seller/upload",
-        roles: SELLER_ACCESS,
-      },
-      {
         name: "Leads",
         icon: "solar:users-group-rounded-line-duotone",
         url: "/seller/leads",
@@ -163,7 +157,7 @@ export const AVIATONLY_NAV_SECTIONS: NavSection[] = [
       {
         name: "Auctions",
         icon: "solar:hammer-line-duotone",
-        url: "/admin/auctions",
+        url: "/auctions",
         roles: ADMIN_ACCESS,
       },
       {
@@ -194,7 +188,6 @@ export const AVIATONLY_NAV_SECTIONS: NavSection[] = [
         name: "Browse Aircraft",
         icon: "solar:magnifer-line-duotone",
         url: "/buy",
-        external: true,
         roles: ALL_AUTHENTICATED,
       },
     ],

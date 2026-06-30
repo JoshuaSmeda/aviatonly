@@ -1,0 +1,30 @@
+Using the AVIATONLY Cursor rules, especially `.cursor/rules/05-aviatonly-buy-pages.mdc`, implement the first version of the public `/buy` marketplace section.
+
+Build:
+
+1. `/buy` page
+2. `/buy/[listingSlug]` detail page
+3. aviation-specific filter sidebar
+4. aircraft listing cards
+5. results toolbar with result count, sort dropdown, and active filter chips
+6. mock aircraft listing data
+7. aircraft image gallery on the detail page
+8. aircraft key stats section
+9. aircraft highlights section
+10. aircraft technical details sections
+11. document availability summary
+12. verification/inspection summary
+13. enquiry panel
+14. similar aircraft section
+15. proper empty state
+16. responsive mobile layout
+
+Use mock data only for now.
+
+Do not connect to Prisma yet.
+Do not implement real auctions yet.
+Do not implement payments, escrow, document access approval, or SACAA transfer.
+Do not use rooms, beds, baths, property type, or real-estate terminology.
+Do not expose internal listing statuses like `UNDER_REVIEW` or `NEEDS_CHANGES` on the public `/buy` page.
+
+Make the UI feel premium, aviation-specific, and trust-heavy.

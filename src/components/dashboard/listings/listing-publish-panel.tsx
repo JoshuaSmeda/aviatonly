@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { isLiveStatus, ListingStatus, SALE_TYPE_LABELS, SaleType } from "@/lib/aviatonly/domain";
 import type { MockAircraftListing } from "@/lib/aviatonly/mock/types";
-import { ExternalLink, Globe, Loader2 } from "lucide-react";
+import { ExternalLink, Gavel, Globe, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface ListingPublishPanelProps {
@@ -62,7 +62,7 @@ const ListingPublishPanel = ({
         <Button
           variant="outline"
           className="w-fit gap-2"
-          render={<Link href={`/buy/${listing.registration}`} target="_blank" />}
+          render={<Link href="/dashboard/buy" target="_blank" />}
         >
           <ExternalLink className="size-4" />
           View public listing
@@ -80,6 +80,28 @@ const ListingPublishPanel = ({
     );
   }
 
+  if (listing.saleType === SaleType.AUCTION) {
+    return (
+      <div className="flex flex-col gap-4 rounded-lg border border-border p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-semibold">Auction listing ready</h3>
+          <Badge variant="secondary">{saleLabel}</Badge>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Auction listings go live after you configure times, reserve, and increments, then schedule
+          the auction. Reserve pricing stays admin-only on public pages.
+        </p>
+        <Button
+          className="w-fit gap-2"
+          render={<Link href={`/dashboard/listings/${listing.id}/auction`} />}
+        >
+          <Gavel className="size-4" />
+          Configure auction
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4 rounded-lg border border-border p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -88,9 +110,7 @@ const ListingPublishPanel = ({
       </div>
       <p className="text-sm text-muted-foreground">
         Publishing moves this listing to{" "}
-        <span className="font-medium text-foreground">
-          {listing.saleType === SaleType.AUCTION ? "live auction" : "live fixed price"}
-        </span>
+        <span className="font-medium text-foreground">live fixed price</span>
         . Approved guided photos ({approvedPhotoCount}) will be exposed on the public catalog via
         secure redirects. Documents stay private.
       </p>

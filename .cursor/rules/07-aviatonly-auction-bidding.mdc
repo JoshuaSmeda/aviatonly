@@ -1,0 +1,518 @@
+---
+description: "Use when implementing auction pages, bidding logic, bid buttons, auction state, auction database models, auction admin tools, anti-sniping, reserve handling, or public auction UI on buy pages."
+alwaysApply: false
+globs:
+  - "src/app/**/auctions/**"
+  - "src/app/**/auction/**"
+  - "src/app/(site)/buy/**"
+  - "src/app/(dashboard)/dashboard/admin/auctions/**"
+  - "src/components/**/auction/**"
+  - "src/components/**/bid/**"
+  - "src/components/buy/**"
+  - "src/lib/aviatonly/**/auction/**"
+  - "src/lib/aviatonly/domain/auction-*.ts"
+  - "src/lib/aviatonly/domain/bid-*.ts"
+  - "src/lib/aviatonly/server/auction/**"
+  - "src/lib/aviatonly/server/*auction*"
+  - "src/lib/aviatonly/server/*bid*"
+  - "src/app/api/**/auction/**"
+  - "prisma/**"
+---
+
+# AVIATONLY Auction Bidding
+
+Timed aircraft auctions are **server-authoritative workflow events**, not client-driven countdown widgets.
+
+An `Auction` is a separate domain entity from `AircraftListing`. Bids are **immutable financial events** (append-only). Sellers propose auction terms during intake; **AVIATONLY admin publishes and controls** the live event. Post-close outcomes feed the same **Lead → Deal** path as fixed-price offers.
+
+Related rules: `00-aviatonly-product-context.mdc`, `03-aviatonly-data-model.mdc`, `05-aviatonly-buy-pages.mdc`, `05-aviatonly-leads-offers-crm.mdc`, `aviatonly.mdc`.
+
+## Product principles
+
+- Aviation marketplace, not a generic eBay clone.
+- High-value, low-volume, regulated — registration, verification tiers, and manual ops gates matter.
+- Sellers do **not** publish auctions from the intake wizard.
+- The client may **request** a bid; it never sets auction state, end time, reserve visibility, or winner.
+- All time logic uses **server UTC** (`now()` on server/DB). Browser countdown is display-only.
+- Do not implement payments, escrow, SACAA transfer automation, or proxy bidding in MVP.
+
+## Anti-patterns (do not build)
+
+- Client-side auction state (`isLive`, `endsAt`, `currentBid`) accepted from the browser without server validation
+- Exposing `reservePrice` publicly unless `showReservePrice` is explicitly enabled by admin
+- Letting sellers change `startsAt`, `endsAt`, reserve, or increment after publish without admin audit
+- Deleting bids instead of voiding with audit trail
+- Using `setInterval` on the client to decide when bidding closes
+- Fake payment capture, bid bonds, or escrow holds
+- WebSocket live bidding before server actions and close job are solid (polling/refresh is fine for MVP)
+- Drag-and-drop auction admin without status transition validators
+- Mixing fixed-price CTAs and auction CTAs without clear hierarchy on detail pages
+
+## Domain model (Prisma)
+
+Extend the schema — do not rely on `AircraftListing` fields alone for live auction state.
+
+### Core entities
+
+```text
+Auction          — timed event (1 active auction per listing)
+Bid              — immutable bid event
+AuctionRegistration — buyer eligibility per auction
+AuctionEvent     — append-only audit log (extensions, close, void, cancel)
+```
+
+### `Auction` (required fields)
+
+- `listingId` (unique among non-terminal active auctions)
+- `status` — see Auction lifecycle below
+- `closeOutcome` — set when entering `CLOSED`
+- `startsAt`, `endsAt`, `effectiveEndsAt`, `closedAt`
+- `startingBid`, `bidIncrement`, `reservePrice` (whole ZAR)
+- `showReserveStatus` (default `false`), `showReservePrice` (default `false`), `noReserveConfirmed` (rare; admin only)
+- `buyerPremiumRate` (placeholder display; default `0`)
+- `antiSnipeWindowMinutes` (default `5`), `antiSnipeExtensionMinutes` (default `5`), `extensionCount`, `maxExtensions` (default `12`)
+- Denormalized for catalog: `currentHighBidId`, `currentHighBidAmount`, `bidCount`, `reserveMet`
+- `currency` — `ZAR` for MVP
+
+### `Bid` (required fields)
+
+- `auctionId`, `bidderId`, `amount`, `status`
+- `rejectedReason` (nullable)
+- `createdAt` (server timestamp)
+- Optional audit: `ipHash`, `userAgent`
+
+### `AuctionRegistration`
+
+- `auctionId`, `userId`, `status`: `PENDING` | `APPROVED` | `DENIED` | `REVOKED`
+- `termsAcceptedAt`, `verifiedAtBidTier` (snapshot of buyer verification at registration)
+
+### `Deal` extension
+
+- Add nullable `acceptedBidId` alongside `acceptedOfferId` — mutually exclusive.
+- Deal creation from auction win is **manual in MVP** (admin action after close).
+
+### Listing field roles
+
+`AircraftListing.startingBid`, `reservePrice`, `bidIncrement` during intake are **seller intent** only. Lock authoritative values onto `Auction` at admin setup.
+
+Place domain enums and transition validators in `src/lib/aviatonly/domain/` (mirror `listing-status.ts`, `offer-status.ts` patterns):
+
+- `auction-status.ts`
+- `bid-status.ts`
+- `auction-transitions.ts`
+- `auction-bid-validation.ts`
+
+## Auction lifecycle
+
+`AuctionStatus` is the timed-event state machine. Listing status moves in parallel via existing listing transition helpers — not inside bid handlers.
+
+| Status | Meaning |
+|--------|---------|
+| `DRAFT` | Admin configuring schedule, increments, reserve visibility |
+| `SCHEDULED` | Times locked; listing may be `LIVE_AUCTION`; bidding opens at `startsAt` |
+| `LIVE` | Accepting bids until `effectiveEndsAt` |
+| `CLOSING` | Internal finalize transaction (row lock); not user-visible |
+| `CLOSED` | Terminal; `closeOutcome` set |
+| `CANCELLED` | Admin cancelled; terminal |
+
+### `closeOutcome` (on `CLOSED`)
+
+| Outcome | Meaning |
+|---------|---------|
+| `RESERVE_MET` | Highest accepted bid ≥ reserve |
+| `RESERVE_NOT_MET` | Bids exist but high bid below reserve |
+| `NO_BIDS` | Zero accepted bids |
+| `CANCELLED` | Cancelled auction |
+| `VOIDED` | Admin voided result (fraud, dispute) |
+
+### Listing status coupling
+
+| Auction event | Listing status |
+|---------------|----------------|
+| Admin publishes (`SCHEDULED` or `LIVE`) | `APPROVED_FOR_LISTING` → `LIVE_AUCTION` via `transitionListingForwardRecord` |
+| `CLOSED` + `RESERVE_MET` | `LIVE_AUCTION` → `UNDER_OFFER` |
+| `CLOSED` + `RESERVE_NOT_MET` / `NO_BIDS` | Default `APPROVED_FOR_LISTING` for relist, or admin: `WITHDRAWN`, `EXPIRED` |
+| `CANCELLED` | Admin sets `WITHDRAWN` or `APPROVED_FOR_LISTING` per seller agreement |
+
+Use `assertCanForwardListingStatus` / `transitionListingForwardRecord` — never mutate listing status from client components.
+
+### Seller intake flow
+
+```text
+Seller selects auction in intake → submits for review
+→ AVIATONLY reviews aircraft → reserve confirmed (review task)
+→ Admin configures Auction → schedule agreed → auction goes live
+```
+
+Do not add a "Publish auction" CTA for sellers.
+
+## Bid lifecycle
+
+Bids are append-only. `currentBid` is **derived** from the highest `ACCEPTED` bid (denormalize on `Auction` for performance).
+
+| Status | Meaning |
+|--------|---------|
+| `ACCEPTED` | Valid; counts toward high bid |
+| `REJECTED` | Failed validation; never counted |
+| `SUPERSEDED` | Was high bid; replaced by later `ACCEPTED` bid |
+| `WINNING_AT_CLOSE` | Highest `ACCEPTED` when auction entered `CLOSING` |
+| `BINDING` | Post-close ops confirmation (pre-deal) |
+| `DEFAULTED` | Winner failed to proceed |
+| `VOIDED` | Admin invalidated |
+
+Never delete bids. Rejected bids visible to bidder and admin only.
+
+## Reserve price handling
+
+| Audience | Sees |
+|----------|------|
+| Seller / admin | Exact `reservePrice` |
+| Public (default) | **Nothing** about reserve amount |
+| Public (`showReserveStatus`) | "Reserve met" / "Reserve not met" only |
+| Public (`showReservePrice`) | Exact reserve — only when admin explicitly enables |
+
+Server computation:
+
+```text
+reserveMet = currentHighBidAmount !== null && currentHighBidAmount >= reservePrice
+```
+
+- Recompute on every accepted bid; store `reserveMet` on `Auction`.
+- At close: `RESERVE_MET` only if highest accepted bid ≥ reserve.
+- **No-reserve auctions** require `noReserveConfirmed` + admin approval; show "No reserve" badge publicly.
+
+Public API projections and marketplace mappers must **strip** `reservePrice` unless `showReservePrice` is true.
+
+## Opening bid and bid increments
+
+### Opening bid
+
+| State | Minimum acceptable bid |
+|-------|------------------------|
+| No accepted bids | `startingBid` |
+| Current high = H | `H + bidIncrement` |
+
+- Whole ZAR only; reject decimals.
+- Buyer may **jump bid** (any amount ≥ minimum next bid).
+- Seller, listing owner, and broker of record cannot bid.
+
+### Increment (MVP)
+
+Single fixed `bidIncrement` per auction. Increment defines the **minimum step**, not a forced exact step for jump bids.
+
+```text
+minNextBid = currentHighBidAmount ? currentHighBidAmount + bidIncrement : startingBid
+valid ⟺ bidAmount >= minNextBid
+```
+
+Platform minimum increment floors (e.g. R10 000 below R2m) may be enforced at admin setup. Tiered increments by price band are **later**.
+
+## Buyer eligibility
+
+### Registration gate
+
+Before first bid, buyer completes **Register to bid** for that auction:
+
+1. Authenticated session.
+2. Accept auction-specific terms (hammer price, buyer's premium disclosure, inspection status).
+3. Pass verification tier (see below).
+4. Not seller, listing owner, broker of record, or conflicted admin.
+5. Not `buyerBidBlocked` / compliance hold.
+6. Auction `LIVE` and server time within window.
+
+`AuctionRegistration` statuses: `PENDING` → `APPROVED` | `DENIED` | `REVOKED`.
+
+### Verification tiers
+
+| Tier | MVP access |
+|------|------------|
+| `UNVERIFIED` | View only; enquire |
+| `PENDING` (FICA submitted) | Register and bid; banner "subject to FICA clearance before deal" |
+| `VERIFIED` (FICA cleared) | Full access; **required before `BINDING` / deal progression** |
+
+Stricter per-auction tier (require `VERIFIED` to bid) is configurable later.
+
+### Per-bid server checks (every `placeBid`)
+
+- Registration `APPROVED`.
+- Auction `LIVE`; server `now() < effectiveEndsAt`.
+- `bidAmount >= minNextBid`.
+- Buyer ≠ seller.
+- No active compliance hold.
+- Rate limit (e.g. 10 bids / minute / user / auction).
+
+## Anti-sniping
+
+When an `ACCEPTED` bid is placed and `remainingTime <= antiSnipeWindowMinutes`:
+
+1. `effectiveEndsAt = max(effectiveEndsAt, now + antiSnipeExtensionMinutes)`
+2. `extensionCount += 1`
+3. Write `AuctionEvent` type `AUCTION_EXTENDED`
+4. Fan out `AUCTION_EXTENDED` notification
+
+Stop extending when `extensionCount >= maxExtensions`. No extensions once status is `CLOSING` or `CLOSED`.
+
+Defaults: window `5` min, extension `5` min, max `12` extensions.
+
+## Server-side bidding rules
+
+All mutations via server actions or API routes with role checks. Never trust client-provided `auctionId` ownership, `endsAt`, or `amount` without re-validation.
+
+### Required server actions
+
+| Action | Who |
+|--------|-----|
+| `createAuctionDraft(listingId)` | Admin |
+| `configureAuction(auctionId, …)` | Admin |
+| `scheduleAuction(auctionId)` | Admin |
+| `cancelAuction(auctionId, reason)` | Admin |
+| `registerForAuction(auctionId)` | Authenticated buyer |
+| `placeBid(auctionId, amount)` | Approved registrant |
+| `voidBid(bidId, reason)` | Admin |
+| `markWinnerDefaulted(auctionId, reason)` | Admin |
+| `createDealFromWinningBid(auctionId)` | Admin (MVP manual) |
+
+### `placeBid` transaction (single DB transaction)
+
+1. `SELECT … FOR UPDATE` on `Auction` row.
+2. Reject if status ≠ `LIVE` or `now() >= effectiveEndsAt`.
+3. Validate amount, registration, eligibility.
+4. Insert `Bid` with status `ACCEPTED`.
+5. Mark prior high bid `SUPERSEDED`.
+6. Update denormalized `currentHighBid*`, `bidCount`, `reserveMet`.
+7. Apply anti-snipe extension if applicable.
+8. Insert `AuctionEvent` + `NotificationEvent` (`BID_PLACED`, `BID_OUTBID`).
+
+Return fresh auction projection to client.
+
+## Concurrency requirements
+
+- **Pessimistic lock** on `Auction` during `placeBid` and close finalize (`SELECT FOR UPDATE` or equivalent).
+- Close job must be **idempotent**: `LIVE` → `CLOSING` → `CLOSED` safe to retry; set `closedAt` once.
+- Use unique constraint or job lock to prevent double-close.
+- Bids received after `effectiveEndsAt` (server time) → `REJECTED` with reason `AUCTION_ENDED`.
+- Denormalized `currentHighBidAmount` must always match max `ACCEPTED` bid — reconcile in same transaction.
+- Rate limiting per user per auction to reduce lock contention abuse.
+- Do not use eventual consistency for bid acceptance; buyer must get synchronous accept/reject.
+
+### Close job
+
+Scheduled worker every 30–60s:
+
+```text
+WHERE status = LIVE AND effectiveEndsAt <= now()
+→ CLOSING (lock row)
+→ reject new bids
+→ find highest ACCEPTED bid
+→ set closeOutcome, mark WINNING_AT_CLOSE / SUPERSEDED
+→ CLOSED
+→ transition listing status
+→ notifications
+```
+
+## Auction close and winner selection
+
+At close:
+
+1. Winner = highest `amount`; tie-break = earliest `createdAt`.
+2. If `winner.amount >= reservePrice` → `RESERVE_MET`; else if any bids → `RESERVE_NOT_MET`; else → `NO_BIDS`.
+3. Listing → `UNDER_OFFER` when `RESERVE_MET`.
+
+### Reserve not met
+
+- No deal auto-created.
+- Auto-create `Lead` for high bidder (`source: AUCTION`) for ops follow-up.
+- Admin disposition: negotiate, re-schedule auction, convert to fixed price, withdraw.
+
+### Winner defaults (backs out)
+
+MVP: manual ops tracking. Admin action `markWinnerDefaulted`:
+
+- Winner bid → `DEFAULTED`; flag buyer account.
+- Offer second chance to next-highest bid (manual accept → `BINDING` → deal).
+- No payment chargeback — deal failure workflow only.
+
+## Admin auction management
+
+Route: `/dashboard/admin/auctions` (workspace, not placeholder long-term).
+
+### Admin setup (before go-live)
+
+| Field | Rule |
+|-------|------|
+| `startsAt`, `endsAt` | UTC stored; display `Africa/Johannesburg`; `endsAt > startsAt`; min duration e.g. 48h |
+| `startingBid`, `bidIncrement`, `reservePrice` | Required whole ZAR |
+| `showReserveStatus`, `showReservePrice` | Default `false` |
+| `buyerPremiumRate` | Display placeholder only |
+
+### Preconditions
+
+- Listing `APPROVED_FOR_LISTING` (inspection path complete).
+- Required photos/documents accepted.
+- Reserve confirmed with seller (review task done).
+- One active auction per listing.
+
+### Admin overrides (all require `reason` + `AuctionEvent`)
+
+| Action | When |
+|--------|------|
+| Cancel auction | `DRAFT`, `SCHEDULED`, `LIVE` |
+| Extend end time | `SCHEDULED`, `LIVE` |
+| Void bid | Any time before deal |
+| Void result / reopen | After `CLOSED`, before deal — rare, dual approval |
+| Force early close | `LIVE` with seller written consent |
+| Accept late bid | **Deny by default** — exceptional audit only |
+| Override winner | **Deny by default** — use void + second-chance workflow |
+
+Sellers view auction activity on listing workspace; they cannot change auction config or status.
+
+## Buyer's premium / platform fee (display only)
+
+| Fee | Who pays | MVP |
+|-----|----------|-----|
+| Buyer's premium | Buyer | `buyerPremiumRate` on auction; show estimated total = hammer × (1 + premium); **no charging** |
+| Seller commission | Seller | Existing central commission config; seller/deal workspace only |
+
+Public bid panel shows hammer price + premium estimate + "subject to contract and AVIATONLY verification".
+
+## Public auction UI
+
+### Catalog (`/buy`)
+
+- Listing cards for auctions: current bid, ends-at (server-sourced), bid count, `AUCTION_LIVE` / `AUCTION_SCHEDULED` badge.
+- Sort: `AUCTION_ENDING` uses `effectiveEndsAt` ascending.
+- Never show reserve amount on cards unless `showReservePrice`.
+
+### Auction detail panel (`/buy/[listingSlug]`)
+
+When `saleType === AUCTION`, show dedicated panel — do not mix with fixed-price CTAs.
+
+**Live auction shows:**
+
+- Current bid (hammer)
+- Next minimum bid
+- Opening bid (when no bids yet)
+- Countdown to `effectiveEndsAt` (display only; refresh from server)
+- Bid count
+- Reserve status badge **only if** `showReserveStatus`
+- Register to bid / Place bid (based on auth + registration state)
+- Auction terms link
+- Buyer's premium estimate
+- Extended badge when `extensionCount > 0`
+
+**Scheduled shows:**
+
+- Starts at / ends at
+- Opening bid
+- Register to bid CTA
+
+**Closed shows:**
+
+- Final bid, outcome, closed at
+- No bid button
+- Enquire CTA for reserve-not-met scenarios
+
+### Bid button behaviour
+
+- Unauthenticated → redirect/login with return URL.
+- Authenticated, not registered → "Register to bid" → terms modal → server `registerForAuction`.
+- Registered, auction not live → disabled with clear label.
+- Registered, live → bid form with amount ≥ `minNextBid`; submit via `placeBid` server action only.
+- Show loading/error from server response; optimistic UI optional but must reconcile on error.
+
+Poll or revalidate every ~30s for countdown/card updates in MVP. No WebSockets until later.
+
+## Notification events
+
+Write `NotificationEvent` (and `AuctionEvent` for audit) on:
+
+| Event | Recipients |
+|-------|------------|
+| `AUCTION_SCHEDULED` | Seller |
+| `AUCTION_REGISTRATION_APPROVED` / `DENIED` | Buyer |
+| `AUCTION_STARTED` | Registered bidders |
+| `BID_PLACED` | Bidder |
+| `BID_OUTBID` | Prior high bidder |
+| `AUCTION_EXTENDED` | Registered bidders |
+| `AUCTION_ENDING_SOON` | Registered bidders (24h / 1h) |
+| `AUCTION_CLOSED_RESERVE_MET` | Winner, seller, other bidders (variant copy) |
+| `AUCTION_CLOSED_RESERVE_NOT_MET` | Seller, high bidder, bidders |
+| `AUCTION_CLOSED_NO_BIDS` | Seller |
+| `AUCTION_CANCELLED` | Registered bidders, seller |
+| `WINNER_ACTION_REQUIRED` | Winner (ops checklist MVP) |
+| `WINNER_DEFAULTED` | Seller, admin |
+| `SECOND_CHANCE_OFFER` | Next bidder |
+
+PostHog `StartBid`, `BidPlaced` — defer until persistence is stable.
+
+## Recommended build order
+
+```text
+Phase 1 — Foundation
+  [ ] Prisma: Auction, Bid, AuctionRegistration, AuctionEvent
+  [ ] Domain enums + transition validators + bid validation helpers
+  [ ] Extend Deal for acceptedBidId
+  [ ] Server actions with role checks + row locking
+
+Phase 2 — Admin
+  [ ] Admin auction setup / schedule / cancel UI
+  [ ] Close job worker
+  [ ] Post-close disposition queue (reserve not met, no bids)
+
+Phase 3 — Public bidding
+  [ ] registerForAuction + placeBid
+  [ ] Buy page auction panel + bid button states
+  [ ] Marketplace mappers (strip reserve, server projections)
+
+Phase 4 — Post-close ops
+  [ ] Auto Lead for high bidder on reserve not met
+  [ ] markWinnerDefaulted + second-chance manual flow
+  [ ] createDealFromWinningBid (manual)
+  [ ] Notifications fan-out
+
+Phase 5 — Polish
+  [ ] AUCTION_ENDING_SOON job
+  [ ] Seller listing workspace auction activity tab
+  [ ] Tests: bid validation, anti-snipe, close idempotency, concurrency
+```
+
+When the user says **"build auction bidding"** or **"start auction Phase 1"**, begin at the first unchecked phase unless they specify otherwise.
+
+## What not to build yet
+
+Defer explicitly:
+
+- Payment collection, bid bonds, deposit holds
+- Escrow integration and SACAA transfer automation
+- Proxy / max auto-bidding
+- WebSocket real-time bid stream
+- Tiered bid increments by price band
+- Automated second-chance offers with timers
+- `PAUSED` auction state
+- Public pre-announce before `SCHEDULED`
+- Simultaneous multi-lot auctions
+- Live auctioneer / floor bid mode
+- Finance pre-approval API integration
+- Export / cross-border bidding rule engine
+- SMS/WhatsApp outbid alerts (in-app/email first)
+- Hard FICA gate at bid placement (configurable later; MVP allows `PENDING` with banner)
+
+## Tests to add (when implementing)
+
+- Illegal auction status transitions rejected
+- `placeBid` rejects below minimum, after end, without registration
+- Anti-snipe extends `effectiveEndsAt` and respects `maxExtensions`
+- Close job idempotent; correct `closeOutcome` and winner selection
+- Reserve never in public API unless `showReservePrice`
+- Seller cannot bid on own listing
+- Concurrent bids: only one high bid; no lost updates under lock
+- Listing status changes only through listing transition helpers
+
+## Definition of done (auction MVP)
+
+1. Admin configures and publishes auction; listing shows `LIVE_AUCTION`.
+2. Buyer registers and places bid; server validates increment and time.
+3. Anti-snipe extends auction; close job finalizes outcome.
+4. Reserve met → listing `UNDER_OFFER`; reserve not met → ops queue + lead.
+5. Public detail page never leaks reserve amount by default.
+6. All bid and auction state changes have audit events.

@@ -191,6 +191,56 @@ export {
 } from "./roles";
 
 export {
+  AuctionStatus,
+  AuctionCloseOutcome,
+  AUCTION_STATUS_META,
+  ACTIVE_AUCTION_STATUSES,
+  BIDDING_OPEN_STATUSES,
+  CANCELLABLE_AUCTION_STATUSES,
+  getAuctionStatusMeta,
+  isActiveAuctionStatus,
+  isBiddingOpenStatus,
+} from "./auction-status";
+
+export {
+  BidStatus,
+  BID_STATUSES_FOR_WINNER,
+  isBidEligibleForWinner,
+} from "./bid-status";
+
+export {
+  AuctionRegistrationStatus,
+  BidRejectedReason,
+  AuctionBidderDisplayMode,
+} from "./auction-enums";
+
+export type {
+  AuctionClock,
+  AuctionDomainRecord,
+  AuctionBidderContext,
+  AuctionRegistrationRecord,
+  BidForOutcome,
+  DomainDecision,
+  PublicAuctionState,
+  PrivateAdminAuctionState,
+} from "./auction-types";
+
+export {
+  canStartAuction,
+  canPlaceBid,
+  calculateMinimumNextBid,
+  hasReserveBeenMet,
+  shouldExtendAuctionForAntiSniping,
+  calculateExtendedEndTime,
+  determineWinningBid,
+  determineAuctionCloseOutcome,
+  canCancelAuction,
+  canRegisterForAuction,
+  getPublicAuctionState,
+  getPrivateAdminAuctionState,
+} from "./auction-logic";
+
+export {
   INTAKE_STEPS,
   INTAKE_STEP_COUNT,
   getIntakeStep,

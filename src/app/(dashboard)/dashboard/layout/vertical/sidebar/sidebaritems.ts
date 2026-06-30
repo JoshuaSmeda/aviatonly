@@ -75,7 +75,6 @@ const SidebarContent: MenuItem[] = [
         name: "Browse Aircraft",
         icon: "solar:magnifer-line-duotone",
         url: "/buy",
-        external: true,
       },
     ],
   },

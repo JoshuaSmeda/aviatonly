@@ -1,6 +1,6 @@
 ---
 description: "Use when creating AVIATONLY UI components, pages, layouts, dashboard screens, listing cards, form wizards, tables, status badges, timelines, upload flows, or public listing pages."
-alwaysApply: false
+alwaysApply: true
 globs:
   - "app/**/*.tsx"
   - "components/**/*.tsx"

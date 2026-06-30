@@ -36,7 +36,7 @@ export function deriveAdminListingNextStep(
         sectionLabel: "Your next step",
         message: "Listing cleared for publication — publish to the public catalog when ready.",
         actionRequired: true,
-        primaryCta: { label: "Preview & publish", href: `${base}?tab=preview` },
+        primaryCta: { label: "Publish listing", href: `${base}?tab=overview` },
       };
     case ListingStatus.INSPECTION_PENDING:
       return {

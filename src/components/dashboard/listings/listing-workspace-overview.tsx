@@ -10,23 +10,28 @@ import {
   deriveAdminListingNextStep,
   getListingStatusMeta,
   getReviewTaskStatusMeta,
+  isLiveStatus,
+  ListingStatus,
   ReviewTaskStatus,
 } from "@/lib/aviatonly/domain";
 import type { ListingWorkspaceOverview } from "@/lib/aviatonly/mock/types";
 import type { MockAircraftListing } from "@/lib/aviatonly/mock/types";
 import { cn } from "@/lib/utils";
 import ListingWorkspaceActivityTimeline from "./listing-workspace-activity-timeline";
+import ListingPublishPanel from "./listing-publish-panel";
 
 interface ListingWorkspaceOverviewProps {
   listing: MockAircraftListing;
   overview: ListingWorkspaceOverview;
   canManageReview?: boolean;
+  approvedPhotoCount?: number;
 }
 
 const ListingWorkspaceOverviewTab = ({
   listing,
   overview,
   canManageReview = false,
+  approvedPhotoCount = 0,
 }: ListingWorkspaceOverviewProps) => {
   const statusMeta = getListingStatusMeta(listing.status);
   const blockingTasksForView = canManageReview
@@ -122,6 +127,19 @@ const ListingWorkspaceOverviewTab = ({
           </div>
         </div>
       </div>
+
+      {canManageReview &&
+      (listing.status === ListingStatus.APPROVED_FOR_LISTING ||
+        isLiveStatus(listing.status)) ? (
+        <>
+          <Separator />
+          <ListingPublishPanel
+            listing={listing}
+            canManageReview={canManageReview}
+            approvedPhotoCount={approvedPhotoCount}
+          />
+        </>
+      ) : null}
 
       {blockingTasksForView.length > 0 && (
         <div>

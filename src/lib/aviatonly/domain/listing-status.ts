@@ -48,7 +48,7 @@ export const LISTING_STATUS_META: Record<ListingStatus, StatusMeta> = {
   },
   [ListingStatus.VALUATION_READY]: {
     label: "Valuation Ready",
-    description: "Review passed and a valuation estimate is ready.",
+    description: "AVIATONLY has prepared an indicative market estimate for your aircraft.",
     badgeVariant: "outline",
   },
   [ListingStatus.INSPECTION_PENDING]: {
@@ -204,4 +204,9 @@ export function isAttentionStatus(status: ListingStatus): boolean {
 
 export function isLiveStatus(status: ListingStatus): boolean {
   return LIVE_STATUSES.includes(status);
+}
+
+/** True once the listing has reached the valuation workflow step or later. */
+export function isValuationPhaseReached(status: ListingStatus): boolean {
+  return getListingPhaseIndex(status) >= STATUS_PHASE_INDEX[ListingStatus.VALUATION_READY];
 }

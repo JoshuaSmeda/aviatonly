@@ -74,10 +74,10 @@ const StepPricing = () => {
         )}
         <RHFNumber
           name="valuationEstimate"
-          label="Your valuation estimate (optional)"
+          label="Expected sale price (optional)"
           placeholder="900000"
           suffix="ZAR"
-          description="Helps our team prepare an internal valuation."
+          description="What you hope to achieve. AVIATONLY prepares a separate indicative estimate after review."
         />
       </div>
 

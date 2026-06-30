@@ -22,6 +22,7 @@ export {
   isTerminalStatus,
   isAttentionStatus,
   isLiveStatus,
+  isValuationPhaseReached,
   type ListingPhaseKey,
 } from "./listing-status";
 

@@ -90,10 +90,13 @@ export function deriveSellerListingNextStep(
   }
 
   if (input.status === ListingStatus.VALUATION_READY) {
-    return actionState("Confirm your asking price or auction reserve before publication", {
-      label: "Confirm pricing",
-      href: `${base}?tab=valuation`,
-    });
+    return actionState(
+      "Review AVIATONLY's indicative estimate and check your asking price or auction reserve",
+      {
+        label: "Review estimate",
+        href: `${base}?tab=valuation`,
+      },
+    );
   }
 
   if (input.hasDeal) {

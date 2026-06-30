@@ -6,14 +6,15 @@ South African aviation marketplace — single Next.js application.
 
 ```text
 src/app/
-  (site)/          Public marketplace (Homely template base — to be reworked)
-  (dashboard)/     Authenticated dashboard shell
-    dashboard/     Admin/seller UI at /dashboard/*
-    auth/          Auth pages at /auth/*
-  api/             API routes (public + dashboard demo routes)
-src/components/    Shared UI (dashboard shadcn components + Themeprovider)
+  page.tsx           Root redirect → /dashboard
+  buy/               Legacy URL redirects → /dashboard/buy
+  (dashboard)/       Authenticated app shell
+    dashboard/       Main UI at /dashboard/*
+    auth/            Auth pages at /auth/*
+  api/               API routes
+src/components/      Shared UI (dashboard + marketplace components)
 src/components/dashboard/  Dashboard feature components
-prisma/            Database schema
+prisma/              Database schema
 ```
 
 ## Getting started
@@ -42,9 +43,7 @@ npm run db:push
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) for the public site.
-
-Dashboard template routes live under [http://localhost:3000/dashboard](http://localhost:3000/dashboard).
+Open [http://localhost:3000](http://localhost:3000) — redirects to the dashboard (login required).
 
 ## Scripts
 
@@ -64,4 +63,3 @@ Dashboard template routes live under [http://localhost:3000/dashboard](http://lo
 - Dashboard UI prompts: `prompts/` (copy into chat or reference by path)
 - shadcn agent skill: `.agents/skills/shadcn/`
 - Legacy dashboard docs: `docs/dashboard-template/` (deprecated paths)
-- The public site still uses Homely real-estate placeholder content — replace with AVIATONLY routes (`/buy`, `/sell`, etc.) during feature development.

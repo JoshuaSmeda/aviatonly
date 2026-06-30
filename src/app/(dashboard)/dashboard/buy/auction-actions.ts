@@ -33,9 +33,11 @@ function toErrorResult<T>(error: unknown): AuctionBuyerActionResult<T> {
 async function revalidateForAuction(auctionId: string) {
   const auction = await prisma.auction.findUnique({
     where: { id: auctionId },
-    select: { listing: { select: { registration: true } } },
+    select: { listing: { select: { registration: true, slug: true } } },
   });
-  if (auction?.listing.registration) {
+  if (auction?.listing.slug) {
+    revalidatePath(`/dashboard/buy/${auction.listing.slug}`);
+    revalidatePath("/dashboard/buy");
     revalidatePath(`/buy/${auction.listing.registration}`);
     revalidatePath("/buy");
   }

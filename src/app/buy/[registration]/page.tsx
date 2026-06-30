@@ -8,7 +8,7 @@ interface PageProps {
   params: Promise<{ registration: string }>;
 }
 
-export default async function PublicBuyDetailRedirectPage({ params }: PageProps) {
+export default async function BuyDetailRedirectPage({ params }: PageProps) {
   const { registration } = await params;
   const slug = registration.toLowerCase();
   const normalizedReg = slug.replace(/[^a-z0-9]/g, "");

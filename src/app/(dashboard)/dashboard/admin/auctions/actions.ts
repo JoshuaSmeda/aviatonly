@@ -40,6 +40,7 @@ async function requireAdmin() {
 function revalidateAuctionPaths(registration?: string) {
   revalidatePath("/dashboard/auctions");
   revalidatePath("/dashboard/admin/auctions");
+  revalidatePath("/dashboard/buy");
   revalidatePath("/buy");
   if (registration) {
     revalidatePath(`/buy/${registration}`);

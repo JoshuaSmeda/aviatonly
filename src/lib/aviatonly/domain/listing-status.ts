@@ -28,7 +28,7 @@ export enum ListingStatus {
 export const LISTING_STATUS_META: Record<ListingStatus, StatusMeta> = {
   [ListingStatus.DRAFT]: {
     label: "Draft",
-    description: "Aircraft intake started but not yet submitted to AVIATONLY.",
+    description: "Aircraft intake started but not yet submitted.",
     badgeVariant: "secondary",
   },
   [ListingStatus.SUBMITTED]: {

@@ -21,9 +21,7 @@ import WorkflowPlaceholder from "@/components/dashboard/shared/workflow-placehol
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  getDealStatusMeta,
-} from "@/lib/aviatonly/domain";
+import { getDealStatusMeta, PhotoStatus } from "@/lib/aviatonly/domain";
 import {
   formatTimeAgo,
   formatZar,
@@ -37,6 +35,7 @@ import ListingWorkspaceOverviewTab from "./listing-workspace-overview";
 import ListingAircraftDataReviewTab from "./listing-aircraft-data-review-tab";
 import ListingMediaReviewTab from "./listing-media-review-tab";
 import ListingDocumentsReviewTab from "./listing-documents-review-tab";
+import ListingPublishPanel from "./listing-publish-panel";
 import ListingReviewTasksAdminPanel from "./listing-review-tasks-admin-panel";
 import ListingSellerReviewTasksPanel from "./listing-seller-review-tasks-panel";
 
@@ -188,10 +187,10 @@ const ListingWorkspaceTabs = ({
       </TabsContent>
 
       <TabsContent value="preview" className="w-full flex-none pt-6">
-        <WorkflowPlaceholder
-          icon={Eye}
-          title="Listing preview"
-          description="This is a seller preview only. Your aircraft is not publicly visible until AVIATONLY approves and publishes the listing."
+        <ListingPublishPanel
+          listing={listing}
+          canManageReview={canManageReview}
+          approvedPhotoCount={workspace.photos.filter((p) => p.status === PhotoStatus.APPROVED).length}
         />
       </TabsContent>
 

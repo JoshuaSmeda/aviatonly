@@ -26,6 +26,7 @@ export interface UploadMeta {
   fileName: string;
   storageKey?: string;
   photoId?: string;
+  documentId?: string;
 }
 
 export type SubmitListingResult =
@@ -184,16 +185,39 @@ async function syncListingChildren(
   }
 
   if (documents.length) {
-    await prisma.aircraftDocument.deleteMany({ where: { listingId } });
-    await prisma.aircraftDocument.createMany({
-      data: documents.map((d) => ({
-        listingId,
-        documentType: d.slot,
-        fileName: d.fileName,
-        reviewStatus: DocumentStatus.UPLOADED,
-        visibility: DocumentVisibility.PRIVATE_INTERNAL,
-      })),
-    });
+    for (const document of documents) {
+      const existing = await prisma.aircraftDocument.findFirst({
+        where: { listingId, documentType: document.slot },
+        select: { id: true, storageKey: true },
+      });
+
+      if (existing?.storageKey && !existing.storageKey.startsWith("local/")) {
+        continue;
+      }
+
+      if (existing) {
+        await prisma.aircraftDocument.update({
+          where: { id: existing.id },
+          data: {
+            fileName: document.fileName,
+            storageKey: document.storageKey ?? existing.storageKey,
+            reviewStatus: DocumentStatus.UPLOADED,
+            visibility: DocumentVisibility.PRIVATE_INTERNAL,
+          },
+        });
+      } else {
+        await prisma.aircraftDocument.create({
+          data: {
+            listingId,
+            documentType: document.slot,
+            fileName: document.fileName,
+            storageKey: document.storageKey ?? null,
+            reviewStatus: DocumentStatus.UPLOADED,
+            visibility: DocumentVisibility.PRIVATE_INTERNAL,
+          },
+        });
+      }
+    }
   }
 }
 
@@ -298,7 +322,7 @@ export async function getIntakeFixContext(
 
 export async function getListingUploadPrefill(listingId: string): Promise<{
   photos: Record<string, { name: string; sizeLabel: string; photoId?: string; storageKey?: string }>;
-  documents: Record<string, { name: string; sizeLabel: string }>;
+  documents: Record<string, { name: string; sizeLabel: string; documentId?: string; storageKey?: string }>;
 }> {
   const session = await requireAnyRole(SELLER_ROLES);
   const listing = await prisma.aircraftListing.findFirst({
@@ -313,7 +337,7 @@ export async function getListingUploadPrefill(listingId: string): Promise<{
           storageKey: true,
         },
       },
-      documents: { select: { documentType: true, fileName: true } },
+      documents: { select: { id: true, documentType: true, fileName: true, sizeBytes: true, storageKey: true } },
     },
   });
 
@@ -331,9 +355,14 @@ export async function getListingUploadPrefill(listingId: string): Promise<{
     };
   }
 
-  const documents: Record<string, { name: string; sizeLabel: string }> = {};
+  const documents: Record<string, { name: string; sizeLabel: string; documentId?: string; storageKey?: string }> = {};
   for (const doc of listing.documents) {
-    documents[doc.documentType] = { name: doc.fileName, sizeLabel: "On file" };
+    documents[doc.documentType] = {
+      name: doc.fileName,
+      sizeLabel: doc.sizeBytes ? `${Math.round(doc.sizeBytes / 1024)} KB` : "On file",
+      documentId: doc.id,
+      storageKey: doc.storageKey ?? undefined,
+    };
   }
 
   return { photos, documents };
@@ -520,7 +549,7 @@ export async function submitAircraftListing(
           listingId: existing.id,
           type: "SELLER_SUBMITTED_LISTING",
           actorId: sellerId,
-          message: `${registration} submitted for AVIATONLY review.`,
+          message: `${registration} submitted for review.`,
         },
       });
 
@@ -642,14 +671,14 @@ export async function submitAircraftListing(
             fromStatus: ListingStatus.DRAFT,
             toStatus: ListingStatus.SUBMITTED,
             changedById: sellerId,
-            reason: "Seller submitted aircraft for AVIATONLY review.",
+            reason: "Seller submitted aircraft for review.",
           },
         },
         events: {
           create: {
             type: "SELLER_SUBMITTED_LISTING",
             actorId: sellerId,
-            message: `${registration} submitted for AVIATONLY review.`,
+            message: `${registration} submitted for review.`,
           },
         },
       },

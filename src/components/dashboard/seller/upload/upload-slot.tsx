@@ -24,6 +24,7 @@ export interface UploadedFile {
   status?: GuidedPhotoUploadStatus;
   progress?: number;
   photoId?: string;
+  documentId?: string;
   storageKey?: string;
   error?: string;
 }

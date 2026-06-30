@@ -1,7 +1,7 @@
 import {
   BuyerActivityType,
+  deriveSellerListingNextStep,
   DocumentStatus,
-  isLiveStatus,
   LeadStatus,
   LeadType,
   ListingStatus,
@@ -34,13 +34,11 @@ import type {
   OfferTableRow,
   ReviewQueueRow,
   SellerAircraftSummary,
-  WorkspacePrimaryCta,
 } from "./types";
 import { DEMO_SELLER_ID, getMockUserById } from "./users";
 import { getMockDocumentsForListing } from "./documents";
 import { getMockEventsForListing } from "./activity";
 import { getMockPhotosForListing } from "./photos";
-import type { MockAircraftListing } from "./types";
 
 const REVIEW_QUEUE_STATUSES: ListingStatus[] = [
   ListingStatus.SUBMITTED,
@@ -78,45 +76,41 @@ function deriveMissingItems(listingId: string): string[] {
   return items.slice(0, 4);
 }
 
-function deriveNextAction(listing: { id: string; status: ListingStatus; completenessScore: number }): string {
-  const openTasks = getOpenReviewTasksForListing(listing.id).filter((t) => t.blockingPublication);
-  if (openTasks.length > 0) {
-    return openTasks[0].title;
-  }
+function buildSellerNextStepForListing(listing: {
+  id: string;
+  status: ListingStatus;
+}) {
+  const blockingSellerTasks = getOpenReviewTasksForListing(listing.id).filter(
+    (t) => t.blockingPublication && t.status === ReviewTaskStatus.WAITING_ON_SELLER,
+  );
 
-  const offerCount = countActiveOffersForListing(listing.id);
-  if (offerCount > 0) {
-    return `Respond to ${offerCount} pending offer${offerCount === 1 ? "" : "s"}`;
-  }
-
-  switch (listing.status) {
-    case ListingStatus.DRAFT:
-      return "Finish the intake wizard to submit for review";
-    case ListingStatus.VALUATION_READY:
-      return "Confirm pricing before AVIATONLY approves publication";
-    case ListingStatus.UNDER_CONTRACT:
-      return "Awaiting buyer deposit verification";
-    case ListingStatus.LIVE_FIXED_PRICE:
-    case ListingStatus.LIVE_AUCTION:
-      return "Monitor buyer enquiries and offers";
-    default:
-      return "AVIATONLY is reviewing your submission";
-  }
+  return deriveSellerListingNextStep({
+    listingId: listing.id,
+    status: listing.status,
+    blockingSellerTasks,
+    offerCount: countActiveOffersForListing(listing.id),
+    hasDeal: Boolean(getMockDealForListing(listing.id)),
+  });
 }
 
 export function buildSellerAircraftSummaries(sellerId = DEMO_SELLER_ID): SellerAircraftSummary[] {
-  return getMockListingsForSeller(sellerId).map((listing) => ({
-    id: listing.id,
-    registration: listing.registration,
-    title: listingTitle(listing),
-    location: listingLocation(listing),
-    status: listing.status,
-    completeness: listing.completenessScore,
-    missingItems: deriveMissingItems(listing.id),
-    leads: countLeadsForListing(listing.id),
-    offers: countActiveOffersForListing(listing.id),
-    nextAction: deriveNextAction(listing),
-  }));
+  return getMockListingsForSeller(sellerId).map((listing) => {
+    const nextStep = buildSellerNextStepForListing(listing);
+
+    return {
+      id: listing.id,
+      registration: listing.registration,
+      title: listingTitle(listing),
+      location: listingLocation(listing),
+      status: listing.status,
+      completeness: listing.completenessScore,
+      missingItems: deriveMissingItems(listing.id),
+      leads: countLeadsForListing(listing.id),
+      offers: countActiveOffersForListing(listing.id),
+      nextAction: nextStep.message,
+      actionRequired: nextStep.actionRequired,
+    };
+  });
 }
 
 export function buildActionRequiredItems(sellerId = DEMO_SELLER_ID): ActionRequiredItem[] {
@@ -292,63 +286,6 @@ export function buildReviewQueueRows(): ReviewQueueRow[] {
     .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
 }
 
-function derivePrimaryCta(listing: MockAircraftListing): WorkspacePrimaryCta {
-  const base = `/dashboard/listings/${listing.id}`;
-  const blockingSellerTasks = getOpenReviewTasksForListing(listing.id).filter(
-    (t) => t.blockingPublication && t.status === ReviewTaskStatus.WAITING_ON_SELLER,
-  );
-  const offerCount = countActiveOffersForListing(listing.id);
-  const deal = getMockDealForListing(listing.id);
-
-  if (listing.status === ListingStatus.DRAFT) {
-    return { label: "Resume intake wizard", href: "/dashboard/seller/upload" };
-  }
-
-  if (blockingSellerTasks.length > 0 || listing.status === ListingStatus.NEEDS_CHANGES) {
-    const firstTask = blockingSellerTasks[0];
-    const title = firstTask?.title.toLowerCase() ?? "";
-    const tab =
-      title.includes("photo") || title.includes("cockpit") || title.includes("propeller")
-        ? "media"
-        : title.includes("document") ||
-            title.includes("mpi") ||
-            title.includes("logbook") ||
-            title.includes("stamp")
-          ? "documents"
-          : "review-tasks";
-    return { label: "Resolve blocking tasks", href: `${base}?tab=${tab}` };
-  }
-
-  if (offerCount > 0) {
-    return {
-      label: `Review ${offerCount} offer${offerCount === 1 ? "" : "s"}`,
-      href: `${base}?tab=leads-offers`,
-    };
-  }
-
-  if (deal) {
-    return { label: "Open deal room", href: `${base}?tab=deal-room` };
-  }
-
-  if (listing.status === ListingStatus.VALUATION_READY) {
-    return { label: "Confirm pricing", href: `${base}?tab=valuation` };
-  }
-
-  if (listing.status === ListingStatus.APPROVED_FOR_LISTING) {
-    return { label: "Preview listing", href: `${base}?tab=preview` };
-  }
-
-  if (listing.status === ListingStatus.INSPECTION_PENDING) {
-    return { label: "View inspection status", href: `${base}?tab=inspection` };
-  }
-
-  if (isLiveStatus(listing.status)) {
-    return { label: "View leads & offers", href: `${base}?tab=leads-offers` };
-  }
-
-  return { label: "View aircraft data", href: `${base}?tab=aircraft-data` };
-}
-
 export function buildListingWorkspaceOverview(listingId: string): ListingWorkspaceOverview | null {
   const listing = MOCK_LISTINGS.find((l) => l.id === listingId);
   if (!listing) {
@@ -368,8 +305,7 @@ export function buildListingWorkspaceOverview(listingId: string): ListingWorkspa
 
   return {
     listingId,
-    nextAction: deriveNextAction(listing),
-    primaryCta: derivePrimaryCta(listing),
+    nextStep: buildSellerNextStepForListing(listing),
     blockingTasks,
     recentActivity: events,
     missingItems: deriveMissingItems(listingId),

@@ -6,6 +6,7 @@ import {
   ReviewTaskStatus,
 } from "@/lib/aviatonly/domain";
 import { getGuidedPhotoSlotLabel } from "@/lib/upload/photo-slot-keys";
+import { getGuidedDocumentSlotLabel } from "@/lib/upload/document-slot-keys";
 import { formatReviewTasksReleasedMessage } from "@/lib/aviatonly/domain/listing-event-tasks";
 import { AIRCRAFT_DATA_FIELD_KEYS } from "@/lib/aviatonly/domain/listing-aircraft-data-rows";
 import { resolveRejectionReason } from "@/lib/aviatonly/domain/intake-rejection-presets";
@@ -389,7 +390,7 @@ async function collectRejections(listingId: string): Promise<RejectionItem[]> {
       rejections.push({
         sourceType: "document",
         sourceKey: doc.id,
-        title: `Fix document: ${doc.documentType.replace(/-/g, " ")}`,
+        title: `Fix document: ${getGuidedDocumentSlotLabel(doc.documentType)}`,
         description: doc.rejectionReason,
       });
     }

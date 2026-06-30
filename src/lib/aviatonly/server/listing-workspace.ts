@@ -1,7 +1,6 @@
 import {
   DocumentStatus,
-  isLiveStatus,
-  ListingStatus,
+  deriveSellerListingNextStep,
   OfferStatus,
   ReviewTaskStatus,
 } from "@/lib/aviatonly/domain";
@@ -22,7 +21,6 @@ import type {
   MockListingEvent,
   MockListingFieldReview,
   MockListingReviewTask,
-  WorkspacePrimaryCta,
 } from "@/lib/aviatonly/mock/types";
 import {
   mapAirframeRecord,
@@ -104,82 +102,6 @@ async function countLeads(listingId: string): Promise<number> {
   return prisma.lead.count({ where: { listingId } });
 }
 
-function deriveNextAction(
-  listing: MockAircraftListing,
-  blockingTasks: MockListingReviewTask[],
-  offerCount: number,
-): string {
-  if (blockingTasks.length > 0) {
-    return blockingTasks[0].title;
-  }
-  if (offerCount > 0) {
-    return `Respond to ${offerCount} pending offer${offerCount === 1 ? "" : "s"}`;
-  }
-
-  switch (listing.status) {
-    case ListingStatus.DRAFT:
-      return "Finish the intake wizard to submit for review";
-    case ListingStatus.VALUATION_READY:
-      return "Confirm pricing before AVIATONLY approves publication";
-    case ListingStatus.UNDER_CONTRACT:
-      return "Awaiting buyer deposit verification";
-    case ListingStatus.LIVE_FIXED_PRICE:
-    case ListingStatus.LIVE_AUCTION:
-      return "Monitor buyer enquiries and offers";
-    default:
-      return "AVIATONLY is reviewing your submission";
-  }
-}
-
-function derivePrimaryCta(
-  listing: MockAircraftListing,
-  blockingSellerTasks: MockListingReviewTask[],
-  offerCount: number,
-  hasDeal: boolean,
-): WorkspacePrimaryCta {
-  const base = `/dashboard/listings/${listing.id}`;
-
-  if (listing.status === ListingStatus.DRAFT) {
-    return {
-      label: "Resume intake wizard",
-      href: `/dashboard/seller/upload?listingId=${listing.id}`,
-    };
-  }
-
-  if (blockingSellerTasks.length > 0 || listing.status === ListingStatus.NEEDS_CHANGES) {
-    return { label: "Fix review items", href: `${base}?tab=review-tasks` };
-  }
-
-  if (offerCount > 0) {
-    return {
-      label: `Review ${offerCount} offer${offerCount === 1 ? "" : "s"}`,
-      href: `${base}?tab=leads-offers`,
-    };
-  }
-
-  if (hasDeal) {
-    return { label: "Open deal room", href: `${base}?tab=deal-room` };
-  }
-
-  if (listing.status === ListingStatus.VALUATION_READY) {
-    return { label: "Confirm pricing", href: `${base}?tab=valuation` };
-  }
-
-  if (listing.status === ListingStatus.APPROVED_FOR_LISTING) {
-    return { label: "Preview listing", href: `${base}?tab=preview` };
-  }
-
-  if (listing.status === ListingStatus.INSPECTION_PENDING) {
-    return { label: "View inspection status", href: `${base}?tab=inspection` };
-  }
-
-  if (isLiveStatus(listing.status)) {
-    return { label: "View leads & offers", href: `${base}?tab=leads-offers` };
-  }
-
-  return { label: "View aircraft data", href: `${base}?tab=aircraft-data` };
-}
-
 function buildOverviewFromRecord(
   record: ListingWithDetails,
   listing: MockAircraftListing,
@@ -208,8 +130,13 @@ function buildOverviewFromRecord(
 
   return {
     listingId: listing.id,
-    nextAction: deriveNextAction(listing, blockingTasks, offerCount),
-    primaryCta: derivePrimaryCta(listing, blockingSellerTasks, offerCount, hasDeal),
+    nextStep: deriveSellerListingNextStep({
+      listingId: listing.id,
+      status: listing.status,
+      blockingSellerTasks,
+      offerCount,
+      hasDeal,
+    }),
     blockingTasks,
     recentActivity,
     missingItems: deriveMissingItems(documents, blockingTasks),

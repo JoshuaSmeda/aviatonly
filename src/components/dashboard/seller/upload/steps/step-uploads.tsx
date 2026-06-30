@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useIntakeFixMode } from "@/components/dashboard/seller/intake/intake-fix-mode-context";
 import type { AircraftFormValues } from "@/components/dashboard/seller/upload/schema";
 import GuidedPhotoUploadGrid from "../guided-photo-upload-grid";
+import GuidedDocumentUploadGrid from "../guided-document-upload-grid";
 import UploadSlot, { type UploadedFile } from "../upload-slot";
 import type { UploadSlotDef } from "../constants";
 
@@ -16,6 +17,7 @@ interface StepUploadsProps {
   onSelect: (slotId: string, file: File) => void;
   onRemove: (slotId: string) => void;
   onPhotoChange?: (slotId: string, value: UploadedFile | null) => void;
+  onDocumentChange?: (slotId: string, value: UploadedFile | null) => void;
   listingId?: string | null;
   getFormValues?: () => AircraftFormValues;
   onListingIdChange?: (listingId: string) => void;
@@ -30,6 +32,7 @@ const StepUploads = ({
   onSelect,
   onRemove,
   onPhotoChange,
+  onDocumentChange,
   listingId,
   getFormValues,
   onListingIdChange,
@@ -48,6 +51,9 @@ const StepUploads = ({
 
   const useGuidedPhotoUpload =
     variant === "photo" && onPhotoChange && getFormValues;
+
+  const useGuidedDocumentUpload =
+    variant === "document" && onDocumentChange && getFormValues;
 
   return (
     <div className="flex flex-col gap-6">
@@ -73,6 +79,16 @@ const StepUploads = ({
           slots={slots}
           values={values}
           onChange={onPhotoChange}
+          listingId={listingId ?? null}
+          getFormValues={getFormValues}
+          onListingIdChange={onListingIdChange}
+          isSlotDisabled={isSlotDisabled}
+        />
+      ) : useGuidedDocumentUpload ? (
+        <GuidedDocumentUploadGrid
+          slots={slots}
+          values={values}
+          onChange={onDocumentChange}
           listingId={listingId ?? null}
           getFormValues={getFormValues}
           onListingIdChange={onListingIdChange}

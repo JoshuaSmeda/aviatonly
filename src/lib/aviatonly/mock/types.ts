@@ -245,6 +245,7 @@ export interface SellerAircraftSummary {
   leads: number;
   offers: number;
   nextAction: string;
+  actionRequired: boolean;
 }
 
 export interface ActionRequiredItem {
@@ -303,11 +304,17 @@ export interface WorkspacePrimaryCta {
   href: string;
 }
 
+export interface ListingWorkspaceNextStep {
+  sectionLabel: string;
+  message: string;
+  actionRequired: boolean;
+  primaryCta: WorkspacePrimaryCta | null;
+}
+
 /** Overview tab data for a single listing workspace. */
 export interface ListingWorkspaceOverview {
   listingId: string;
-  nextAction: string;
-  primaryCta: WorkspacePrimaryCta;
+  nextStep: ListingWorkspaceNextStep;
   blockingTasks: MockListingReviewTask[];
   recentActivity: ActivityFeedItem[];
   missingItems: string[];

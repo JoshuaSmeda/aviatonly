@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast, Toaster } from "sonner";
@@ -202,20 +203,23 @@ const AircraftUploadWizard = () => {
                 <li>4. Listing published as fixed-price or auction.</li>
               </ul>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                form.reset(aircraftDefaultValues as AircraftFormValues);
-                setPhotos({});
-                setDocuments({});
-                setCurrentStep(0);
-                setConfirmed(false);
-                setSubmitted(false);
-              }}
-            >
-              List another aircraft
-            </Button>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  form.reset(aircraftDefaultValues as AircraftFormValues);
+                  setPhotos({});
+                  setDocuments({});
+                  setCurrentStep(0);
+                  setConfirmed(false);
+                  setSubmitted(false);
+                }}
+              >
+                List another aircraft
+              </Button>
+              <Button render={<Link href="/dashboard/listings" />}>Back to My Aircraft</Button>
+            </div>
           </CardContent>
         </Card>
       </>

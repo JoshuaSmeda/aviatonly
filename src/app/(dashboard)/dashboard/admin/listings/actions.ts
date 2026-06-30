@@ -13,6 +13,7 @@ import {
   reviewListingFieldRecord,
   reviewListingPhotoRecord,
 } from "@/lib/aviatonly/server/listing-intake-review";
+import { publishListingRecord } from "@/lib/aviatonly/server/publish-listing";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { requireAnyRole } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -31,8 +32,12 @@ function toErrorResult(error: unknown): ListingReviewActionResult {
   return { ok: false, error: "Something went wrong." };
 }
 
-function revalidateListingPaths(listingId: string, options?: { full?: boolean }) {
+function revalidateListingPaths(listingId: string, options?: { full?: boolean; registration?: string }) {
   revalidatePath(`/dashboard/listings/${listingId}`);
+  if (options?.registration) {
+    revalidatePath(`/buy/${options.registration}`);
+    revalidatePath("/buy");
+  }
   if (options?.full) {
     revalidatePath("/dashboard/admin/review-queue");
     revalidatePath("/dashboard/listings");
@@ -132,5 +137,51 @@ export async function adminGetIntakeReviewProgressAction(listingId: string) {
   } catch (error) {
     const result = toErrorResult(error);
     return { ok: false as const, error: result.ok ? "Something went wrong." : result.error };
+  }
+}
+
+export type PublishListingActionResult =
+  | { ok: true; listingId: string; registration: string; publishedPhotoCount: number }
+  | { ok: false; error: string };
+
+async function requireAdminListingPublishAccess(listingId: string) {
+  const session = await requireAnyRole(ADMIN_ROLES);
+  const listing = await prisma.aircraftListing.findUnique({
+    where: { id: listingId },
+    select: { id: true, sellerId: true },
+  });
+
+  if (!listing) {
+    throw new NotFoundError("Listing not found.");
+  }
+
+  assertCanAccessListing(listing, session);
+  return { session, listing };
+}
+
+export async function adminPublishListingAction(
+  listingId: string,
+): Promise<PublishListingActionResult> {
+  try {
+    const { session } = await requireAdminListingPublishAccess(listingId);
+    const result = await publishListingRecord(listingId, session.user.id);
+    revalidateListingPaths(listingId, {
+      full: true,
+      registration: result.registration,
+    });
+    return {
+      ok: true,
+      listingId: result.listingId,
+      registration: result.registration,
+      publishedPhotoCount: result.publishedPhotoCount,
+    };
+  } catch (error) {
+    if (error instanceof AuthorizationError || error instanceof NotFoundError) {
+      return { ok: false, error: error.message };
+    }
+    if (error instanceof Error) {
+      return { ok: false, error: error.message };
+    }
+    return { ok: false, error: "Something went wrong." };
   }
 }

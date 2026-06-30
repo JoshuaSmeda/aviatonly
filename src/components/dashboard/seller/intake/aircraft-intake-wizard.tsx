@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -324,7 +325,7 @@ const AircraftIntakeWizard = ({
 
       if (fixContext.type === "document" && fixContext.documentId && fixContext.documentSlot) {
         const upload = documents[fixContext.documentSlot];
-        if (!upload || upload.sizeLabel === "On file") {
+        if (!upload || upload.status === "on-file") {
           toast.error("Upload a replacement document before saving.");
           return;
         }
@@ -373,6 +374,8 @@ const AircraftIntakeWizard = ({
       const documentMeta = Object.entries(documents).map(([slot, file]) => ({
         slot,
         fileName: file.name,
+        storageKey: file.storageKey,
+        documentId: file.documentId,
       }));
 
       const listingResult = await saveDraftListingFromIntake(
@@ -460,6 +463,8 @@ const AircraftIntakeWizard = ({
     const documentMeta = Object.entries(documents).map(([slot, file]) => ({
       slot,
       fileName: file.name,
+      storageKey: file.storageKey,
+      documentId: file.documentId,
     }));
 
     const result = await submitAircraftListing(values, photoMeta, documentMeta);
@@ -489,6 +494,17 @@ const AircraftIntakeWizard = ({
       if (previous?.previewUrl?.startsWith("blob:")) {
         URL.revokeObjectURL(previous.previewUrl);
       }
+      if (!value) {
+        const next = { ...prev };
+        delete next[slotId];
+        return next;
+      }
+      return { ...prev, [slotId]: value };
+    });
+  }, []);
+
+  const handleDocumentChange = useCallback((slotId: string, value: UploadedFile | null) => {
+    setDocuments((prev) => {
       if (!value) {
         const next = { ...prev };
         delete next[slotId];
@@ -541,25 +557,28 @@ const AircraftIntakeWizard = ({
             review the data and schedule an inspection or verification where needed before it goes
             live.
           </p>
-          <Button
-            variant="outline"
-            onClick={() => {
-              form.reset(aircraftDefaultValues as AircraftFormValues);
-              setPhotos({});
-              setDocuments({});
-              setCurrentStep(0);
-              stepRef.current = 0;
-              setVisited(new Set([0]));
-              draftIdRef.current = null;
-              setDraftId(null);
-              setConfirmed(false);
-              setSubmitted(false);
-              setAutosaveStatus("idle");
-              setLastSavedAt(null);
-            }}
-          >
-            List another aircraft
-          </Button>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                form.reset(aircraftDefaultValues as AircraftFormValues);
+                setPhotos({});
+                setDocuments({});
+                setCurrentStep(0);
+                stepRef.current = 0;
+                setVisited(new Set([0]));
+                draftIdRef.current = null;
+                setDraftId(null);
+                setConfirmed(false);
+                setSubmitted(false);
+                setAutosaveStatus("idle");
+                setLastSavedAt(null);
+              }}
+            >
+              List another aircraft
+            </Button>
+            <Button render={<Link href="/dashboard/listings" />}>Back to My Aircraft</Button>
+          </div>
         </div>
       </>
     );
@@ -598,6 +617,7 @@ const AircraftIntakeWizard = ({
         onPhotoSelect={handlePhotoSelect}
         onPhotoRemove={handlePhotoRemove}
         onPhotoChange={handlePhotoChange}
+        onDocumentChange={handleDocumentChange}
         listingId={activeListingId}
         getFormValues={getFormValues}
         onListingIdChange={handleListingIdChange}
@@ -632,6 +652,7 @@ interface AircraftIntakeWizardFormProps {
   onPhotoSelect: (slotId: string, file: File) => void;
   onPhotoRemove: (slotId: string) => void;
   onPhotoChange: (slotId: string, value: UploadedFile | null) => void;
+  onDocumentChange: (slotId: string, value: UploadedFile | null) => void;
   listingId: string | null;
   getFormValues: () => AircraftFormValues;
   onListingIdChange: (listingId: string) => void;
@@ -663,6 +684,7 @@ const AircraftIntakeWizardForm = ({
   onPhotoSelect,
   onPhotoRemove,
   onPhotoChange,
+  onDocumentChange,
   listingId,
   getFormValues,
   onListingIdChange,
@@ -826,8 +848,12 @@ const AircraftIntakeWizardForm = ({
                   values={documents}
                   onSelect={onDocumentSelect}
                   onRemove={onDocumentRemove}
-                  alertTitle="Documents are private and optional for now"
-                  alertDescription="Logbooks and certificates are stored privately and only released after authorization. You can skip and upload them during review."
+                  onDocumentChange={onDocumentChange}
+                  listingId={listingId}
+                  getFormValues={getFormValues}
+                  onListingIdChange={onListingIdChange}
+                  alertTitle="Private document vault"
+                  alertDescription="Logbooks and certificates are stored privately in secure cloud storage. Only authorized AVIATONLY staff can access them until you grant buyer access later."
                 />
               )}
               {currentStep === 10 && <StepSale />}
@@ -894,7 +920,7 @@ const AircraftIntakeWizardForm = ({
                       <Button type="submit" disabled={!confirmed || form.formState.isSubmitting || closing}>
                         {form.formState.isSubmitting && <Spinner />}
                         <Send data-icon="inline-start" />
-                        Submit for AVIATONLY review
+                        Submit for review
                       </Button>
                     ) : (
                       <Button type="button" onClick={handleNext} disabled={closing}>

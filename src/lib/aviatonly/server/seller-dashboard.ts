@@ -1,6 +1,7 @@
 import {
   BuyerActivityType,
   DealStatus,
+  deriveSellerListingNextStep,
   DocumentStatus,
   LeadStatus,
   LeadType,
@@ -81,36 +82,32 @@ async function deriveMissingItems(listingId: string): Promise<string[]> {
   return items.slice(0, 4);
 }
 
-async function deriveNextAction(
+async function deriveSellerNextStepForListing(
   listingId: string,
   status: ListingStatus,
-): Promise<string> {
-  const [blockingTasks, offerCount] = await Promise.all([
-    prisma.listingReviewTask.findFirst({
-      where: { listingId, blockingPublication: true, status: { not: ReviewTaskStatus.DONE } },
+) {
+  const [blockingSellerTasks, offerCount, hasDeal] = await Promise.all([
+    prisma.listingReviewTask.findMany({
+      where: {
+        listingId,
+        blockingPublication: true,
+        status: ReviewTaskStatus.WAITING_ON_SELLER,
+        releasedToSeller: true,
+      },
       orderBy: { createdAt: "asc" },
+      select: { title: true },
     }),
     countActiveOffersForListing(listingId),
+    prisma.deal.findFirst({ where: { listingId }, select: { id: true } }).then(Boolean),
   ]);
 
-  if (blockingTasks) return blockingTasks.title;
-  if (offerCount > 0) {
-    return `Respond to ${offerCount} pending offer${offerCount === 1 ? "" : "s"}`;
-  }
-
-  switch (status) {
-    case ListingStatus.DRAFT:
-      return "Finish the intake wizard to submit for review";
-    case ListingStatus.VALUATION_READY:
-      return "Confirm pricing before AVIATONLY approves publication";
-    case ListingStatus.UNDER_CONTRACT:
-      return "Awaiting buyer deposit verification";
-    case ListingStatus.LIVE_FIXED_PRICE:
-    case ListingStatus.LIVE_AUCTION:
-      return "Monitor buyer enquiries and offers";
-    default:
-      return "AVIATONLY is reviewing your submission";
-  }
+  return deriveSellerListingNextStep({
+    listingId,
+    status,
+    blockingSellerTasks,
+    offerCount,
+    hasDeal,
+  });
 }
 
 export async function querySellerAircraftSummaries(
@@ -120,11 +117,11 @@ export async function querySellerAircraftSummaries(
 
   return Promise.all(
     listings.map(async (listing) => {
-      const [leads, offers, missingItems, nextAction] = await Promise.all([
+      const [leads, offers, missingItems, nextStep] = await Promise.all([
         countLeadsForListing(listing.id),
         countActiveOffersForListing(listing.id),
         deriveMissingItems(listing.id),
-        deriveNextAction(listing.id, listing.status),
+        deriveSellerNextStepForListing(listing.id, listing.status),
       ]);
 
       return {
@@ -137,7 +134,8 @@ export async function querySellerAircraftSummaries(
         missingItems,
         leads,
         offers,
-        nextAction,
+        nextAction: nextStep.message,
+        actionRequired: nextStep.actionRequired,
       };
     }),
   );

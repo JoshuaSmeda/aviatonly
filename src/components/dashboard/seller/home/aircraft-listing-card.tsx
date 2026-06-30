@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import type { SellerAircraftSummary } from "@/lib/aviatonly/mock/types";
+import { cn } from "@/lib/utils";
 
 interface AircraftListingCardProps {
   aircraft: SellerAircraftSummary;
@@ -44,8 +45,15 @@ const AircraftListingCard = ({ aircraft }: AircraftListingCardProps) => {
           )}
         </div>
 
-        <div className="rounded-lg bg-muted/40 p-3 text-sm">
-          <span className="text-muted-foreground">Next action: </span>
+        <div
+          className={cn(
+            "rounded-lg p-3 text-sm",
+            aircraft.actionRequired ? "bg-primary/5" : "bg-muted/40",
+          )}
+        >
+          <span className="text-muted-foreground">
+            {aircraft.actionRequired ? "Your next step: " : "What's happening: "}
+          </span>
           <span className="font-medium">{aircraft.nextAction}</span>
         </div>
 

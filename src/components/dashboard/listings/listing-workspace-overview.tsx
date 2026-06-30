@@ -7,14 +7,14 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import {
   buildReviewTaskFixHref,
-  deriveAdminNextAction,
-  deriveAdminPrimaryCta,
+  deriveAdminListingNextStep,
   getListingStatusMeta,
   getReviewTaskStatusMeta,
   ReviewTaskStatus,
 } from "@/lib/aviatonly/domain";
 import type { ListingWorkspaceOverview } from "@/lib/aviatonly/mock/types";
 import type { MockAircraftListing } from "@/lib/aviatonly/mock/types";
+import { cn } from "@/lib/utils";
 import ListingWorkspaceActivityTimeline from "./listing-workspace-activity-timeline";
 
 interface ListingWorkspaceOverviewProps {
@@ -34,27 +34,41 @@ const ListingWorkspaceOverviewTab = ({
     : overview.blockingTasks.filter(
         (task) => task.status === ReviewTaskStatus.WAITING_ON_SELLER,
       );
-  const nextAction = canManageReview
-    ? deriveAdminNextAction(listing.status)
-    : overview.nextAction;
-  const primaryCta = canManageReview
-    ? deriveAdminPrimaryCta(listing.id, listing.status)
-    : overview.primaryCta;
+  const nextStep = canManageReview
+    ? deriveAdminListingNextStep(listing.id, listing.status)
+    : overview.nextStep;
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border border-primary/20 bg-primary/5 p-5">
+      <div
+        className={cn(
+          "rounded-lg border p-5",
+          nextStep.actionRequired
+            ? "border-primary/20 bg-primary/5"
+            : "border-border bg-muted/30",
+        )}
+      >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-1">
-            <p className="text-sm font-medium text-primary">
-              {canManageReview ? "Admin next action" : "Next required action"}
+            <p
+              className={cn(
+                "text-sm font-medium",
+                nextStep.actionRequired ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              {nextStep.sectionLabel}
             </p>
-            <p className="text-base font-semibold">{nextAction}</p>
+            <p className="text-base font-semibold">{nextStep.message}</p>
+            {!nextStep.actionRequired ? (
+              <p className="text-sm text-muted-foreground">No action needed from you right now.</p>
+            ) : null}
           </div>
-          <Button render={<Link href={primaryCta.href} />}>
-            {primaryCta.label}
-            <ArrowRight data-icon="inline-end" />
-          </Button>
+          {nextStep.actionRequired && nextStep.primaryCta ? (
+            <Button className="shrink-0" render={<Link href={nextStep.primaryCta.href} />}>
+              {nextStep.primaryCta.label}
+              <ArrowRight data-icon="inline-end" />
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -141,7 +155,7 @@ const ListingWorkspaceOverviewTab = ({
                   <Badge variant="outline">
                     {getReviewTaskStatusMeta(task.status).label}
                   </Badge>
-                  {!canManageReview ? (
+                  {!canManageReview && task.status === ReviewTaskStatus.WAITING_ON_SELLER ? (
                     <Button
                       size="sm"
                       variant="outline"

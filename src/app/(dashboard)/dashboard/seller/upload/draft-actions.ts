@@ -2,7 +2,8 @@
 
 import { Prisma } from "@prisma/client";
 import { INTAKE_STEPS } from "@/lib/aviatonly/domain";
-import { getListingIntakePrefill, getListingUploadPrefill } from "./actions";
+import { getListingIntakePrefill } from "./actions";
+import { loadGuidedDocumentsForListing, type GuidedDocumentPrefill } from "./document-actions";
 import { loadGuidedPhotosForListing, type GuidedPhotoPrefill } from "./photo-actions";
 import { SELLER_ROLES } from "@/lib/auth/roles";
 import { requireAnyRole } from "@/lib/auth/session";
@@ -26,7 +27,7 @@ export interface IntakeWizardLoadedState {
   step: number;
   formData: Record<string, unknown> | null;
   photos: Record<string, GuidedPhotoPrefill>;
-  documents: Record<string, { name: string; sizeLabel: string }>;
+  documents: Record<string, GuidedDocumentPrefill>;
   updatedAt: string | null;
   source: "draft" | "listing" | "empty";
 }
@@ -41,12 +42,12 @@ function readListingIdFromData(data: Record<string, unknown>): string | null {
 }
 
 async function loadListingUploads(listingId: string) {
-  const [uploads, photos] = await Promise.all([
-    getListingUploadPrefill(listingId),
+  const [photos, documents] = await Promise.all([
     loadGuidedPhotosForListing(listingId).catch(() => ({})),
+    loadGuidedDocumentsForListing(listingId).catch(() => ({})),
   ]);
 
-  return { photos, documents: uploads.documents };
+  return { photos, documents };
 }
 
 async function findSellerDraft(sellerId: string, listingId?: string | null) {

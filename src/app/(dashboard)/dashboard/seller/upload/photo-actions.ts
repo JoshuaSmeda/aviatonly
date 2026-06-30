@@ -4,7 +4,7 @@ import { z } from "zod";
 import { ListingStatus, PhotoStatus } from "@/lib/aviatonly/domain";
 import { prisma } from "@/lib/prisma";
 import { requireAnyRole } from "@/lib/auth/session";
-import { SELLER_ROLES } from "@/lib/auth/roles";
+import { ADMIN_ROLES, hasAnyRole, SELLER_ROLES } from "@/lib/auth/roles";
 import { computeCompleteness } from "@/lib/completeness";
 import {
   type AircraftFormValues,
@@ -235,6 +235,45 @@ export async function resolveGuidedPhotoPreviews(listingId: string): Promise<
       previewUrl: previewUrl ?? undefined,
       status: "on-file",
     };
+  }
+
+  return result;
+}
+
+const WORKSPACE_PHOTO_ROLES = [...SELLER_ROLES, ...ADMIN_ROLES] as const;
+
+/** Signed previews for listing workspace (seller or admin). */
+export async function resolveWorkspacePhotoPreviews(listingId: string): Promise<
+  Record<string, { previewUrl?: string }>
+> {
+  const session = await requireAnyRole([...WORKSPACE_PHOTO_ROLES]);
+  const isAdmin = hasAnyRole(session.user.roles, ADMIN_ROLES);
+
+  const listing = await prisma.aircraftListing.findFirst({
+    where: {
+      id: listingId,
+      ...(isAdmin ? {} : { sellerId: session.user.id }),
+    },
+    select: {
+      photos: {
+        select: {
+          id: true,
+          slotKey: true,
+          storageKey: true,
+        },
+      },
+    },
+  });
+
+  if (!listing) {
+    return {};
+  }
+
+  const result: Record<string, { previewUrl?: string }> = {};
+
+  for (const photo of listing.photos) {
+    const previewUrl = await getSignedPreviewForPhoto(photo);
+    result[photo.slotKey] = { previewUrl: previewUrl ?? undefined };
   }
 
   return result;

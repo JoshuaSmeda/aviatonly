@@ -11,3 +11,7 @@ export function isGuidedPhotoSlotKey(slotKey: string): boolean {
 export function getGuidedPhotoSlotLabel(slotKey: string): string {
   return PHOTO_SLOTS.find((slot) => slot.id === slotKey)?.label ?? slotKey.replace(/-/g, " ");
 }
+
+export function getGuidedPhotoSlotInstruction(slotKey: string): string {
+  return PHOTO_SLOTS.find((slot) => slot.id === slotKey)?.instruction ?? "";
+}

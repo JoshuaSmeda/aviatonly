@@ -6,6 +6,7 @@ import {
 } from "./listing-intake-review-utils";
 import { FieldReviewStatus } from "./field-review-status";
 import type { ListingWorkspaceData } from "@/lib/aviatonly/server/listing-workspace";
+import { getGuidedPhotoSlotLabel } from "@/lib/upload/photo-slot-keys";
 
 export type IntakeReviewSection = "aircraft-data" | "media" | "documents";
 
@@ -47,7 +48,7 @@ export function listPendingIntakeReviewItems(
     if (photoReviewState(photo.status) === "pending") {
       pending.push({
         id: photo.id,
-        label: photo.slotKey.replace(/-/g, " "),
+        label: getGuidedPhotoSlotLabel(photo.slotKey),
         section: "media",
         tab: "media",
       });

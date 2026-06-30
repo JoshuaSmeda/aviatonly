@@ -1,4 +1,11 @@
-import { DocumentStatus, FieldReviewStatus, ListingStatus, PhotoStatus, ReviewTaskStatus } from "@/lib/aviatonly/domain";
+import {
+  DocumentStatus,
+  FieldReviewStatus,
+  ListingStatus,
+  PhotoStatus,
+  ReviewTaskStatus,
+} from "@/lib/aviatonly/domain";
+import { getGuidedPhotoSlotLabel } from "@/lib/upload/photo-slot-keys";
 import { formatReviewTasksReleasedMessage } from "@/lib/aviatonly/domain/listing-event-tasks";
 import { AIRCRAFT_DATA_FIELD_KEYS } from "@/lib/aviatonly/domain/listing-aircraft-data-rows";
 import { resolveRejectionReason } from "@/lib/aviatonly/domain/intake-rejection-presets";
@@ -371,7 +378,7 @@ async function collectRejections(listingId: string): Promise<RejectionItem[]> {
       rejections.push({
         sourceType: "photo",
         sourceKey: photo.id,
-        title: `Replace photo: ${photo.slotKey.replace(/-/g, " ")}`,
+        title: `Replace photo: ${getGuidedPhotoSlotLabel(photo.slotKey)}`,
         description: photo.rejectionReason,
       });
     }

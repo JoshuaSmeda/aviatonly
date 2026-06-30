@@ -1,8 +1,8 @@
 "use client";
 
 import { useId, useRef } from "react";
-import Image from "next/image";
 import { AlertCircle, Check, FileText, RefreshCw, Trash2, UploadCloud } from "lucide-react";
+import AsyncPhotoThumb from "@/components/dashboard/shared/async-photo-thumb";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -129,14 +129,9 @@ const UploadSlot = ({
       {filled && value ? (
         <div className="flex items-center gap-3 rounded-md border border-border bg-background p-2">
           {variant === "photo" && value.previewUrl ? (
-            <Image
-              src={value.previewUrl}
-              alt={slot.label}
-              width={48}
-              height={48}
-              unoptimized
-              className="size-12 rounded object-cover"
-            />
+            <AsyncPhotoThumb src={value.previewUrl} alt={slot.label} />
+          ) : variant === "photo" && (value.status === "uploading" || isUploading) ? (
+            <AsyncPhotoThumb alt={slot.label} pending />
           ) : (
             <div className="flex size-12 items-center justify-center rounded bg-muted text-muted-foreground">
               <FileText className="size-5" />

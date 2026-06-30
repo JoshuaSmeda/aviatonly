@@ -11,7 +11,6 @@ import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import Notifications from "../../shared/header/notifications";
 import Message from "../../shared/header/message";
-import { Cart } from "../../shared/header/cart";
 import { cn } from "@/lib/utils";
 import LightDark from "../../shared/header/light-dark";
 import { PanelLeft } from 'lucide-react';
@@ -19,7 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import OrganizationSwitcher from "@/components/dashboard/auth/organization-switcher";
 import type { AuthUser } from "@/lib/auth/session"
 
-const Header = ({ user }: { user: AuthUser }) => {
+const Header = ({ user }: { user: AuthUser | null }) => {
   const { setIsCollapse } =
     useContext(CustomizerContext);
   const { toggleSidebar, state } = useSidebar();
@@ -71,8 +70,6 @@ const Header = ({ user }: { user: AuthUser }) => {
               <LightDark />
               {/* Language Dropdown*/}
               <Language />
-
-              <Cart />
 
               {/* Notifications Dropdown */}
               <Notifications className="sm:block hidden" />

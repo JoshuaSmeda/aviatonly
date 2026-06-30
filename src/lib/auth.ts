@@ -3,7 +3,6 @@ import { prismaAdapter } from "better-auth/adapters/prisma"
 import { nextCookies } from "better-auth/next-js"
 import { organization } from "better-auth/plugins"
 import { prisma } from "@/lib/prisma"
-import { createDefaultOrganizationForUser } from "@/lib/auth/organization-server"
 
 const organizationPlugin = organization({
   allowUserToCreateOrganization: true,
@@ -46,21 +45,23 @@ export const auth = betterAuth({
       roles: {
         type: "string[]",
         required: true,
-        defaultValue: ["SELLER"],
-        input: false,
+        defaultValue: ["BUYER"],
+        input: true,
       },
     },
   },
   databaseHooks: {
     user: {
       create: {
-        after: async (user) => {
-          await createDefaultOrganizationForUser({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            roles: user.roles,
-          })
+        before: async (user) => {
+          const requested = Array.isArray(user.roles) ? user.roles : []
+          const signupRole = requested.includes("SELLER") ? "SELLER" : "BUYER"
+          return {
+            data: {
+              ...user,
+              roles: [signupRole],
+            },
+          }
         },
       },
     },

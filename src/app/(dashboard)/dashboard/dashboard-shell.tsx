@@ -17,7 +17,7 @@ import "@/utils/i18n"
 interface DashboardShellProps {
   children: React.ReactNode
   navigation: MenuItem[]
-  user: AuthUser
+  user: AuthUser | null
 }
 
 export default function DashboardShell({
@@ -27,7 +27,7 @@ export default function DashboardShell({
 }: DashboardShellProps) {
   const { activeLayout, isLayout, isCollapse } = useContext(CustomizerContext)
   const pathname = usePathname()
-  const isFullWidthRoute = pathname === "/dashboard/buy"
+  const isFullWidthRoute = pathname?.startsWith("/dashboard/buy")
 
   return (
     <SidebarProvider

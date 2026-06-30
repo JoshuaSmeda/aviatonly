@@ -93,10 +93,6 @@ const pageLinks: LinkType[] = [
     href: "/apps/blog/post",
     title: "Blog Design",
   },
-  {
-    href: "/apps/ecommerce/checkout",
-    title: "Shopping Cart",
-  },
 ];
 
 //   Search Data

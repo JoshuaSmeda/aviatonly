@@ -21,7 +21,7 @@ import type { AuthUser } from "@/lib/auth/session"
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   navigation: MenuItem[]
-  user: AuthUser
+  user: AuthUser | null
 }
 
 export function AppSidebar({ navigation, user, ...props }: AppSidebarProps) {

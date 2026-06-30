@@ -1,20 +1,17 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import React, { useContext, useState } from "react";
 import Link from "next/link";
 import { ProductContext } from "@/app/context/ecommerce-context/index";
 import { useParams } from "next/navigation";
-
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { ProductType } from "@/app/(dashboard)/dashboard/types/apps/ecommerce";
 import RatingStars from "@/components/dashboard/shared/rating-stars";
 import { Separator } from "@/components/ui/separator";
 
 const ProductDetail = () => {
-  const { products, addToCart } = useContext(ProductContext);
+  const { products } = useContext(ProductContext);
   const { id } = useParams<{ id: string }>();
 
   const product: ProductType | undefined = products.find(
@@ -24,22 +21,11 @@ const ProductDetail = () => {
     product ? product.colors[0] : ""
   );
   const [count, setCount] = useState<number>(1);
-  const [cartAlert, setCartAlert] = useState(false);
 
   const setColor = (color: string) => setScolor(color);
 
   const handleQuantityChange = (increment: boolean) => {
     setCount((prev) => (increment ? prev + 1 : Math.max(1, prev - 1)));
-  };
-
-  const handleAddToCart = () => {
-    if (product) {
-      addToCart(product.id);
-      setCartAlert(true);
-      setTimeout(() => {
-        setCartAlert(false);
-      }, 3000);
-    }
   };
 
   if (!product) return <>No product</>;
@@ -125,35 +111,10 @@ const ProductDetail = () => {
       </div>
 
       <Separator className={"my-6"} />
-      <div className="flex gap-3 items-center mb-6">
-        <Button
-          className="px-6 rounded-md "
-          onClick={handleAddToCart}
-        >
-          Buy now
-        </Button>
-        <Button
-          variant={"destructive"}
-          className="px-6 rounded-md bg-destructive text-white hover:bg-destructive/80"
-          onClick={handleAddToCart}
-        >
-          Add to Cart
-        </Button>
-      </div>
-
       <p className="text-sm text-muted-foreground">Dispatched in 2-3 weeks</p>
       <Link href="#" className="text-sm text-primary font-medium">
         Why the longer time for delivery?
       </Link>
-      {cartAlert && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 w-full max-w-xs">
-          <Alert className="w-full text-center rounded flex items-center justify-center gap-2 bg-chart-3/10">
-            <AlertDescription className="text-chart-3">
-              Item Added to the Cart!!!
-            </AlertDescription>
-          </Alert>
-        </div>
-      )}
     </>
   );
 };

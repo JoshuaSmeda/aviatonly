@@ -1,39 +1,40 @@
 "use client"
 import * as React from "react"
-
-import {
-    SidebarGroup,
-    SidebarGroupContent,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-} from "@/components/ui/sidebar"
-import { Settings, CircleHelp } from 'lucide-react';
-import Link from "next/link";
+import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 import type { AuthUser } from "@/lib/auth/session"
 
 interface NavSecondaryProps {
-  user: AuthUser
+  user: AuthUser | null
 }
 
 export function NavSecondary({ user }: NavSecondaryProps) {
-
-
-    const navSecondary = [
-        {
-            title: "Settings",
-            url: "/theme-pages/account-settings",
-            icon: Settings,
-        },
-        {
-            title: "Get Help",
-            url: "/theme-pages/faq",
-            icon: CircleHelp,
-        },
-    ]
+    if (!user) {
+        return (
+            <Card className="shadow-none ring-0 bg-primary/5 px-4 py-6 border-none">
+                <CardContent className="p-0 flex flex-col gap-3 items-center">
+                    <div className="flex flex-col gap-1 text-center">
+                        <p className="text-base font-semibold text-card-foreground">
+                            AVIATONLY
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            Sign in to sell aircraft, make offers, or manage your account.
+                        </p>
+                    </div>
+                    <div className="flex w-full flex-col gap-2">
+                        <Button render={<Link href="/auth/auth1/login" />} className="w-full">
+                            Sign in
+                        </Button>
+                        <Button variant="outline" render={<Link href="/auth/auth1/register" />} className="w-full">
+                            Create account
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        )
+    }
 
     return (
         <div>

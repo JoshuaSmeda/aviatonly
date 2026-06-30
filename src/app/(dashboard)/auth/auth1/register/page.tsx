@@ -24,9 +24,9 @@ const Register = () => {
             </div>
 
             <div className="w-full">
-              <h3 className="text-xl font-bold">Create your AVIATONLY account</h3>
+              <h3 className="text-xl font-bold">Welcome to AVIATONLY</h3>
               <p className="text-muted-foreground text-sm font-medium">
-                Register to list aircraft and manage your seller workspace
+                Create an account to buy or sell aircraft on AVIATONLY
               </p>
 
               {/* Social Buttons */}

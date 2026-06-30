@@ -270,11 +270,6 @@ const Menuitems: MenuItem[] = [
           },
           {
             id: uniqueId(),
-            title: 'Checkout',
-            href: '/apps/ecommerce/checkout',
-          },
-          {
-            id: uniqueId(),
             title: 'Add Product',
             href: '/apps/ecommerce/addproduct',
           },

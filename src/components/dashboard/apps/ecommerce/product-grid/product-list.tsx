@@ -1,17 +1,9 @@
 "use client";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-  Tooltip,
-} from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import React, { useState, useContext, SetStateAction, Dispatch } from "react";
+import React, { useContext, SetStateAction, Dispatch } from "react";
 
 import Link from "next/link";
 import Image from "next/image";
-import { Icon } from "@iconify/react";
 import ProductSearch from "./product-search";
 
 import CardBox from "@/components/dashboard/shared/CardBox";
@@ -19,23 +11,14 @@ import { ProductContext } from "@/app/context/ecommerce-context";
 import RatingStars from "@/components/dashboard/shared/rating-stars";
 
 type ShopProps = {
-  openShopFilter: Dispatch<SetStateAction<boolean>>; // or specify the exact type of the function
+  openShopFilter: Dispatch<SetStateAction<boolean>>;
 };
 
 const ProductList = ({ openShopFilter }: ShopProps) => {
-  const { filteredAndSortedProducts, addToCart, filterReset } =
-    useContext(ProductContext);
-  const [cartAlert, setCartAlert] = useState(false);
-  const handleClick = () => {
-    setCartAlert(true);
-    setTimeout(() => {
-      setCartAlert(false);
-    }, 3000);
-  };
+  const { filteredAndSortedProducts, filterReset } = useContext(ProductContext);
 
   return (
     <>
-      {/* Search Products */}
       <ProductSearch onClickFilter={() => openShopFilter(true)} />
       <div className="grid grid-cols-12 gap-6 mt-6">
         {filteredAndSortedProducts.length > 0 ? (
@@ -58,26 +41,6 @@ const ProductList = ({ openShopFilter }: ShopProps) => {
                     </div>
                   </Link>
                   <div className="p-6 pt-4">
-                    <div className="flex justify-between items-center -mt-8 relative  ">
-                      <div className="ms-auto">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <Button
-                                className="btn-circle ms-auto"
-                                onClick={() => {
-                                  addToCart(product.id);
-                                  handleClick();
-                                }}
-                              >
-                                <Icon icon="solar:cart-3-outline" height={18} />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Add To Cart</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                    </div>
                     <h6 className="text-base line-clamp-1 group-hover:text-primary">
                       {product.title}
                     </h6>
@@ -96,41 +59,30 @@ const ProductList = ({ openShopFilter }: ShopProps) => {
             </div>
           ))
         ) : (
-          <>
-            <div className="col-span-12">
-              <div className="flex justify-center text-center">
-                <div>
-                  <Image
-                    src={"/images/backgrounds/empty-shopping-cart.svg"}
-                    alt="no product"
-                    width={350}
-                    height={350}
-                  />
-                  <h2 className="text-2xl">There is no Product</h2>
-                  <p className=" my-3">
-                    The product you are searching for is no longer available.
-                  </p>
-                  <Button
-                    className="w-fit px-4 mx-auto rounded-md"
-                    onClick={filterReset}
-                  >
-                    Try Again
-                  </Button>
-                </div>
+          <div className="col-span-12">
+            <div className="flex justify-center text-center">
+              <div>
+                <Image
+                  src={"/images/backgrounds/empty-shopping-cart.svg"}
+                  alt="no product"
+                  width={350}
+                  height={350}
+                />
+                <h2 className="text-2xl">There is no Product</h2>
+                <p className=" my-3">
+                  The product you are searching for is no longer available.
+                </p>
+                <Button
+                  className="w-fit px-4 mx-auto rounded-md"
+                  onClick={filterReset}
+                >
+                  Try Again
+                </Button>
               </div>
             </div>
-          </>
+          </div>
         )}
       </div>
-      {cartAlert && (
-        <div className="fixed top-3 left-1/2 transform -translate-x-1/2 z-50 w-full flex justify-center ">
-          <Alert className="max-w-sm w-full text-center rounded bg-primary/5 ">
-            <AlertDescription className="text-primary">
-              Item Added to the Cart!!!
-            </AlertDescription>
-          </Alert>
-        </div>
-      )}
     </>
   );
 };

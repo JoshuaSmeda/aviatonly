@@ -4,7 +4,7 @@ import { useMemo, useTransition } from "react"
 import Link from "next/link"
 import { Building2, Check, ChevronsUpDown, Plus } from "lucide-react"
 import { toast } from "sonner"
-import { authClient } from "@/lib/auth-client"
+import { authClient, useSession } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 
 export default function OrganizationSwitcher() {
+  const { data: session } = useSession()
   const { data: organizations, isPending: orgsPending } =
     authClient.useListOrganizations()
   const { data: activeOrganization, isPending: activePending } =
@@ -27,6 +28,10 @@ export default function OrganizationSwitcher() {
 
   const isLoading = orgsPending || activePending
   const items = useMemo(() => organizations ?? [], [organizations])
+
+  if (!session?.user) {
+    return null
+  }
 
   const handleSetActive = (organizationId: string) => {
     startTransition(async () => {
@@ -43,6 +48,26 @@ export default function OrganizationSwitcher() {
 
   if (isLoading) {
     return <Skeleton className="hidden md:block h-9 w-44 rounded-md" />
+  }
+
+  const hasOrganization = items.length > 0
+
+  if (!hasOrganization) {
+    return (
+      <div className="hidden md:block">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled
+          className="max-w-56 justify-between gap-2 text-muted-foreground opacity-60"
+          aria-label="No organization assigned"
+        >
+          <Building2 data-icon="inline-start" />
+          <span className="truncate"></span>
+          <ChevronsUpDown data-icon="inline-end" className="opacity-40" />
+        </Button>
+      </div>
+    )
   }
 
   return (

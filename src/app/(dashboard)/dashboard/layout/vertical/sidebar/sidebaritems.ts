@@ -269,11 +269,6 @@ const SidebarContent: MenuItem[] = [
           },
           {
             id: uniqueId(),
-            name: "Checkout",
-            url: "/apps/ecommerce/checkout",
-          },
-          {
-            id: uniqueId(),
             name: "Add Product",
             url: "/apps/ecommerce/addproduct",
           },

@@ -12,7 +12,6 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import Notifications from "../../shared/header/notifications";
 import Message from "../../shared/header/message";
-import { Cart } from "../../shared/header/cart";
 import { cn } from "@/lib/utils";
 import LightDark from "../../shared/header/light-dark";
 import Navigation from "../navbar";
@@ -20,7 +19,7 @@ import OrganizationSwitcher from "@/components/dashboard/auth/organization-switc
 
 import type { AuthUser } from "@/lib/auth/session"
 
-const HorizontalHeader = ({ user }: { user: AuthUser }) => {
+const HorizontalHeader = ({ user }: { user: AuthUser | null }) => {
   const { setIsCollapse, isCollapse, isLayout, activeMode, setActiveMode } =
     useContext(CustomizerContext);
   const { toggleSidebar, state } = useSidebar();
@@ -68,8 +67,6 @@ const HorizontalHeader = ({ user }: { user: AuthUser }) => {
               <LightDark />
               {/* Language Dropdown*/}
               <Language />
-
-              <Cart />
 
               {/* Notifications Dropdown */}
               <Notifications className="sm:block hidden" />

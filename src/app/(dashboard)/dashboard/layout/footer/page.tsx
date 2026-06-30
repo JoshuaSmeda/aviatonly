@@ -22,9 +22,9 @@ export default function Footer() {
                     href="https://www.wrappixel.com/" target="_blank"
                     className="hover:text-primary text-muted-foreground"
                 >
-                    WrapPixel
+                    AVIATONLY
                 </Link>
-                , creating a better web for you.
+                , example footer.
             </p>
 
             <div className="flex gap-4">

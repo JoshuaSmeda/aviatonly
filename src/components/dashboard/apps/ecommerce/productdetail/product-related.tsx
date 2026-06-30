@@ -3,16 +3,8 @@ import React from "react";
 import { Card } from "@/components/ui/card";
 import Image from "next/image";
 import Link from "next/link";
-import { Icon } from "@iconify/react";
 import { ProductsData } from "@/app/api/ecommerce/product-data";
 import RatingStars from "@/components/dashboard/shared/rating-stars";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 const ProductRelated = () => {
   return (
@@ -40,26 +32,6 @@ const ProductRelated = () => {
                           />
                         </div>
                         <div className="p-6 pt-4">
-                          <div className="flex justify-between items-center -mt-8 ">
-                            <div className="ms-auto relative z-10">
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    <Button
-                                      variant="default"
-                                      className="ms-auto p-0 h-10 w-10 rounded-full "
-                                      aria-label="Add to cart"
-                                    >
-                                      <Icon icon="tabler:basket" height={18} />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="top">
-                                    Add to Cart
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </div>
-                          </div>
                           <h6 className="text-base line-clamp-1 group-hover:text-primary">
                             {product.title}
                           </h6>

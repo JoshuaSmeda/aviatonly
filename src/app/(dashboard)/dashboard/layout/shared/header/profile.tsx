@@ -29,13 +29,27 @@ import { Separator } from "@/components/ui/separator"
 import { Spinner } from "@/components/ui/spinner"
 
 interface ProfileSheetProps {
-  user: AuthUser
+  user: AuthUser | null
 }
 
 export default function ProfileSheet({ user }: ProfileSheetProps) {
   const { activeDir } = useContext(CustomizerContext)
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+
+  if (!user) {
+    return (
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" render={<Link href="/auth/auth1/login" />}>
+          Sign in
+        </Button>
+        <Button size="sm" render={<Link href="/auth/auth1/register" />}>
+          Register
+        </Button>
+      </div>
+    )
+  }
+
   const initials = getUserInitials(user.name, user.email)
 
   const handleSignOut = () => {

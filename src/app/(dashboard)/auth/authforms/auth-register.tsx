@@ -1,10 +1,10 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useTransition } from "react"
+import { useState, useTransition } from "react"
 import { toast } from "sonner"
 import { signUp } from "@/lib/auth-client"
-import { DASHBOARD_BASE_PATH } from "@/lib/utils"
+import { DASHBOARD_BASE_PATH, withDashboardBase } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
   Field,
@@ -14,10 +14,14 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+
+type AccountIntent = "BUYER" | "SELLER"
 
 const AuthRegister = () => {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const [accountIntent, setAccountIntent] = useState<AccountIntent>("BUYER")
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -37,6 +41,7 @@ const AuthRegister = () => {
         name,
         email,
         password,
+        roles: [accountIntent],
       })
 
       if (result.error) {
@@ -53,6 +58,29 @@ const AuthRegister = () => {
   return (
     <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-6">
       <FieldGroup>
+        <Field>
+          <FieldLabel>I want to</FieldLabel>
+          <ToggleGroup
+            type="single"
+            value={accountIntent}
+            onValueChange={(value) => {
+              if (value === "BUYER" || value === "SELLER") {
+                setAccountIntent(value)
+              }
+            }}
+            variant="outline"
+            className="flex w-full gap-3"
+            spacing={12}
+          >
+            <ToggleGroupItem value="BUYER" className="h-auto flex-1 rounded-md py-2.5">
+              Buy aircraft
+            </ToggleGroupItem>
+            <ToggleGroupItem value="SELLER" className="h-auto flex-1 rounded-md py-2.5">
+              Sell aircraft
+            </ToggleGroupItem>
+          </ToggleGroup>
+          
+        </Field>
         <Field>
           <FieldLabel htmlFor="name">Full name</FieldLabel>
           <Input
@@ -86,9 +114,6 @@ const AuthRegister = () => {
             minLength={8}
             required
           />
-          <FieldDescription>
-            A default seller organization is created when you register.
-          </FieldDescription>
         </Field>
       </FieldGroup>
 

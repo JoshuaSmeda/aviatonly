@@ -23,6 +23,22 @@ const ALL_AUTHENTICATED: AppRole[] = [
 const SELLER_ACCESS: AppRole[] = ["SELLER", "BROKER", "ADMIN", "SUPER_ADMIN"]
 const ADMIN_ACCESS: AppRole[] = ["ADMIN", "SUPER_ADMIN"]
 
+const MARKETPLACE_NAV_ITEM: NavMenuItem = {
+  name: "Browse Aircraft",
+  icon: "solar:magnifer-line-duotone",
+  url: "/buy",
+  roles: ALL_AUTHENTICATED,
+}
+
+/** Dashboard paths that do not require authentication. */
+export function isPublicDashboardPath(pathname: string): boolean {
+  const normalized = pathname.replace(/\/$/, "") || "/"
+  return (
+    normalized === "/dashboard/buy" ||
+    normalized.startsWith("/dashboard/buy/")
+  )
+}
+
 export const AVIATONLY_NAV_SECTIONS: NavSection[] = [
   {
     heading: "Seller",
@@ -183,16 +199,24 @@ export const AVIATONLY_NAV_SECTIONS: NavSection[] = [
   {
     heading: "Marketplace",
     roles: ALL_AUTHENTICATED,
-    items: [
-      {
-        name: "Browse Aircraft",
-        icon: "solar:magnifer-line-duotone",
-        url: "/buy",
-        roles: ALL_AUTHENTICATED,
-      },
-    ],
+    items: [MARKETPLACE_NAV_ITEM],
   },
 ]
+
+export function buildPublicNavigation(): MenuItem[] {
+  return [
+    {
+      heading: "Marketplace",
+      items: [
+        {
+          name: MARKETPLACE_NAV_ITEM.name,
+          icon: MARKETPLACE_NAV_ITEM.icon,
+          url: MARKETPLACE_NAV_ITEM.url,
+        },
+      ],
+    },
+  ]
+}
 
 export function buildNavigationForRoles(userRoles: AppRole[]): MenuItem[] {
   return AVIATONLY_NAV_SECTIONS.filter((section) =>
@@ -209,6 +233,10 @@ export function canAccessDashboardPath(
   pathname: string,
   userRoles: AppRole[],
 ): boolean {
+  if (isPublicDashboardPath(pathname)) {
+    return true
+  }
+
   const normalized = pathname.replace(/^\/dashboard/, "") || "/"
 
   for (const section of AVIATONLY_NAV_SECTIONS) {

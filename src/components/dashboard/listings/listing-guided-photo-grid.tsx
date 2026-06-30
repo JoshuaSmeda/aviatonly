@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { resolveWorkspacePhotoPreviews } from "@/app/(dashboard)/dashboard/seller/upload/photo-actions";
 import AdminReviewTicks from "@/components/dashboard/listings/admin-review-ticks";
 import AsyncPhotoThumb from "@/components/dashboard/shared/async-photo-thumb";
+import GuidedPhotoPreviewDialog from "@/components/dashboard/shared/guided-photo-preview-dialog";
 import { PHOTO_SLOTS } from "@/components/dashboard/seller/upload/constants";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,7 @@ const ListingGuidedPhotoGrid = ({
 }: ListingGuidedPhotoGridProps) => {
   const [previews, setPreviews] = useState<Record<string, string>>({});
   const [loadingPreviews, setLoadingPreviews] = useState(true);
+  const [previewSlotId, setPreviewSlotId] = useState<string | null>(null);
 
   const photosBySlot = new Map(photos.map((photo) => [photo.slotKey, photo]));
 
@@ -74,8 +76,12 @@ const ListingGuidedPhotoGrid = ({
     };
   }, [listingId, photos]);
 
+  const previewSlot = PHOTO_SLOTS.find((slot) => slot.id === previewSlotId);
+  const previewPhoto = previewSlotId ? photosBySlot.get(previewSlotId) : undefined;
+
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       {PHOTO_SLOTS.map((slot) => {
         const photo = photosBySlot.get(slot.id);
         const label = getGuidedPhotoSlotLabel(slot.id);
@@ -138,7 +144,11 @@ const ListingGuidedPhotoGrid = ({
 
             {photo ? (
               <>
-                <div className="flex items-center gap-3 rounded-md border border-border bg-background p-2">
+                <button
+                  type="button"
+                  className="flex w-full cursor-pointer items-center gap-3 rounded-md border border-border bg-background p-2 text-left transition-colors hover:bg-muted/40"
+                  onClick={() => setPreviewSlotId(slot.id)}
+                >
                   <AsyncPhotoThumb
                     src={previewUrl}
                     alt={label}
@@ -148,7 +158,7 @@ const ListingGuidedPhotoGrid = ({
                     <p className="truncate text-sm font-medium">{photo.fileName}</p>
                     <p className="text-xs text-muted-foreground">{formatSize(photo.sizeBytes)}</p>
                   </div>
-                </div>
+                </button>
                 {showSellerActions && photo.rejectionReason ? (
                   <p className="text-xs text-muted-foreground">{photo.rejectionReason}</p>
                 ) : null}
@@ -161,7 +171,21 @@ const ListingGuidedPhotoGrid = ({
           </div>
         );
       })}
-    </div>
+      </div>
+
+      <GuidedPhotoPreviewDialog
+        open={previewSlotId != null}
+        onOpenChange={(open) => {
+          if (!open) setPreviewSlotId(null);
+        }}
+        title={previewSlot ? getGuidedPhotoSlotLabel(previewSlot.id) : "Photo preview"}
+        instruction={previewSlot?.instruction}
+        imageUrl={previewSlotId ? previews[previewSlotId] : null}
+        fileName={previewPhoto?.fileName}
+        fileSize={previewPhoto ? formatSize(previewPhoto.sizeBytes) : undefined}
+        loading={loadingPreviews && previewSlotId != null && !previews[previewSlotId]}
+      />
+    </>
   );
 };
 

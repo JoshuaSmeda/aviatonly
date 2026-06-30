@@ -1,8 +1,5 @@
 import { redirect } from "next/navigation";
-import {
-  getMockListingBySlug,
-  MOCK_AIRCRAFT_LISTINGS,
-} from "@/lib/aviatonly/marketplace/mock-aircraft-listings";
+import { getBuyMarketplaceListingDetail } from "@/lib/aviatonly/server/marketplace-catalog";
 
 interface PageProps {
   params: Promise<{ registration: string }>;
@@ -10,15 +7,7 @@ interface PageProps {
 
 export default async function BuyDetailRedirectPage({ params }: PageProps) {
   const { registration } = await params;
-  const slug = registration.toLowerCase();
-  const normalizedReg = slug.replace(/[^a-z0-9]/g, "");
-
-  const listing =
-    getMockListingBySlug(slug) ??
-    MOCK_AIRCRAFT_LISTINGS.find(
-      (item) =>
-        item.registration.toLowerCase().replace(/[^a-z0-9]/g, "") === normalizedReg,
-    );
+  const listing = await getBuyMarketplaceListingDetail(registration.toLowerCase());
 
   if (listing) {
     redirect(`/dashboard/buy/${listing.slug}`);

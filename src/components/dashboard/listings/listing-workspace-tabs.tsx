@@ -33,6 +33,7 @@ import ListingAircraftDataReviewTab from "./listing-aircraft-data-review-tab";
 import ListingMediaReviewTab from "./listing-media-review-tab";
 import ListingDocumentsReviewTab from "./listing-documents-review-tab";
 import ListingValuationPanel from "./listing-valuation-panel";
+import ListingInspectionPanel from "./listing-inspection-panel";
 import ListingReviewTasksAdminPanel from "./listing-review-tasks-admin-panel";
 import ListingSellerReviewTasksPanel from "./listing-seller-review-tasks-panel";
 
@@ -139,12 +140,6 @@ const ListingWorkspaceTabs = ({
       <TabsContent value="review-tasks" className="w-full flex-none pt-6">
         {canManageReview ? (
           <ListingReviewTasksAdminPanel workspace={workspace} />
-        ) : openTasks.length === 0 ? (
-          <WorkflowPlaceholder
-            icon={ClipboardCheck}
-            title="No open review tasks"
-            description="AVIATONLY review tasks will appear here when action is required from you or operations."
-          />
         ) : (
           <ListingSellerReviewTasksPanel workspace={workspace} />
         )}
@@ -155,11 +150,7 @@ const ListingWorkspaceTabs = ({
       </TabsContent>
 
       <TabsContent value="inspection" className="w-full flex-none pt-6">
-        <WorkflowPlaceholder
-          icon={ShieldCheck}
-          title="Inspection not scheduled"
-          description="Independent AMO or platform inspection will be scheduled when AVIATONLY requires verification before publication."
-        />
+        <ListingInspectionPanel listing={listing} canManageReview={canManageReview} />
       </TabsContent>
 
       <TabsContent value="leads-offers" className="w-full flex-none pt-6">

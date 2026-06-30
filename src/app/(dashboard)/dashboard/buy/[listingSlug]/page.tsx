@@ -10,8 +10,8 @@ import { AircraftImageGallery } from "@/components/buy/aircraft-image-gallery";
 import { AircraftLocationMap } from "@/components/buy/aircraft-location-map";
 import { AircraftMarketEstimateCard } from "@/components/buy/aircraft-market-estimate";
 import { AircraftTechnicalDetails } from "@/components/buy/aircraft-technical-details";
-import { getMockListingBySlug } from "@/lib/aviatonly/marketplace/mock-aircraft-listings";
 import { formatAircraftTitle } from "@/lib/aviatonly/marketplace/aircraft-marketplace-utils";
+import { getBuyMarketplaceListingDetail } from "@/lib/aviatonly/server/marketplace-catalog";
 
 interface PageProps {
   params: Promise<{ listingSlug: string }>;
@@ -19,7 +19,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { listingSlug } = await params;
-  const listing = getMockListingBySlug(listingSlug);
+  const listing = await getBuyMarketplaceListingDetail(listingSlug);
   if (!listing) {
     return { title: "Aircraft not found | AVIATONLY" };
   }
@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function DashboardBuyDetailPage({ params }: PageProps) {
   const { listingSlug } = await params;
-  const listing = getMockListingBySlug(listingSlug);
+  const listing = await getBuyMarketplaceListingDetail(listingSlug);
 
   if (!listing) {
     notFound();

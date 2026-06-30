@@ -17,7 +17,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Separator } from "@/components/ui/separator";
 import {
   isValuationPhaseReached,
   ListingStatus,
@@ -26,6 +25,7 @@ import {
 } from "@/lib/aviatonly/domain";
 import { formatZar } from "@/lib/aviatonly/mock";
 import type { MockAircraftListing } from "@/lib/aviatonly/mock/types";
+import ListingValuationAdminPanel from "./listing-valuation-admin-panel";
 
 interface ListingValuationPanelProps {
   listing: MockAircraftListing;
@@ -55,9 +55,8 @@ function ValuationWaitingState() {
         </EmptyMedia>
         <EmptyTitle>Indicative estimate in progress</EmptyTitle>
         <EmptyDescription>
-          AVIATONLY benchmarks your reviewed aircraft against the South African market.
-          The estimate helps you set a realistic asking price or auction reserve before
-          going live.
+          AVIATONLY is preparing a market benchmark from your reviewed aircraft data. You will see
+          the indicative estimate here once operations completes valuation.
         </EmptyDescription>
       </EmptyHeader>
     </Empty>
@@ -76,13 +75,13 @@ function ValuationReadyState({ listing }: { listing: MockAircraftListing }) {
           <CardHeader>
             <CardTitle>AVIATONLY indicative estimate</CardTitle>
             <CardDescription>
-              Market benchmark from your reviewed aircraft data — indicative only, not a
-              formal appraisal.
+              Market benchmark from your reviewed aircraft data — indicative only, not a formal
+              appraisal.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold tabular-nums">
-              {formatZar(listing.valuationEstimate!)}
+              {formatZar(listing.platformIndicativeValue!)}
             </p>
           </CardContent>
         </Card>
@@ -121,55 +120,11 @@ function ValuationReadyState({ listing }: { listing: MockAircraftListing }) {
       <Alert>
         <AlertTitle>Next step</AlertTitle>
         <AlertDescription>
-          Compare the indicative estimate with your listing price. When you are aligned,
-          AVIATONLY moves toward inspection and publication approval.
+          Compare the indicative estimate with your listing price. AVIATONLY will move toward
+          inspection and publication approval when pricing is aligned.
         </AlertDescription>
       </Alert>
     </div>
-  );
-}
-
-function ValuationAdminState({ listing }: { listing: MockAircraftListing }) {
-  const sellerPrice = sellerListingPrice(listing);
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Platform indicative estimate</CardTitle>
-        <CardDescription>
-          Internal valuation used to guide seller pricing and publication approval.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {listing.valuationEstimate != null ? (
-          <p className="text-2xl font-semibold tabular-nums">
-            {formatZar(listing.valuationEstimate)}
-          </p>
-        ) : (
-          <Empty className="border border-dashed py-10">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <Gauge />
-              </EmptyMedia>
-              <EmptyTitle>No estimate recorded</EmptyTitle>
-              <EmptyDescription>
-                Complete data review, then add the indicative value via the valuations
-                queue.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        )}
-        {sellerPrice ? (
-          <>
-            <Separator />
-            <p className="text-sm text-muted-foreground">
-              Seller pricing from intake:{" "}
-              <span className="font-medium text-foreground">{sellerPrice}</span>
-            </p>
-          </>
-        ) : null}
-      </CardContent>
-    </Card>
   );
 }
 
@@ -178,10 +133,10 @@ const ListingValuationPanel = ({
   canManageReview = false,
 }: ListingValuationPanelProps) => {
   const platformEstimateReady =
-    isValuationPhaseReached(listing.status) && listing.valuationEstimate != null;
+    isValuationPhaseReached(listing.status) && listing.platformIndicativeValue != null;
 
   if (canManageReview) {
-    return <ValuationAdminState listing={listing} />;
+    return <ListingValuationAdminPanel listing={listing} />;
   }
 
   if (!platformEstimateReady) {

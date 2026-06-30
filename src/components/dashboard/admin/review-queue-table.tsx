@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import ListingStatusBadge from "@/components/dashboard/shared/listing-status-badge";
+import ListingStartIntakeReviewPanel from "@/components/dashboard/listings/listing-start-intake-review-panel";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -59,9 +62,20 @@ const ReviewQueueTable = ({ rows }: ReviewQueueTableProps) => {
               {row.assignedReviewer ?? "Unassigned"}
             </TableCell>
             <TableCell className="text-right">
-              <Button size="sm" variant="outline" render={<Link href={`/dashboard/listings/${row.id}`} />}>
-                Open
-              </Button>
+              <div className="flex items-center justify-end gap-2">
+                {row.canStartReview ? (
+                  <ListingStartIntakeReviewPanel
+                    listingId={row.id}
+                    listingStatus={row.status}
+                    intakeReviewTasksReleasedAt={null}
+                    intakeReviewerName={null}
+                    compact
+                  />
+                ) : null}
+                <Button size="sm" variant="outline" render={<Link href={`/dashboard/listings/${row.id}`} />}>
+                  Open
+                </Button>
+              </div>
             </TableCell>
           </TableRow>
         ))}

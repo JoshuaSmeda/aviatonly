@@ -115,7 +115,9 @@ export function deriveSellerListingNextStep(
     case ListingStatus.INSPECTION_FAILED:
       return waitState("Inspection found issues — we'll be in touch if action is needed");
     case ListingStatus.APPROVED_FOR_LISTING:
-      return waitState("Approved — AVIATONLY will publish when ready");
+      return waitState(
+        "Approved for publication — no physical inspection was required. AVIATONLY will publish when ready.",
+      );
     case ListingStatus.LIVE_FIXED_PRICE:
     case ListingStatus.LIVE_AUCTION:
       return waitState("Live on the catalog — we'll notify you of buyer activity");

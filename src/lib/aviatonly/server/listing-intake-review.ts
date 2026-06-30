@@ -1,6 +1,7 @@
 import {
   DocumentStatus,
   FieldReviewStatus,
+  INTAKE_ADMIN_REVIEW_ASSIGNMENT,
   ListingStatus,
   PhotoStatus,
   ReviewTaskStatus,
@@ -132,23 +133,153 @@ export async function getIntakeReviewProgress(
   };
 }
 
-async function ensureUnderReview(listingId: string, actorId: string) {
+async function assertIntakeReviewEditable(listingId: string, actorId: string) {
   const listing = await prisma.aircraftListing.findUnique({
     where: { id: listingId },
-    select: { status: true },
+    select: { status: true, intakeReviewTasksReleasedAt: true },
   });
   if (!listing) throw new NotFoundError("Listing not found.");
 
-  if (listing.status === ListingStatus.SUBMITTED) {
-    await transitionListingForwardRecord({
-      listingId,
-      toStatus: ListingStatus.UNDER_REVIEW,
-      actorId,
-      reason: "Admin started intake data review.",
-      eventType: "ADMIN_STARTED_REVIEW",
-      eventMessage: "AVIATONLY started reviewing submitted intake data.",
-    });
+  if (listing.status !== ListingStatus.UNDER_REVIEW) {
+    throw new Error("Enter review mode before editing intake rows.");
   }
+  if (listing.intakeReviewTasksReleasedAt) {
+    throw new Error("Review tasks were already sent to the seller. Edits are locked.");
+  }
+
+  const claim = await prisma.listingReviewTask.findFirst({
+    where: {
+      listingId,
+      assignedRole: INTAKE_ADMIN_REVIEW_ASSIGNMENT.assignedRole,
+      sourceType: INTAKE_ADMIN_REVIEW_ASSIGNMENT.sourceType,
+      sourceKey: INTAKE_ADMIN_REVIEW_ASSIGNMENT.sourceKey,
+      status: ReviewTaskStatus.IN_PROGRESS,
+    },
+    select: { assignedToId: true },
+  });
+
+  if (claim?.assignedToId && claim.assignedToId !== actorId) {
+    throw new Error("This listing is assigned to another reviewer.");
+  }
+}
+
+async function completeActiveIntakeReviewerAssignment(
+  listingId: string,
+  actorId: string,
+  tx: Pick<typeof prisma, "listingReviewTask"> = prisma,
+) {
+  await tx.listingReviewTask.updateMany({
+    where: {
+      listingId,
+      assignedRole: INTAKE_ADMIN_REVIEW_ASSIGNMENT.assignedRole,
+      sourceType: INTAKE_ADMIN_REVIEW_ASSIGNMENT.sourceType,
+      sourceKey: INTAKE_ADMIN_REVIEW_ASSIGNMENT.sourceKey,
+      status: ReviewTaskStatus.IN_PROGRESS,
+    },
+    data: {
+      status: ReviewTaskStatus.DONE,
+      resolvedById: actorId,
+      resolvedAt: new Date(),
+    },
+  });
+}
+
+export async function startIntakeReviewRecord(listingId: string, actorId: string) {
+  const listing = await prisma.aircraftListing.findUnique({
+    where: { id: listingId },
+    select: { id: true, status: true, registration: true },
+  });
+  if (!listing) throw new NotFoundError("Listing not found.");
+
+  const status = listing.status as ListingStatus;
+
+  if (status === ListingStatus.UNDER_REVIEW) {
+    const existingClaim = await prisma.listingReviewTask.findFirst({
+      where: {
+        listingId,
+        assignedRole: INTAKE_ADMIN_REVIEW_ASSIGNMENT.assignedRole,
+        sourceType: INTAKE_ADMIN_REVIEW_ASSIGNMENT.sourceType,
+        sourceKey: INTAKE_ADMIN_REVIEW_ASSIGNMENT.sourceKey,
+        status: ReviewTaskStatus.IN_PROGRESS,
+      },
+      select: { assignedToId: true },
+    });
+
+    if (existingClaim?.assignedToId === actorId) {
+      return getIntakeReviewProgress(listingId);
+    }
+    if (existingClaim?.assignedToId && existingClaim.assignedToId !== actorId) {
+      throw new Error("This listing is already assigned to another reviewer.");
+    }
+  } else if (status !== ListingStatus.SUBMITTED) {
+    throw new Error("Only submitted listings can enter intake review mode.");
+  }
+
+  const blockingClaim = await prisma.listingReviewTask.findFirst({
+    where: {
+      listingId,
+      assignedRole: INTAKE_ADMIN_REVIEW_ASSIGNMENT.assignedRole,
+      sourceType: INTAKE_ADMIN_REVIEW_ASSIGNMENT.sourceType,
+      sourceKey: INTAKE_ADMIN_REVIEW_ASSIGNMENT.sourceKey,
+      status: ReviewTaskStatus.IN_PROGRESS,
+      assignedToId: { not: actorId },
+    },
+    select: { id: true },
+  });
+  if (blockingClaim) {
+    throw new Error("This listing is already assigned to another reviewer.");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await completeActiveIntakeReviewerAssignment(listingId, actorId, tx);
+
+    await tx.listingReviewTask.create({
+      data: {
+        listingId,
+        title: INTAKE_ADMIN_REVIEW_ASSIGNMENT.title,
+        assignedRole: INTAKE_ADMIN_REVIEW_ASSIGNMENT.assignedRole,
+        assignedToId: actorId,
+        status: ReviewTaskStatus.IN_PROGRESS,
+        sourceType: INTAKE_ADMIN_REVIEW_ASSIGNMENT.sourceType,
+        sourceKey: INTAKE_ADMIN_REVIEW_ASSIGNMENT.sourceKey,
+        blockingPublication: false,
+        releasedToSeller: false,
+        createdById: actorId,
+      },
+    });
+
+    await tx.aircraftListing.update({
+      where: { id: listingId },
+      data: {
+        status: ListingStatus.UNDER_REVIEW,
+        intakeReviewTasksReleasedAt: null,
+        intakeReviewFinalizedAt: null,
+      },
+    });
+
+    if (status === ListingStatus.SUBMITTED) {
+      await tx.listingStatusHistory.create({
+        data: {
+          listingId,
+          fromStatus: ListingStatus.SUBMITTED,
+          toStatus: ListingStatus.UNDER_REVIEW,
+          changedById: actorId,
+          reason: "Admin entered intake review mode.",
+        },
+      });
+
+      await tx.listingEvent.create({
+        data: {
+          listingId,
+          actorId,
+          type: "ADMIN_STARTED_REVIEW",
+          message: `${listing.registration} intake review started.`,
+        },
+      });
+    }
+  });
+
+  return getIntakeReviewProgress(listingId);
 }
 
 async function clearUnreleasedDraftTasks(listingId: string) {
@@ -177,7 +308,7 @@ export async function reviewListingFieldRecord(input: {
     }
   }
 
-  await ensureUnderReview(input.listingId, input.actorId);
+  await assertIntakeReviewEditable(input.listingId, input.actorId);
 
   if (input.approved) {
     await prisma.listingFieldReview.upsert({
@@ -256,7 +387,7 @@ export async function reviewListingPhotoRecord(input: {
     if (!reason) throw new Error("A rejection reason or preset is required.");
   }
 
-  await ensureUnderReview(input.listingId, input.actorId);
+  await assertIntakeReviewEditable(input.listingId, input.actorId);
 
   await prisma.aircraftPhoto.update({
     where: { id: input.photoId },
@@ -300,7 +431,7 @@ export async function reviewListingDocumentRecord(input: {
     if (!reason) throw new Error("A rejection reason or preset is required.");
   }
 
-  await ensureUnderReview(input.listingId, input.actorId);
+  await assertIntakeReviewEditable(input.listingId, input.actorId);
 
   await prisma.aircraftDocument.update({
     where: { id: input.documentId },
@@ -422,6 +553,7 @@ export async function tryFinalizeIntakeReview(
     });
 
     if (listing?.status === ListingStatus.UNDER_REVIEW) {
+      await completeActiveIntakeReviewerAssignment(listingId, actorId);
       await transitionListingForwardRecord({
         listingId,
         toStatus: ListingStatus.VALUATION_READY,
@@ -536,6 +668,8 @@ export async function releaseIntakeReviewTasksRecord(listingId: string, actorId:
         status: ReviewTaskStatus.WAITING_ON_SELLER,
       },
     });
+
+    await completeActiveIntakeReviewerAssignment(listingId, actorId, tx);
 
     await tx.aircraftListing.update({
       where: { id: listingId },

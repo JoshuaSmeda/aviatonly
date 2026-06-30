@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useTransition } from "react";
-import { getWorkspaceDocumentDownloadPath } from "@/app/(dashboard)/dashboard/seller/upload/document-actions";
 import AdminReviewTicks from "@/components/dashboard/listings/admin-review-ticks";
+import { useWorkspaceDocumentDownload } from "@/components/dashboard/shared/use-workspace-document-download";
 import { DOCUMENT_SLOTS } from "@/components/dashboard/seller/upload/constants";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,6 @@ import type { MockAircraftDocument } from "@/lib/aviatonly/mock/types";
 import { getGuidedDocumentSlotLabel } from "@/lib/upload/document-slot-keys";
 import { cn } from "@/lib/utils";
 import { Download, FileText } from "lucide-react";
-import { toast } from "sonner";
 
 function formatSize(bytes: number | null) {
   if (!bytes || bytes <= 0) return "On file";
@@ -48,19 +46,8 @@ const ListingGuidedDocumentGrid = ({
   onApprove,
   onReject,
 }: ListingGuidedDocumentGridProps) => {
-  const [, startTransition] = useTransition();
+  const { openDocument } = useWorkspaceDocumentDownload(listingId);
   const documentsBySlot = new Map(documents.map((doc) => [doc.documentType, doc]));
-
-  const handleDownload = (documentId: string) => {
-    startTransition(async () => {
-      const result = await getWorkspaceDocumentDownloadPath(listingId, documentId);
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-      window.open(result.path, "_blank", "noopener,noreferrer");
-    });
-  };
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -137,10 +124,10 @@ const ListingGuidedDocumentGrid = ({
                     type="button"
                     size="icon-sm"
                     variant="ghost"
-                    aria-label={`Download ${document.fileName}`}
-                    onClick={() => handleDownload(document.id)}
+                    aria-label={`Open ${document.fileName}`}
+                    onClick={() => openDocument(document.id)}
                   >
-                    <Download className="size-4" />
+                    <Download />
                   </Button>
                 </div>
                 {showSellerActions && document.rejectionReason ? (

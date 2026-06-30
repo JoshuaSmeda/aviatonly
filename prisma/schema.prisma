@@ -422,9 +422,10 @@ model AircraftListing {
   authorisedToSell Boolean?
 
   // Pricing & sale setup (ZAR, whole rand)
-  saleType          SaleType @default(FIXED_PRICE)
-  valuationEstimate Int?
-  askingPrice       Int?
+  saleType               SaleType @default(FIXED_PRICE)
+  valuationEstimate      Int? // Seller optional expected price from intake
+  platformIndicativeValue Int? // AVIATONLY internal indicative estimate (set by admin)
+  askingPrice            Int?
   reservePrice      Int?
   startingBid       Int?
   bidIncrement      Int?
@@ -434,6 +435,14 @@ model AircraftListing {
   completenessScore Int           @default(0)
   intakeReviewFinalizedAt   DateTime?
   intakeReviewTasksReleasedAt DateTime?
+
+  // Independent AMO / platform inspection
+  inspectionProvider    String?
+  inspectionLocation    String?
+  inspectionScheduledAt DateTime?
+  inspectionNotes       String?
+  inspectionCompletedAt DateTime?
+  inspectionSummary     String?
 
   sellerId String
   seller   User   @relation(fields: [sellerId], references: [id], onDelete: Cascade)

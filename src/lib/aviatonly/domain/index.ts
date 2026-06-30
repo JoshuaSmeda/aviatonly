@@ -35,6 +35,14 @@ export {
 export { buildReviewTaskFixHref } from "./review-task-fix-routes";
 
 export {
+  INTAKE_ADMIN_REVIEW_ASSIGNMENT,
+  adminNeedsToStartIntakeReview,
+  canAdminEditIntakeReview,
+  findActiveIntakeReviewerId,
+  isIntakeAdminAssignmentTask,
+} from "./intake-review-mode";
+
+export {
   formatReviewTasksReleasedMessage,
   parseListingEventTaskSummaries,
   type ListingEventTaskSummary,

@@ -34,6 +34,16 @@ function displayValue(value: string | number | null | undefined, suffix = ""): s
   return `${value}${suffix}`;
 }
 
+function formatMakeModel(
+  manufacturer: string | null | undefined,
+  model: string | null | undefined,
+): string {
+  const parts = [manufacturer, model].filter(
+    (part) => part != null && String(part).trim() !== "",
+  );
+  return parts.length > 0 ? parts.join(" ") : "Not provided";
+}
+
 export function buildAircraftDataReviewRows(
   workspace: ListingWorkspaceData,
 ): AircraftDataReviewRow[] {
@@ -68,7 +78,7 @@ export function buildAircraftDataReviewRows(
       fieldKey: "engine",
       label: "Engine",
       value: engines[0]
-        ? `${engines[0].manufacturer} ${engines[0].model} · ${engines[0].engineHours} hrs${
+        ? `${formatMakeModel(engines[0].manufacturer, engines[0].model)} · ${engines[0].engineHours} hrs${
             engines[0].timeSinceOverhaul != null
               ? ` · TSO ${engines[0].timeSinceOverhaul} hrs`
               : ""
@@ -79,7 +89,7 @@ export function buildAircraftDataReviewRows(
       fieldKey: "propeller",
       label: "Propeller",
       value: propellers[0]
-        ? `${propellers[0].manufacturer} ${propellers[0].model}${
+        ? `${formatMakeModel(propellers[0].manufacturer, propellers[0].model)}${
             propellers[0].propellerHours != null
               ? ` · ${propellers[0].propellerHours} hrs`
               : ""

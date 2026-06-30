@@ -2,11 +2,24 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
+import { ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
 import { adminReleaseIntakeReviewTasksAction } from "@/app/(dashboard)/dashboard/admin/listings/actions";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Spinner } from "@/components/ui/spinner";
 import { getReviewTaskStatusMeta } from "@/lib/aviatonly/domain";
 import type { ListingWorkspaceData } from "@/lib/aviatonly/server/listing-workspace";
@@ -15,45 +28,23 @@ interface ListingReviewTasksAdminPanelProps {
   workspace: ListingWorkspaceData;
 }
 
+function ReviewTasksIdleState({ title = "Nothing to do here right now" }: { title?: string }) {
+  return (
+    <Empty className="border border-dashed py-16">
+      <EmptyHeader className="max-w-md">
+        <EmptyMedia variant="icon">
+          <ClipboardCheck />
+        </EmptyMedia>
+        <EmptyTitle>{title}</EmptyTitle>
+      </EmptyHeader>
+    </Empty>
+  );
+}
+
 const ListingReviewTasksAdminPanel = ({ workspace }: ListingReviewTasksAdminPanelProps) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const { draftTasks, listing, intakeReviewTasksReleasedAt, intakeReviewFinalizedAt } = workspace;
-
-  if (intakeReviewTasksReleasedAt) {
-    return (
-      <Alert>
-        <AlertTitle>Tasks sent to seller</AlertTitle>
-        <AlertDescription>
-          Review tasks are visible to the seller on their listing workspace. The listing is in
-          Needs changes until they resubmit.
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  if (!intakeReviewFinalizedAt) {
-    return (
-      <Alert>
-        <AlertTitle>No tasks yet</AlertTitle>
-        <AlertDescription>
-          Check every row on Aircraft Data, Media, and Documents first. Draft tasks are created
-          automatically when the last row is reviewed and any items failed.
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  if (draftTasks.length === 0) {
-    return (
-      <Alert>
-        <AlertTitle>All intake rows approved</AlertTitle>
-        <AlertDescription>
-          No seller tasks were needed. The listing should be on the valuation step.
-        </AlertDescription>
-      </Alert>
-    );
-  }
 
   const sendToSeller = () => {
     startTransition(async () => {
@@ -67,34 +58,36 @@ const ListingReviewTasksAdminPanel = ({ workspace }: ListingReviewTasksAdminPane
     });
   };
 
+  if (intakeReviewTasksReleasedAt || !intakeReviewFinalizedAt || draftTasks.length === 0) {
+    return <ReviewTasksIdleState />;
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <Alert>
-        <AlertTitle>Draft tasks — not visible to seller yet</AlertTitle>
-        <AlertDescription>
-          Review the tasks below. When you send them, the seller will see each item and can fix
-          intake data before resubmitting.
-        </AlertDescription>
-      </Alert>
-
       <ul className="flex flex-col gap-3">
         {draftTasks.map((task) => (
-          <li key={task.id} className="rounded-lg border border-border p-4 text-sm">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-medium">{task.title}</span>
-              <Badge variant="outline">Draft</Badge>
-            </div>
-            {task.description ? (
-              <p className="mt-2 text-muted-foreground">{task.description}</p>
-            ) : null}
-            <p className="mt-2 text-xs text-muted-foreground">
-              Will become: {getReviewTaskStatusMeta(task.status).label} after release
-            </p>
+          <li key={task.id}>
+            <Card>
+              <CardHeader className="pb-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <CardTitle className="text-base">{task.title}</CardTitle>
+                  <Badge variant="outline">Draft</Badge>
+                </div>
+                {task.description ? (
+                  <CardDescription>{task.description}</CardDescription>
+                ) : null}
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-xs text-muted-foreground">
+                  Will become: {getReviewTaskStatusMeta(task.status).label} after release
+                </p>
+              </CardContent>
+            </Card>
           </li>
         ))}
       </ul>
 
-      <Button disabled={isPending} onClick={sendToSeller}>
+      <Button disabled={isPending} onClick={sendToSeller} className="w-fit">
         {isPending ? <Spinner data-icon="inline-start" /> : null}
         Send tasks to seller
       </Button>

@@ -67,7 +67,7 @@ const ListingWorkspaceOverviewTab = ({
             <span className="text-muted-foreground">Current status</span>
             <ListingStatusBadge status={listing.status} />
           </div>
-          <p className="mt-3 text-sm text-muted-foreground">{statusMeta.description}</p>
+          <p className="mt-3 text-sm">{statusMeta.description}</p>
         </div>
 
         <div className="rounded-lg border border-border p-4">

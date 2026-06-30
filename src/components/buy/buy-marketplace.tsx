@@ -6,23 +6,30 @@ import { AircraftFilterSidebar } from "@/components/buy/aircraft-filter-sidebar"
 import { AircraftListingGrid } from "@/components/buy/aircraft-listing-grid";
 import { AircraftResultsToolbar } from "@/components/buy/aircraft-results-toolbar";
 import { MobileFilterSheet } from "@/components/buy/mobile-filter-sheet";
-import type { AircraftMarketplaceFilters, SortOption } from "@/lib/aviatonly/marketplace/aircraft-marketplace-types";
+import type {
+  AircraftMarketplaceFilters,
+  AircraftMarketplaceListing,
+  SortOption,
+} from "@/lib/aviatonly/marketplace/aircraft-marketplace-types";
 import {
   DEFAULT_FILTERS,
   filterListings,
   removeFilterChip,
 } from "@/lib/aviatonly/marketplace/filters";
-import { MOCK_AIRCRAFT_LISTINGS } from "@/lib/aviatonly/marketplace/mock-aircraft-listings";
 import { sortListings } from "@/lib/aviatonly/marketplace/aircraft-marketplace-utils";
 
-export function BuyMarketplace() {
+interface BuyMarketplaceProps {
+  listings: AircraftMarketplaceListing[];
+}
+
+export function BuyMarketplace({ listings }: BuyMarketplaceProps) {
   const [filters, setFilters] = useState<AircraftMarketplaceFilters>(DEFAULT_FILTERS);
   const [sort, setSort] = useState<SortOption>("NEWEST");
 
   const filtered = useMemo(() => {
-    const results = filterListings(MOCK_AIRCRAFT_LISTINGS, filters);
+    const results = filterListings(listings, filters);
     return sortListings(results, sort);
-  }, [filters, sort]);
+  }, [listings, filters, sort]);
 
   const updateFilters = (next: AircraftMarketplaceFilters) => {
     setFilters(next);

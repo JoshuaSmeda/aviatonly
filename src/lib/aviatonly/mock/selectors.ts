@@ -281,6 +281,7 @@ export function buildReviewQueueRows(): ReviewQueueRow[] {
         status: listing.status,
         assignedReviewer:
           listing.id === "zs-mno" ? "AVIATONLY Ops" : null,
+        canStartReview: listing.status === ListingStatus.SUBMITTED && listing.id !== "zs-mno",
       };
     })
     .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
@@ -292,7 +293,9 @@ export function buildListingWorkspaceOverview(listingId: string): ListingWorkspa
     return null;
   }
 
-  const blockingTasks = getOpenReviewTasksForListing(listingId).filter((t) => t.blockingPublication);
+  const blockingTasks = getOpenReviewTasksForListing(listingId).filter(
+    (t) => t.blockingPublication && t.status === ReviewTaskStatus.WAITING_ON_SELLER,
+  );
   const events = getMockEventsForListing(listingId)
     .slice(0, 5)
     .map((event) => ({

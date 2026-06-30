@@ -5,9 +5,10 @@ import { useOptimistic, useTransition } from "react";
 import { adminReviewListingDocumentAction } from "@/app/(dashboard)/dashboard/admin/listings/actions";
 import ListingGuidedDocumentGrid from "@/components/dashboard/listings/listing-guided-document-grid";
 import ListingIntakeReviewProgress from "@/components/dashboard/listings/listing-intake-review-progress";
+import ListingStartIntakeReviewPanel from "@/components/dashboard/listings/listing-start-intake-review-panel";
 import { Badge } from "@/components/ui/badge";
 import { DOCUMENT_SLOTS } from "@/components/dashboard/seller/upload/constants";
-import { DocumentStatus } from "@/lib/aviatonly/domain";
+import { DocumentStatus, ListingStatus, canAdminEditIntakeReview } from "@/lib/aviatonly/domain";
 import type { MockAircraftDocument } from "@/lib/aviatonly/mock/types";
 import type { ListingWorkspaceData } from "@/lib/aviatonly/server/listing-workspace";
 
@@ -41,7 +42,11 @@ const ListingDocumentsReviewTab = ({
     workspace.documents,
     applyDocumentOptimistic,
   );
-  const canEdit = canManageReview && !workspace.intakeReviewTasksReleasedAt;
+  const canEdit = canAdminEditIntakeReview({
+    canManageReview,
+    listingStatus: listing.status,
+    intakeReviewTasksReleasedAt: workspace.intakeReviewTasksReleasedAt,
+  });
   const uploadedCount = documents.length;
 
   const afterReview = (result: { ok: boolean; finalized?: boolean }) => {
@@ -52,6 +57,15 @@ const ListingDocumentsReviewTab = ({
 
   return (
     <div className="flex flex-col gap-4">
+      {canManageReview && listing.status === ListingStatus.SUBMITTED ? (
+        <ListingStartIntakeReviewPanel
+          listingId={listing.id}
+          listingStatus={listing.status}
+          intakeReviewTasksReleasedAt={workspace.intakeReviewTasksReleasedAt}
+          intakeReviewerName={workspace.intakeReviewerName}
+        />
+      ) : null}
+
       {canManageReview ? (
         <ListingIntakeReviewProgress workspace={workspace} documents={documents} />
       ) : null}

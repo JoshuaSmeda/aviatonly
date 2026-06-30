@@ -11,6 +11,7 @@ import {
   removeGuidedDocumentForSlot,
 } from "@/app/(dashboard)/dashboard/seller/upload/document-actions";
 import { refreshListingCompleteness } from "@/app/(dashboard)/dashboard/seller/upload/photo-actions";
+import { useWorkspaceDocumentDownload } from "@/components/dashboard/shared/use-workspace-document-download";
 import { aircraftUpload } from "@/lib/upload/upload-client";
 import UploadSlot, { type UploadedFile } from "./upload-slot";
 import type { UploadSlotDef } from "./constants";
@@ -41,6 +42,7 @@ const GuidedDocumentUploadGrid = ({
   isSlotDisabled,
 }: GuidedDocumentUploadGridProps) => {
   const [r2Enabled, setR2Enabled] = useState(false);
+  const { openDocument } = useWorkspaceDocumentDownload(listingId);
   const [ensuringListing, setEnsuringListing] = useState(false);
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
   const [slotProgress, setSlotProgress] = useState<Record<string, number>>({});
@@ -261,6 +263,11 @@ const GuidedDocumentUploadGrid = ({
             isUploading={isActiveSlot}
             onSelect={(file) => void handleSelect(slot.id, file)}
             onRemove={() => void handleRemove(slot.id)}
+            onOpenDocument={
+              listingId && value?.documentId
+                ? () => openDocument(value.documentId!)
+                : undefined
+            }
             disabled={isSlotDisabled?.(slot.id)}
           />
         );

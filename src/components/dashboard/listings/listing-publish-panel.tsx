@@ -103,17 +103,7 @@ const ListingPublishPanel = ({
   }
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-border p-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-semibold">Ready to publish</h3>
-        <Badge variant="secondary">{saleLabel}</Badge>
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Publishing moves this listing to{" "}
-        <span className="font-medium text-foreground">live fixed price</span>
-        . Approved guided photos ({approvedPhotoCount}) will be exposed on the public catalog via
-        secure redirects. Documents stay private.
-      </p>
+    <div className="flex flex-col gap-2">
       <Button
         type="button"
         className="w-fit gap-2"

@@ -30,10 +30,17 @@ export interface MockAircraftListing {
   authorisedToSell: boolean | null;
   saleType: SaleType;
   valuationEstimate: number | null;
+  platformIndicativeValue: number | null;
   askingPrice: number | null;
   reservePrice: number | null;
   startingBid: number | null;
   bidIncrement: number | null;
+  inspectionProvider: string | null;
+  inspectionLocation: string | null;
+  inspectionScheduledAt: string | null;
+  inspectionNotes: string | null;
+  inspectionCompletedAt: string | null;
+  inspectionSummary: string | null;
   status: ListingStatus;
   completenessScore: number;
   sellerId: string;
@@ -297,6 +304,7 @@ export interface ReviewQueueRow {
   photoIssues: number;
   status: ListingStatus;
   assignedReviewer: string | null;
+  canStartReview: boolean;
 }
 
 export interface WorkspacePrimaryCta {

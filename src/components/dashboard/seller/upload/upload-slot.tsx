@@ -1,8 +1,9 @@
 "use client";
 
-import { useId, useRef } from "react";
-import { AlertCircle, Check, FileText, RefreshCw, Trash2, UploadCloud } from "lucide-react";
+import { useId, useRef, useState } from "react";
+import { AlertCircle, Check, Download, Eye, FileText, RefreshCw, Trash2, UploadCloud } from "lucide-react";
 import AsyncPhotoThumb from "@/components/dashboard/shared/async-photo-thumb";
+import GuidedPhotoPreviewDialog from "@/components/dashboard/shared/guided-photo-preview-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -37,6 +38,7 @@ interface UploadSlotProps {
   isUploading?: boolean;
   onSelect: (file: File) => void;
   onRemove: () => void;
+  onOpenDocument?: () => void;
   disabled?: boolean;
 }
 
@@ -88,10 +90,12 @@ const UploadSlot = ({
   isUploading = false,
   onSelect,
   onRemove,
+  onOpenDocument,
   disabled = false,
 }: UploadSlotProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
+  const [previewOpen, setPreviewOpen] = useState(false);
   const filled = Boolean(value);
   const showProgress = Boolean(isUploading && progress != null);
 
@@ -130,12 +134,19 @@ const UploadSlot = ({
       {filled && value ? (
         <div className="flex items-center gap-3 rounded-md border border-border bg-background p-2">
           {variant === "photo" && value.previewUrl ? (
-            <AsyncPhotoThumb src={value.previewUrl} alt={slot.label} />
+            <button
+              type="button"
+              className="shrink-0 cursor-pointer rounded-md transition-opacity hover:opacity-80"
+              aria-label={`Inspect ${slot.label}`}
+              onClick={() => setPreviewOpen(true)}
+            >
+              <AsyncPhotoThumb src={value.previewUrl} alt={slot.label} />
+            </button>
           ) : variant === "photo" && (value.status === "uploading" || isUploading) ? (
             <AsyncPhotoThumb alt={slot.label} pending />
           ) : (
             <div className="flex size-12 items-center justify-center rounded bg-muted text-muted-foreground">
-              <FileText className="size-5" />
+              <FileText />
             </div>
           )}
           <div className="min-w-0 flex-1">
@@ -146,6 +157,28 @@ const UploadSlot = ({
             ) : null}
           </div>
           <div className="flex items-center gap-1">
+            {variant === "photo" && value.previewUrl ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Inspect photo"
+                onClick={() => setPreviewOpen(true)}
+              >
+                <Eye />
+              </Button>
+            ) : null}
+            {variant === "document" && onOpenDocument ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Open document"
+                onClick={onOpenDocument}
+              >
+                <Download />
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="ghost"
@@ -194,6 +227,18 @@ const UploadSlot = ({
           event.target.value = "";
         }}
       />
+
+      {variant === "photo" && value?.previewUrl ? (
+        <GuidedPhotoPreviewDialog
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+          title={slot.label}
+          instruction={slot.instruction}
+          imageUrl={value.previewUrl}
+          fileName={value.name}
+          fileSize={value.sizeLabel}
+        />
+      ) : null}
     </div>
   );
 };

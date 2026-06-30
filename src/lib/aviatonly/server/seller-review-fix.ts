@@ -1,9 +1,10 @@
 import {
+  DocumentStatus,
+  EnginePosition,
   FieldReviewStatus,
   ListingStatus,
   PhotoStatus,
   ReviewTaskStatus,
-  DocumentStatus,
 } from "@/lib/aviatonly/domain";
 import { NotFoundError } from "@/lib/aviatonly/server/authorization";
 import { prisma } from "@/lib/prisma";
@@ -288,6 +289,52 @@ export async function sellerFixListingFieldRecord(input: {
         update: { equipment: value.split(",").map((s) => s.trim()).filter(Boolean) },
       });
       break;
+    case "engine": {
+      const [makeModel = "", hoursStr = "", tsoStr = ""] = value
+        .split("|")
+        .map((part) => part.trim());
+      if (!makeModel) {
+        return { ok: false, error: "Enter engine make and model." };
+      }
+      const engineHours = hoursStr ? Number(hoursStr) : null;
+      const tso = tsoStr ? Number(tsoStr) : null;
+      if (engineHours != null && (!Number.isFinite(engineHours) || engineHours < 0)) {
+        return { ok: false, error: "Enter valid engine hours." };
+      }
+      if (tso != null && (!Number.isFinite(tso) || tso < 0)) {
+        return { ok: false, error: "Enter valid time since overhaul." };
+      }
+      await prisma.aircraftEngine.deleteMany({ where: { listingId: input.listingId } });
+      await prisma.aircraftEngine.create({
+        data: {
+          listingId: input.listingId,
+          position: EnginePosition.SINGLE,
+          model: makeModel,
+          engineHours,
+          timeSinceOverhaul: tso,
+        },
+      });
+      break;
+    }
+    case "propeller": {
+      const [makeModel = "", hoursStr = ""] = value.split("|").map((part) => part.trim());
+      if (!makeModel) {
+        return { ok: false, error: "Enter propeller make and model." };
+      }
+      const propellerHours = hoursStr ? Number(hoursStr) : null;
+      if (propellerHours != null && (!Number.isFinite(propellerHours) || propellerHours < 0)) {
+        return { ok: false, error: "Enter valid propeller hours." };
+      }
+      await prisma.aircraftPropeller.deleteMany({ where: { listingId: input.listingId } });
+      await prisma.aircraftPropeller.create({
+        data: {
+          listingId: input.listingId,
+          model: makeModel,
+          propellerHours,
+        },
+      });
+      break;
+    }
     default:
       return { ok: false, error: "This field cannot be fixed here yet." };
   }

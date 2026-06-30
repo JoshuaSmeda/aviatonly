@@ -226,6 +226,14 @@ export function getListingDetailHref(slug: string): string {
   return `/dashboard/buy/${slug}`;
 }
 
+/** URL slug for catalog detail pages — must stay stable for a listing. */
+export function buildListingSlug(registration: string, make: string, model: string): string {
+  return `${registration}-${make}-${model}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export function getFilterLabel(
   key: keyof AircraftMarketplaceFilters,
   value: string,

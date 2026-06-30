@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import {
   buildAircraftDataReviewRows,
   buildReviewTaskFixHref,
+  canAdminEditIntakeReview,
   FieldReviewStatus,
   getFieldReviewStatusMeta,
   ListingStatus,
@@ -21,6 +22,7 @@ import type { MockListingFieldReview } from "@/lib/aviatonly/mock/types";
 import type { ListingWorkspaceData } from "@/lib/aviatonly/server/listing-workspace";
 import { cn } from "@/lib/utils";
 import ListingIntakeReviewProgress from "./listing-intake-review-progress";
+import ListingStartIntakeReviewPanel from "./listing-start-intake-review-panel";
 
 const WIDE_FIELDS = new Set(["damage-history", "avionics", "maintenance-notes"]);
 
@@ -95,7 +97,11 @@ const ListingAircraftDataReviewTab = ({
       applyFieldReviewOptimistic(current, action, listing.id),
   );
   const fieldMap = new Map(fieldReviews.map((r) => [r.fieldKey, r]));
-  const canEdit = canManageReview && !workspace.intakeReviewTasksReleasedAt;
+  const canEdit = canAdminEditIntakeReview({
+    canManageReview,
+    listingStatus: listing.status,
+    intakeReviewTasksReleasedAt: workspace.intakeReviewTasksReleasedAt,
+  });
 
   const adminRows = buildAircraftDataReviewRows(workspace);
   const sellerReviewMode =
@@ -112,15 +118,25 @@ const ListingAircraftDataReviewTab = ({
 
   return (
     <div className="flex flex-col gap-4">
+      {canManageReview && listing.status === ListingStatus.SUBMITTED ? (
+        <ListingStartIntakeReviewPanel
+          listingId={listing.id}
+          listingStatus={listing.status}
+          intakeReviewTasksReleasedAt={workspace.intakeReviewTasksReleasedAt}
+          intakeReviewerName={workspace.intakeReviewerName}
+        />
+      ) : null}
+
       {canManageReview ? (
         <ListingIntakeReviewProgress workspace={workspace} fieldReviews={fieldReviews} />
       ) : null}
 
-      {canManageReview && workspace.intakeReviewTasksReleasedAt ? (
+      {canManageReview && listing.status === ListingStatus.NEEDS_CHANGES ? (
         <Alert>
-          <AlertTitle>Review locked</AlertTitle>
+          <AlertTitle>Waiting on seller</AlertTitle>
           <AlertDescription>
-            Tasks were sent to the seller. Further intake edits require a new submission cycle.
+            Review tasks were sent to the seller. Intake editing unlocks after they resubmit and you
+            enter review mode again.
           </AlertDescription>
         </Alert>
       ) : null}

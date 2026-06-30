@@ -1,6 +1,7 @@
 import {
   DocumentStatus,
   deriveSellerListingNextStep,
+  findActiveIntakeReviewerId,
   OfferStatus,
   ReviewTaskStatus,
 } from "@/lib/aviatonly/domain";
@@ -54,6 +55,8 @@ export interface ListingWorkspaceData {
   fieldReviews: MockListingFieldReview[];
   intakeReviewFinalizedAt: string | null;
   intakeReviewTasksReleasedAt: string | null;
+  intakeReviewerId: string | null;
+  intakeReviewerName: string | null;
   deal: MockDeal | null;
   events: MockListingEvent[];
 }
@@ -110,7 +113,12 @@ function buildOverviewFromRecord(
 ): ListingWorkspaceOverview {
   const documents = record.documents.map(mapDocumentRecord);
   const blockingTasks = record.reviewTasks
-    .filter((t) => t.blockingPublication && t.releasedToSeller)
+    .filter(
+      (t) =>
+        t.blockingPublication &&
+        t.releasedToSeller &&
+        t.status === ReviewTaskStatus.WAITING_ON_SELLER,
+    )
     .map(mapReviewTaskRecord);
   const blockingSellerTasks = blockingTasks.filter(
     (t) => t.status === ReviewTaskStatus.WAITING_ON_SELLER,
@@ -169,6 +177,16 @@ export async function getListingWorkspaceData(
   );
   const draftTasks = allTasks.filter((t) => !t.releasedToSeller);
 
+  const intakeReviewerId = findActiveIntakeReviewerId(record.reviewTasks);
+  let intakeReviewerName: string | null = null;
+  if (intakeReviewerId) {
+    const reviewer = await prisma.user.findUnique({
+      where: { id: intakeReviewerId },
+      select: { name: true },
+    });
+    intakeReviewerName = reviewer?.name ?? null;
+  }
+
   const deal = record.deals[0]
     ? mapDealRecord(record.deals[0])
     : null;
@@ -188,6 +206,8 @@ export async function getListingWorkspaceData(
     fieldReviews: record.fieldReviews.map(mapFieldReviewRecord),
     intakeReviewFinalizedAt: record.intakeReviewFinalizedAt?.toISOString() ?? null,
     intakeReviewTasksReleasedAt: record.intakeReviewTasksReleasedAt?.toISOString() ?? null,
+    intakeReviewerId,
+    intakeReviewerName,
     deal,
     events: record.events.map(mapListingEventRecord),
   };

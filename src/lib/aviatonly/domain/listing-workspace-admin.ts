@@ -9,13 +9,20 @@ export function deriveAdminListingNextStep(
 
   switch (status) {
     case ListingStatus.SUBMITTED:
+      return {
+        sectionLabel: "Your next step",
+        message:
+          "Enter review mode to claim this listing and start checking aircraft data, media, and documents.",
+        actionRequired: true,
+        primaryCta: { label: "Open intake review", href: `${base}?tab=aircraft-data` },
+      };
     case ListingStatus.UNDER_REVIEW:
       return {
         sectionLabel: "Your next step",
         message:
           "Review and tick off every row on Aircraft Data, Media, and Documents before finalizing intake.",
         actionRequired: true,
-        primaryCta: { label: "Start intake review", href: `${base}?tab=aircraft-data` },
+        primaryCta: { label: "Continue intake review", href: `${base}?tab=aircraft-data` },
       };
     case ListingStatus.NEEDS_CHANGES:
       return {
@@ -33,10 +40,10 @@ export function deriveAdminListingNextStep(
       };
     case ListingStatus.APPROVED_FOR_LISTING:
       return {
-        sectionLabel: "Your next step",
-        message: "Listing cleared for publication — publish to the public catalog when ready.",
-        actionRequired: true,
-        primaryCta: { label: "Publish listing", href: `${base}?tab=overview` },
+        sectionLabel: "What's happening now",
+        message: "Listing cleared for publication — use Publish to catalog below when ready.",
+        actionRequired: false,
+        primaryCta: null,
       };
     case ListingStatus.INSPECTION_PENDING:
       return {

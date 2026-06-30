@@ -3,6 +3,7 @@ import {
   DealStatus,
   deriveSellerListingNextStep,
   DocumentStatus,
+  findActiveIntakeReviewerId,
   LeadStatus,
   LeadType,
   ListingStatus,
@@ -54,7 +55,12 @@ async function deriveMissingItems(listingId: string): Promise<string[]> {
   const [documents, tasks] = await Promise.all([
     prisma.aircraftDocument.findMany({ where: { listingId } }),
     prisma.listingReviewTask.findMany({
-      where: { listingId, blockingPublication: true, status: { not: ReviewTaskStatus.DONE } },
+      where: {
+        listingId,
+        blockingPublication: true,
+        releasedToSeller: true,
+        status: ReviewTaskStatus.WAITING_ON_SELLER,
+      },
     }),
   ]);
 
@@ -344,9 +350,15 @@ export async function queryReviewQueueRows(): Promise<ReviewQueueRow[]> {
         countPhotoIssuesForListing(listing.id),
       ]);
 
-      const adminTask = listing.reviewTasks.find(
-        (t) => t.assignedRole === "ADMIN" && t.status === ReviewTaskStatus.IN_PROGRESS,
-      );
+      const intakeReviewerId = findActiveIntakeReviewerId(listing.reviewTasks);
+      let assignedReviewer: string | null = null;
+      if (intakeReviewerId) {
+        const reviewer = await prisma.user.findUnique({
+          where: { id: intakeReviewerId },
+          select: { name: true },
+        });
+        assignedReviewer = reviewer?.name ?? "Assigned reviewer";
+      }
 
       return {
         id: listing.id,
@@ -358,7 +370,8 @@ export async function queryReviewQueueRows(): Promise<ReviewQueueRow[]> {
         missingDocs,
         photoIssues,
         status: mapped.status,
-        assignedReviewer: adminTask ? "AVIATONLY Ops" : null,
+        assignedReviewer,
+        canStartReview: mapped.status === ListingStatus.SUBMITTED && !assignedReviewer,
       };
     }),
   );

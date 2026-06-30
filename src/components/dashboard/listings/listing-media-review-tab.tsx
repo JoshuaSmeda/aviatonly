@@ -5,9 +5,10 @@ import { useOptimistic, useTransition } from "react";
 import { adminReviewListingPhotoAction } from "@/app/(dashboard)/dashboard/admin/listings/actions";
 import ListingGuidedPhotoGrid from "@/components/dashboard/listings/listing-guided-photo-grid";
 import ListingIntakeReviewProgress from "@/components/dashboard/listings/listing-intake-review-progress";
+import ListingStartIntakeReviewPanel from "@/components/dashboard/listings/listing-start-intake-review-panel";
 import { Badge } from "@/components/ui/badge";
 import { PHOTO_SLOTS } from "@/components/dashboard/seller/upload/constants";
-import { PhotoStatus } from "@/lib/aviatonly/domain";
+import { ListingStatus, PhotoStatus, canAdminEditIntakeReview } from "@/lib/aviatonly/domain";
 import type { MockAircraftPhoto } from "@/lib/aviatonly/mock/types";
 import type { ListingWorkspaceData } from "@/lib/aviatonly/server/listing-workspace";
 
@@ -35,7 +36,11 @@ const ListingMediaReviewTab = ({ workspace, canManageReview }: ListingMediaRevie
   const [, startTransition] = useTransition();
   const { listing } = workspace;
   const [photos, applyOptimisticPhoto] = useOptimistic(workspace.photos, applyPhotoOptimistic);
-  const canEdit = canManageReview && !workspace.intakeReviewTasksReleasedAt;
+  const canEdit = canAdminEditIntakeReview({
+    canManageReview,
+    listingStatus: listing.status,
+    intakeReviewTasksReleasedAt: workspace.intakeReviewTasksReleasedAt,
+  });
   const uploadedCount = photos.length;
 
   const afterReview = (result: { ok: boolean; finalized?: boolean }) => {
@@ -46,6 +51,15 @@ const ListingMediaReviewTab = ({ workspace, canManageReview }: ListingMediaRevie
 
   return (
     <div className="flex flex-col gap-4">
+      {canManageReview && listing.status === ListingStatus.SUBMITTED ? (
+        <ListingStartIntakeReviewPanel
+          listingId={listing.id}
+          listingStatus={listing.status}
+          intakeReviewTasksReleasedAt={workspace.intakeReviewTasksReleasedAt}
+          intakeReviewerName={workspace.intakeReviewerName}
+        />
+      ) : null}
+
       {canManageReview ? (
         <ListingIntakeReviewProgress workspace={workspace} photos={photos} />
       ) : null}

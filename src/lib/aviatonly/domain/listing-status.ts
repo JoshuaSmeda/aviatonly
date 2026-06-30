@@ -72,7 +72,7 @@ export const LISTING_STATUS_META: Record<ListingStatus, StatusMeta> = {
     badgeVariant: "default",
   },
   [ListingStatus.LIVE_FIXED_PRICE]: {
-    label: "Live · Fixed Price",
+    label: "Live",
     description: "Published and live as a fixed-price listing.",
     badgeVariant: "default",
   },

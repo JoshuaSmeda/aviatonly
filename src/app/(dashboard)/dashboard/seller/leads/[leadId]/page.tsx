@@ -9,6 +9,7 @@ import {
   canManageLead,
 } from "@/lib/aviatonly/server/authorization";
 import { getLeadWorkspace } from "@/lib/aviatonly/server/lead-workspace";
+import { loadLeadWorkspaceMessageContext } from "@/lib/aviatonly/server/lead-workspace-messages";
 import { requireAuth } from "@/lib/auth/session";
 
 interface SellerLeadDetailPageProps {
@@ -52,6 +53,13 @@ const SellerLeadDetailPage = async ({ params }: SellerLeadDetailPageProps) => {
     session,
   );
 
+  const messageContext = await loadLeadWorkspaceMessageContext({
+    leadId,
+    viewerId: session.user.id,
+    canManage,
+    markRead: true,
+  });
+
   return (
     <>
       <BreadcrumbComp title={`${lead.listing.registration} · Lead`} />
@@ -60,6 +68,7 @@ const SellerLeadDetailPage = async ({ params }: SellerLeadDetailPageProps) => {
           lead={lead}
           canManage={canManage}
           backHref="/dashboard/seller/leads"
+          messageContext={messageContext}
         />
       </TitleCard>
       <p className="mt-4 text-center text-xs text-muted-foreground">

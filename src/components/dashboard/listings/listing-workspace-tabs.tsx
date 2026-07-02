@@ -26,8 +26,9 @@ import {
 } from "@/lib/aviatonly/mock";
 import { parseListingEventTaskSummaries } from "@/lib/aviatonly/domain/listing-event-tasks";
 import type { ListingWorkspaceData } from "@/lib/aviatonly/server/listing-workspace";
+import type { ListingLeadsOffersData } from "./listing-leads-offers-panel";
 import ListingWorkspaceActivityTimeline from "./listing-workspace-activity-timeline";
-import ListingLeadsOffersPanel from "./listing-leads-offers-panel";
+import ListingLeadsOffersPanelClient from "./listing-leads-offers-panel-client";
 import ListingWorkspaceOverviewTab from "./listing-workspace-overview";
 import ListingAircraftDataReviewTab from "./listing-aircraft-data-review-tab";
 import ListingMediaReviewTab from "./listing-media-review-tab";
@@ -64,11 +65,13 @@ function resolveTab(tab: string | null): WorkspaceTabValue {
 interface ListingWorkspaceTabsProps {
   workspace: ListingWorkspaceData;
   canManageReview?: boolean;
+  leadsOffers?: ListingLeadsOffersData;
 }
 
 const ListingWorkspaceTabs = ({
   workspace,
   canManageReview = false,
+  leadsOffers,
 }: ListingWorkspaceTabsProps) => {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -154,7 +157,16 @@ const ListingWorkspaceTabs = ({
       </TabsContent>
 
       <TabsContent value="leads-offers" className="w-full flex-none pt-6">
-        <ListingLeadsOffersPanel listingId={listing.id} />
+        {leadsOffers ? (
+          <ListingLeadsOffersPanelClient
+            leadRows={leadsOffers.leadRows}
+            offerRows={leadsOffers.offerRows}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Lead and offer data is not available for this workspace.
+          </p>
+        )}
       </TabsContent>
 
       <TabsContent value="deal-room" className="w-full flex-none pt-6">

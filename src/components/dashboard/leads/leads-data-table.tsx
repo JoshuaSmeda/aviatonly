@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -68,8 +68,11 @@ interface LeadsDataTableProps {
   showListingColumns?: boolean;
   showSeller?: boolean;
   showActions?: boolean;
+  showInitialEnquiryColumn?: boolean;
   detailBasePath?: string;
   emptyDescription?: string;
+  searchQuery?: string;
+  showSearchControls?: boolean;
 }
 
 const LeadsDataTable = ({
@@ -77,12 +80,21 @@ const LeadsDataTable = ({
   showListingColumns = true,
   showSeller = false,
   showActions = true,
+  showInitialEnquiryColumn = true,
   detailBasePath = "/dashboard/seller/leads",
   emptyDescription = "Try adjusting your search or filters.",
+  searchQuery,
+  showSearchControls = true,
 }: LeadsDataTableProps) => {
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
+  const [globalFilter, setGlobalFilter] = useState(searchQuery ?? "");
+
+  useEffect(() => {
+    if (searchQuery !== undefined) {
+      setGlobalFilter(searchQuery);
+    }
+  }, [searchQuery]);
 
   const columns = useMemo<ColumnDef<LeadTableRow>[]>(() => {
     const cols: ColumnDef<LeadTableRow>[] = [];
@@ -90,15 +102,26 @@ const LeadsDataTable = ({
     if (showActions) {
       cols.push({
         id: "actions",
-        header: () => <span className="sr-only">Open</span>,
+        header: () => <span className="sr-only">Actions</span>,
         cell: ({ row }) => (
-          <Button
-            size="sm"
-            variant="outline"
-            render={<Link href={`${detailBasePath}/${row.original.id}`} />}
-          >
-            Open
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              render={<Link href={`${detailBasePath}/${row.original.id}`} />}
+            >
+              Open
+            </Button>
+            {row.original.messagesHref ? (
+              <Button
+                size="sm"
+                variant={row.original.unread ? "default" : "outline"}
+                render={<Link href={row.original.messagesHref} />}
+              >
+                {row.original.unread ? "Messages · New" : "Messages"}
+              </Button>
+            ) : null}
+          </div>
         ),
       });
     }
@@ -129,8 +152,13 @@ const LeadsDataTable = ({
         accessorKey: "buyerName",
         header: ({ column }) => <DataTableColumnHeader column={column} title="Buyer" />,
         cell: ({ row }) => (
-          <div className="flex flex-col gap-0.5">
-            <span className="font-medium">{row.original.buyerName}</span>
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium">{row.original.buyerName}</span>
+              {row.original.unread ? (
+                <Badge variant="default">Unread</Badge>
+              ) : null}
+            </div>
             <span className="text-xs text-muted-foreground">
               {verificationLabel(row.original.buyerVerification)}
             </span>
@@ -155,14 +183,33 @@ const LeadsDataTable = ({
         },
       },
       {
+        id: "lastMessage",
+        accessorFn: (row) => row.lastMessagePreview ?? row.message,
+        header: "Latest message",
+        cell: ({ row }) => {
+          const preview = row.original.lastMessagePreview ?? row.original.message;
+          return (
+            <span className="block min-w-0 truncate text-muted-foreground" title={preview}>
+              {preview}
+            </span>
+          );
+        },
+      },
+    );
+
+    if (showInitialEnquiryColumn) {
+      cols.push({
         accessorKey: "message",
-        header: "Enquiry",
+        header: "Initial enquiry",
         cell: ({ row }) => (
           <span className="block min-w-0 truncate text-muted-foreground" title={row.original.message}>
             {row.original.message}
           </span>
         ),
-      },
+      });
+    }
+
+    cols.push(
       {
         accessorKey: "createdAt",
         header: ({ column }) => <DataTableColumnHeader column={column} title="Received" />,
@@ -177,7 +224,7 @@ const LeadsDataTable = ({
     );
 
     return cols;
-  }, [showActions, showListingColumns, showSeller, detailBasePath]);
+  }, [showActions, showListingColumns, showSeller, showInitialEnquiryColumn, detailBasePath]);
 
   const table = useReactTable({
     data: rows,
@@ -192,8 +239,8 @@ const LeadsDataTable = ({
     globalFilterFn: (row, _columnId, filterValue) => {
       const query = String(filterValue).toLowerCase();
       if (!query) return true;
-      const { buyerName, message, registration, aircraftTitle } = row.original;
-      return [buyerName, message, registration, aircraftTitle]
+      const { buyerName, message, registration, aircraftTitle, lastMessagePreview } = row.original;
+      return [buyerName, message, lastMessagePreview, registration, aircraftTitle]
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(query));
     },
@@ -204,6 +251,7 @@ const LeadsDataTable = ({
 
   return (
       <div className="flex flex-col gap-3">
+      {showSearchControls ? (
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <InputGroup className="sm:max-w-xs">
           <InputGroupAddon>
@@ -258,6 +306,51 @@ const LeadsDataTable = ({
           </SelectContent>
         </Select>
       </div>
+      ) : (
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <Select
+            value={statusFilter}
+            onValueChange={(value) =>
+              table.getColumn("status")?.setFilterValue(value === "all" ? undefined : value)
+            }
+          >
+            <SelectTrigger className="w-full sm:w-44">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="all">All statuses</SelectItem>
+                {Object.values(LeadStatus).map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {LEAD_STATUS_META[status].label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={typeFilter}
+            onValueChange={(value) =>
+              table.getColumn("type")?.setFilterValue(value === "all" ? undefined : value)
+            }
+          >
+            <SelectTrigger className="w-full sm:w-44">
+              <SelectValue placeholder="All types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="all">All types</SelectItem>
+                {Object.values(LeadType).map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {LEAD_TYPE_META[type].label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {table.getRowModel().rows.length === 0 ? (
         <Empty className="border py-10">

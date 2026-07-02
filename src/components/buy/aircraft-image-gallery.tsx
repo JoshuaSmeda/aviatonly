@@ -18,6 +18,34 @@ interface AircraftImageGalleryProps {
 
 const detailCardClass = "overflow-hidden rounded-xl border border-border bg-card";
 
+const galleryImageClass = "max-h-full max-w-full object-contain object-center";
+
+function GalleryImage({
+  src,
+  alt,
+  priority = false,
+  sizes,
+}: {
+  src: string;
+  alt: string;
+  priority?: boolean;
+  sizes: string;
+}) {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center">
+      <Image
+        src={src}
+        alt={alt}
+        width={1600}
+        height={1200}
+        className={galleryImageClass}
+        sizes={sizes}
+        priority={priority}
+      />
+    </div>
+  );
+}
+
 export function AircraftImageGallery({ images }: AircraftImageGalleryProps) {
   const initialIndex = Math.max(0, images.findIndex((image) => image.isPrimary));
   const [activeIndex, setActiveIndex] = useState(initialIndex);
@@ -61,17 +89,15 @@ export function AircraftImageGallery({ images }: AircraftImageGalleryProps) {
   return (
     <Dialog open={galleryOpen} onOpenChange={setGalleryOpen}>
       <div className={cn(detailCardClass, "relative p-2")}>
-        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:grid-rows-2">
+        <div className="grid h-[280px] grid-cols-2 gap-2 sm:h-[360px] lg:h-[480px] lg:grid-cols-4 lg:grid-rows-2">
           <button
             type="button"
-            className="relative col-span-2 row-span-2 min-h-[220px] overflow-hidden rounded-lg bg-muted sm:min-h-[300px] lg:min-h-[400px]"
+            className="relative col-span-2 row-span-2 overflow-hidden rounded-lg bg-muted"
             onClick={() => openGallery(activeIndex)}
           >
-            <Image
+            <GalleryImage
               src={primary.url}
               alt={primary.alt}
-              fill
-              className="object-cover"
               sizes="(max-width: 1280px) 80vw, 900px"
               priority
             />
@@ -84,10 +110,10 @@ export function AircraftImageGallery({ images }: AircraftImageGalleryProps) {
               <button
                 key={image.id}
                 type="button"
-                className="relative min-h-[110px] overflow-hidden rounded-lg bg-muted sm:min-h-[140px] lg:min-h-0"
+                className="relative hidden overflow-hidden rounded-lg bg-muted lg:block"
                 onClick={() => setActiveIndex(imageIndex)}
               >
-                <Image src={image.url} alt={image.alt} fill className="object-cover" sizes="200px" />
+                <GalleryImage src={image.url} alt={image.alt} sizes="240px" />
               </button>
             );
           })}
@@ -110,14 +136,7 @@ export function AircraftImageGallery({ images }: AircraftImageGalleryProps) {
         className="max-w-5xl gap-0 overflow-hidden border-0 bg-transparent p-0 shadow-none ring-0 sm:max-w-5xl"
       >
         <div className="relative aspect-[16/10] w-full overflow-hidden rounded-xl bg-black">
-          <Image
-            src={carouselImage.url}
-            alt={carouselImage.alt}
-            fill
-            className="object-cover"
-            sizes="90vw"
-            priority
-          />
+          <GalleryImage src={carouselImage.url} alt={carouselImage.alt} sizes="90vw" priority />
 
           <DialogClose
             render={

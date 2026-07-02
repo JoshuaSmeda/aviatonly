@@ -57,7 +57,7 @@ export const AVIATONLY_NAV_SECTIONS: NavSection[] = [
         roles: SELLER_ACCESS,
       },
       {
-        name: "Leads",
+        name: "Sales pipeline",
         icon: "solar:users-group-rounded-line-duotone",
         url: "/seller/leads",
         roles: SELLER_ACCESS,
@@ -197,6 +197,18 @@ export const AVIATONLY_NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    heading: "Buyer",
+    roles: ALL_AUTHENTICATED,
+    items: [
+      {
+        name: "Messages",
+        icon: "solar:chat-round-dots-line-duotone",
+        url: "/messages",
+        roles: ALL_AUTHENTICATED,
+      },
+    ],
+  },
+  {
     heading: "Marketplace",
     roles: ALL_AUTHENTICATED,
     items: [MARKETPLACE_NAV_ITEM],
@@ -218,14 +230,49 @@ export function buildPublicNavigation(): MenuItem[] {
   ]
 }
 
-export function buildNavigationForRoles(userRoles: AppRole[]): MenuItem[] {
+export type NavigationBadgeCounts = {
+  sellerUnreadMessages?: number
+  buyerUnreadMessages?: number
+}
+
+function applyNavigationBadges(
+  item: ChildItem,
+  badgeCounts: NavigationBadgeCounts,
+): ChildItem {
+  if (item.url === "/seller/messages" && (badgeCounts.sellerUnreadMessages ?? 0) > 0) {
+    const count = badgeCounts.sellerUnreadMessages!
+    return {
+      ...item,
+      badge: true,
+      badgeType: "filled",
+      badgeContent: count > 99 ? "99+" : String(count),
+    }
+  }
+
+  if (item.url === "/messages" && (badgeCounts.buyerUnreadMessages ?? 0) > 0) {
+    const count = badgeCounts.buyerUnreadMessages!
+    return {
+      ...item,
+      badge: true,
+      badgeType: "filled",
+      badgeContent: count > 99 ? "99+" : String(count),
+    }
+  }
+
+  return item
+}
+
+export function buildNavigationForRoles(
+  userRoles: AppRole[],
+  badgeCounts: NavigationBadgeCounts = {},
+): MenuItem[] {
   return AVIATONLY_NAV_SECTIONS.filter((section) =>
     hasAnyRole(userRoles, section.roles),
   ).map((section) => ({
     heading: section.heading,
     items: section.items
       .filter((item) => hasAnyRole(userRoles, item.roles))
-      .map(({ roles: _roles, ...item }) => item),
+      .map(({ roles: _roles, ...item }) => applyNavigationBadges(item, badgeCounts)),
   }))
 }
 

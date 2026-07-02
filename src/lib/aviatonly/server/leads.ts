@@ -6,7 +6,10 @@ import {
   LeadPriority,
   BuyerVerificationStatus,
   LeadActivityType,
+  PIPELINE_LEAD_STATUSES,
+  validateLeadStatusTransition,
 } from "@/lib/aviatonly/domain";
+import { isLeadFollowUpOverdue } from "@/lib/aviatonly/domain/lead-pipeline-logic";
 import { prisma } from "@/lib/prisma";
 import type { LeadTableRow } from "@/lib/aviatonly/mock/types";
 
@@ -30,36 +33,59 @@ const leadTableInclude = {
   seller: {
     select: { id: true, name: true, email: true },
   },
+  assignee: {
+    select: { id: true, name: true },
+  },
 } satisfies Prisma.LeadInclude;
 
-export interface QueryLeadTableRowsOptions {
-  sellerId?: string;
-  listingId?: string;
-  includeClosed?: boolean;
-}
+type LeadWithRelations = Prisma.LeadGetPayload<{
+  include: typeof leadTableInclude & {
+    messages: { select: { body: true } };
+  };
+}>;
 
-export async function queryLeadTableRows(
-  options: QueryLeadTableRowsOptions = {},
-): Promise<LeadTableRow[]> {
-  const { sellerId, listingId, includeClosed = true } = options;
-
+export function buildSellerLeadWhereInput(
+  options: Pick<
+    QuerySellerLeadsOptions,
+    "sellerId" | "listingId" | "pipelineOnly" | "includeClosed"
+  >,
+): Prisma.LeadWhereInput {
+  const { sellerId, listingId, pipelineOnly = false, includeClosed = true } = options;
   const where: Prisma.LeadWhereInput = {};
 
   if (sellerId) where.sellerId = sellerId;
   if (listingId) where.listingId = listingId;
-  if (!includeClosed) {
+
+  if (pipelineOnly) {
+    where.status = { in: [...PIPELINE_LEAD_STATUSES] };
+  } else if (!includeClosed) {
     where.status = {
       notIn: [LeadStatus.CLOSED, LeadStatus.UNQUALIFIED],
     };
   }
 
-  const leads = await prisma.lead.findMany({
-    where,
-    include: leadTableInclude,
-    orderBy: { createdAt: "desc" },
-  });
+  return where;
+}
 
-  return leads.map((lead) => ({
+function mapLeadToPipelineCard(
+  lead: LeadWithRelations,
+  options: Pick<QuerySellerLeadsOptions, "messagingViewerId" | "messagesBasePath" | "detailBasePath">,
+): LeadPipelineCard {
+  const {
+    messagingViewerId,
+    messagesBasePath = "/dashboard/seller/messages",
+    detailBasePath = "/dashboard/seller/leads",
+  } = options;
+
+  const lastPreview = lead.messages[0]?.body ?? lead.message;
+  const isSellerViewer = messagingViewerId != null && lead.sellerId === messagingViewerId;
+  const unread =
+    isSellerViewer &&
+    lead.lastMessageAt != null &&
+    (!lead.sellerLastReadAt || lead.sellerLastReadAt < lead.lastMessageAt);
+  const nextFollowUpAt = lead.nextFollowUpAt?.toISOString() ?? null;
+
+  return {
     id: lead.id,
     listingId: lead.listingId,
     registration: lead.listing.registration,
@@ -73,7 +99,57 @@ export async function queryLeadTableRows(
     message: lead.message,
     createdAt: lead.createdAt.toISOString(),
     listingHref: `/dashboard/listings/${lead.listingId}?tab=leads-offers`,
-  }));
+    lastMessagePreview: lastPreview,
+    lastMessageAt: lead.lastMessageAt?.toISOString() ?? null,
+    unread: messagingViewerId ? unread : undefined,
+    messagesHref: `${messagesBasePath}/${lead.id}`,
+    priority: lead.priority as LeadPriority,
+    nextFollowUpAt,
+    lastContactedAt: lead.lastContactedAt?.toISOString() ?? null,
+    assignedToName: lead.assignee?.name ?? null,
+    followUpOverdue: isLeadFollowUpOverdue(nextFollowUpAt),
+    detailHref: `${detailBasePath}/${lead.id}`,
+  };
+}
+
+export async function querySellerLeads(
+  options: QuerySellerLeadsOptions = {},
+): Promise<LeadPipelineCard[]> {
+  const {
+    messagingViewerId,
+    messagesBasePath = "/dashboard/seller/messages",
+    detailBasePath = "/dashboard/seller/leads",
+    pipelineOnly = false,
+    includeClosed = true,
+    sellerId,
+    listingId,
+  } = options;
+
+  const leads = await prisma.lead.findMany({
+    where: buildSellerLeadWhereInput({ sellerId, listingId, pipelineOnly, includeClosed }),
+    include: {
+      ...leadTableInclude,
+      messages: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { body: true },
+      },
+    },
+    orderBy: [{ lastMessageAt: "desc" }, { createdAt: "desc" }],
+  });
+
+  return leads.map((lead) =>
+    mapLeadToPipelineCard(lead, { messagingViewerId, messagesBasePath, detailBasePath }),
+  );
+}
+
+export type QueryLeadTableRowsOptions = QuerySellerLeadsOptions;
+
+export async function queryLeadTableRows(
+  options: QueryLeadTableRowsOptions = {},
+): Promise<LeadTableRow[]> {
+  const cards = await querySellerLeads(options);
+  return cards;
 }
 
 export async function countLeadsInDatabase(): Promise<number> {
@@ -152,12 +228,11 @@ export async function transitionLeadStatusRecord(input: TransitionLeadStatusInpu
   const fromStatus = lead.status as LeadStatus;
   const toStatus = input.toStatus;
 
-  if (toStatus === LeadStatus.CLOSED && !input.closedReason?.trim()) {
-    throw new Error("A closed reason is required when closing a lead.");
-  }
-
-  const { assertCanTransitionLeadStatus } = await import("@/lib/aviatonly/domain/lead-transitions");
-  assertCanTransitionLeadStatus(fromStatus, toStatus);
+  validateLeadStatusTransition({
+    fromStatus,
+    toStatus,
+    closedReason: input.closedReason,
+  });
 
   return prisma.$transaction(async (tx) => {
     const updated = await tx.lead.update({
@@ -176,15 +251,17 @@ export async function transitionLeadStatusRecord(input: TransitionLeadStatusInpu
       },
     });
 
-    await tx.leadActivity.create({
-      data: {
-        leadId: lead.id,
-        actorId: input.actorId,
-        type: LeadActivityType.STATUS_CHANGED,
-        message: input.message ?? `Status changed to ${toStatus}.`,
-        metadata: { fromStatus, toStatus },
-      },
-    });
+    if (fromStatus !== toStatus) {
+      await tx.leadActivity.create({
+        data: {
+          leadId: lead.id,
+          actorId: input.actorId,
+          type: LeadActivityType.STATUS_CHANGED,
+          message: input.message ?? `Status changed to ${toStatus}.`,
+          metadata: { fromStatus, toStatus },
+        },
+      });
+    }
 
     return updated;
   });

@@ -13,14 +13,17 @@ import {
 } from "@/lib/aviatonly/domain";
 import { formatTimeAgo } from "@/lib/aviatonly/mock/format";
 import type { LeadWorkspaceView } from "@/lib/aviatonly/server/lead-workspace-types";
+import type { LeadWorkspaceMessageContext } from "@/lib/aviatonly/server/lead-workspace-messages";
+import LeadWorkspaceMessages from "@/components/dashboard/leads/lead-workspace-messages";
 
 interface LeadWorkspaceProps {
   lead: LeadWorkspaceView;
   canManage: boolean;
   backHref: string;
+  messageContext?: LeadWorkspaceMessageContext | null;
 }
 
-const LeadWorkspace = ({ lead, canManage, backHref }: LeadWorkspaceProps) => {
+const LeadWorkspace = ({ lead, canManage, backHref, messageContext }: LeadWorkspaceProps) => {
   const typeMeta = getLeadTypeMeta(lead.type);
   const verificationMeta = BUYER_VERIFICATION_META[lead.buyerVerification];
 
@@ -51,6 +54,16 @@ const LeadWorkspace = ({ lead, canManage, backHref }: LeadWorkspaceProps) => {
             <p className="text-sm leading-relaxed">{lead.message}</p>
           </CardContent>
         </Card>
+
+        {messageContext ? (
+          <LeadWorkspaceMessages
+            leadId={lead.id}
+            messages={messageContext.messages}
+            canSendMessage={messageContext.canSendMessage}
+            canReply={messageContext.canReply}
+            inboxHref={messageContext.inboxHref}
+          />
+        ) : null}
 
         <Card>
           <CardHeader className="border-b border-border pb-4">

@@ -160,6 +160,7 @@ enum LeadActivityType {
   OFFER_REJECTED
   FOLLOW_UP_SET
   LEAD_CREATED
+  MESSAGE_SENT
 }
 
 enum OfferStatus {
@@ -303,6 +304,7 @@ model User {
   buyerDeals       Deal[]         @relation("DealBuyer")
   sellerDeals      Deal[]         @relation("DealSeller")
   leadActivities   LeadActivity[]
+  leadMessages     LeadMessage[]  @relation("LeadMessageSender")
   offerActivities  OfferActivity[]
   listingDrafts    ListingDraft[]
 
@@ -763,7 +765,12 @@ model Lead {
 
   closedReason String?
 
+  lastMessageAt     DateTime?
+  sellerLastReadAt  DateTime?
+  buyerLastReadAt   DateTime?
+
   activities LeadActivity[]
+  messages   LeadMessage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -793,6 +800,22 @@ model LeadActivity {
 
   @@index([leadId])
   @@index([createdAt])
+}
+
+model LeadMessage {
+  id     String @id @default(cuid())
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  senderId String
+  sender   User   @relation("LeadMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  body String
+
+  createdAt DateTime @default(now())
+
+  @@index([leadId, createdAt])
+  @@index([senderId])
 }
 
 model Offer {

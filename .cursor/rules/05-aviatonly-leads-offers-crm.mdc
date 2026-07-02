@@ -149,6 +149,8 @@ Document access:
 
 ## Pipeline views (after detail pages work)
 
+**Full Kanban / HubSpot-style pipeline spec:** `09-aviatonly-sales-pipeline-crm.mdc`.
+
 Add grouped views — status columns or filtered tabs:
 
 - **Lead pipeline**: New → Contacted → Qualified → Viewing → Offer made → Closed
@@ -156,7 +158,7 @@ Add grouped views — status columns or filtered tabs:
 - **My follow-ups**: `nextFollowUpAt` due today / overdue
 - **Admin unassigned queue**: new leads needing assignment
 
-Status changes via action menu first; drag-and-drop is deferred.
+Implement board UI per rule 09; drag-and-drop must call the same server actions as workspace status buttons.
 
 ## Dashboard integration
 
@@ -184,7 +186,7 @@ Offers on fixed-price listings: authenticated buyer, FICA gate, creates `Offer` 
 
 `NotificationEvent` for: new lead, viewing confirmed, doc access granted, counter-offer, offer accepted.
 
-Link to `/dashboard/seller/messages` thread per lead when messages module exists.
+Link to `/dashboard/seller/messages` thread per lead when messages module exists. Full phased plan: `08-aviatonly-lead-messaging-crm.mdc`.
 
 ## Analytics (defer until persistence works)
 

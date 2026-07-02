@@ -139,10 +139,14 @@ export {
   LeadType,
   LEAD_STATUS_META,
   LEAD_TYPE_META,
+  PIPELINE_LEAD_STATUSES,
   OPEN_LEAD_STATUSES,
+  ARCHIVED_LEAD_STATUSES,
   getLeadStatusMeta,
   getLeadTypeMeta,
   isOpenLeadStatus,
+  isPipelineLeadStatus,
+  isArchivedLeadStatus,
 } from "./lead-status";
 
 export {
@@ -160,11 +164,39 @@ export {
 } from "./lead-activity-type";
 
 export {
+  LEAD_MESSAGE_MIN_LENGTH,
+  LEAD_MESSAGE_MAX_LENGTH,
+  LeadMessageValidationError,
+  normalizeLeadMessageBody,
+  assertValidLeadMessageBody,
+} from "./lead-message";
+
+export {
+  TERMINAL_LEAD_MESSAGE_STATUSES,
+  isReusableLeadStatus,
+  canSendLeadMessage,
+  resolveLeadThreadParticipantRole,
+  canUserPostLeadMessage,
+  type LeadThreadParticipantRole,
+} from "./lead-message-logic";
+
+export {
   canTransitionLeadStatus,
   assertCanTransitionLeadStatus,
+  validateLeadStatusTransition,
   isTerminalLeadStatus,
   LeadTransitionError,
+  LeadClosedReasonRequiredError,
+  type ValidateLeadStatusTransitionInput,
 } from "./lead-transitions";
+
+export {
+  buildLeadPipelineBoard,
+  isLeadFollowUpOverdue,
+  assertSellerScopedLead,
+  type PipelineBoard,
+  type PipelineColumnGroup,
+} from "./lead-pipeline-logic";
 
 export {
   OfferActivityType,

@@ -1,0 +1,197 @@
+---
+description: "Use when building buyer–seller messaging from buy listing pages, lead-scoped message threads, seller/buyer Messages inbox, LeadMessage persistence, or wiring AircraftEnquiryPanel to the CRM."
+alwaysApply: false
+globs:
+  - "src/app/**/buy/**"
+  - "src/app/**/messages/**"
+  - "src/app/**/seller/messages/**"
+  - "src/components/buy/aircraft-enquiry-panel.tsx"
+  - "src/components/**/messages/**"
+  - "src/components/dashboard/leads/**"
+  - "src/lib/aviatonly/server/lead-messages.ts"
+  - "src/lib/aviatonly/server/leads.ts"
+  - "src/lib/aviatonly/domain/lead-activity-type.ts"
+  - "src/lib/aviatonly/domain/lead-message*.ts"
+  - "prisma/**"
+---
+
+# AVIATONLY Lead Messaging CRM
+
+Buyer–seller messaging is **lead-scoped**, not a generic contacts chat.
+
+One **open lead** = one conversation thread for a buyer + listing. Messages feed the CRM (`Lead`, `LeadActivity`, lead workspace) and the **Messages** inbox (`/dashboard/seller/messages`, `/dashboard/messages`).
+
+Related rules: `05-aviatonly-leads-offers-crm.mdc`, `05-aviatonly-buy-pages.mdc`, `02-aviatonly-dashboard-architecture.mdc`, `04-aviatonly-ui-rules.mdc`, `AGENTS.md`.
+
+## Current state (interim)
+
+- `AircraftEnquiryPanel` — UI only; toast on submit, no persistence
+- `createLeadAction` / `createLeadRecord` — exist; not wired from buy page
+- `/dashboard/seller/messages` — placeholder `RoleWorkspacePage`
+- No `LeadMessage` Prisma model yet
+- Template `dashboard/apps/chat` — **do not wire**; mock generic chat violates CRM anti-patterns
+
+Buy detail route: `/dashboard/buy/[listingSlug]` (`/buy/[registration]` redirects there).
+
+## Product principles
+
+- Messaging is tied to **leads and listings**, not standalone contacts.
+- **Reuse open lead** for same buyer + listing (status not `CLOSED` or `UNQUALIFIED`); do not create a new lead per message.
+- **Internal notes** (`NOTE_ADDED`, `internalNotes`) stay separate from buyer-visible messages.
+- **Closed leads**: thread read-only; composer disabled.
+- Auth required to send; resolve `listingId` / `sellerId` server-side only.
+- MVP: server actions + `router.refresh()` or ~30s poll in open thread — no WebSockets until persistence is solid.
+
+## Anti-patterns (do not build)
+
+- Generic CRM contacts module disconnected from listings
+- Reusing `ChatContext`, `/api/chat`, or template chat fetchers
+- Storing messages only in `Lead.message` or `LeadActivity.message` (need `LeadMessage` table)
+- Client-only send with toast and no server action
+- Exposing `internalNotes` in message threads
+- New lead on every message for the same listing
+- Trusting client-provided `sellerId` or `buyerId`
+
+## Domain model (Prisma)
+
+### `LeadMessage` (new)
+
+- `id`, `leadId`, `senderId`, `body`, `createdAt`
+- Indexes: `[leadId, createdAt]`, `[senderId]`
+
+### Extend `Lead`
+
+- `lastMessageAt DateTime?`
+- `sellerLastReadAt DateTime?`
+- `buyerLastReadAt DateTime?`
+- Relation: `messages LeadMessage[]`
+
+### Domain (`src/lib/aviatonly/domain/`)
+
+- Add `LeadActivityType.MESSAGE_SENT` — mirror each posted message in activity timeline
+- `lead-message.ts` — validate body (trim, min/max length, reject empty)
+
+### Server (`src/lib/aviatonly/server/lead-messages.ts`)
+
+| Function | Responsibility |
+|----------|----------------|
+| `findOpenLeadForBuyerListing(buyerId, listingId)` | Reuse thread if lead still open |
+| `createLeadWithInitialMessage(...)` | Tx: Lead + first message + `LEAD_CREATED` + `MESSAGE_SENT` activities |
+| `appendLeadMessage(leadId, senderId, body)` | Auth, insert, update `lastMessageAt`, activity mirror |
+| `queryLeadThreadsForUser(userId, role)` | Inbox rows for seller or buyer |
+| `queryLeadMessages(leadId, cursor?)` | Paginated thread |
+| `markLeadThreadRead(leadId, viewerId)` | Update read watermark |
+
+Reuse `assertCanAccessLead` / `assertCanManageLead` from `src/lib/aviatonly/server/authorization.ts`.
+
+**First seller reply**: set `lastContactedAt`; optional auto `NEW` → `CONTACTED` (mirror `logLeadBuyerResponseRecord` behaviour).
+
+## Routes
+
+```text
+/dashboard/buy/[listingSlug]           → enquiry panel creates/reopens lead thread
+/dashboard/seller/messages             → seller inbox (two-pane)
+/dashboard/seller/messages/[leadId]    → deep link to thread
+/dashboard/messages                    → buyer inbox
+/dashboard/messages/[leadId]           → buyer thread deep link
+/dashboard/seller/leads/[leadId]       → embed Messages tab + link to inbox
+```
+
+Add buyer **Messages** nav item in `src/lib/auth/navigation.ts` when Phase D starts.
+
+## UI components (shadcn — new, domain-specific)
+
+Location: `src/components/dashboard/messages/`
+
+| Component | Primitives |
+|-----------|------------|
+| `LeadThreadList` | `Card`, `ScrollArea`, `Badge`, `Empty`, `Input` |
+| `LeadThreadView` | `Card`, `ScrollArea`, `Separator`, `Avatar` + `AvatarFallback` |
+| `LeadMessageComposer` | `FieldGroup`, `Field`, `Textarea`, `Button`, `Spinner` |
+| `LeadThreadHeader` | Registration, title, `LeadStatusBadge`, link to lead workspace |
+| `MessagesInboxLayout` | Two-column desktop; `Sheet` for mobile thread list |
+
+Follow shadcn skill: `gap-*` not `space-y-*`; `toast()` from `sonner`; no `Button isLoading`; icons with `data-icon`; dashboard pages use `div` not `section`.
+
+Reuse **layout ideas** from `dashboard/apps/chat` only — not its context, API, or mock data.
+
+## Public ingestion (`AircraftEnquiryPanel`)
+
+Wire to `submitListingEnquiryAction` (or extend `createLeadAction`):
+
+1. `requireAuth()` — guests see sign-in CTA with return URL
+2. Resolve listing + seller server-side
+3. `findOpenLeadForBuyerListing` OR `createLeadWithInitialMessage`
+4. Default type: `GENERAL_ENQUIRY`, source: `PUBLIC_LISTING`
+5. Pass `listingId` into panel from buy detail page
+6. Post-submit: toast + link to `/dashboard/messages/[leadId]`
+
+Remove guest name/email fields for authenticated users (use session profile).
+
+## Authorization
+
+| Role | Access |
+|------|--------|
+| Buyer | Own `buyerId` leads only |
+| Seller / broker | Leads on own listings |
+| Admin | Read on `/dashboard/admin/leads/[leadId]`; admin reply deferred unless requested |
+
+## Recommended build order
+
+Implement in sequence. **Do not skip activity logging or server authorization.**
+
+```text
+Phase A — Foundation
+  [x] Prisma: LeadMessage + Lead read watermarks (lastMessageAt, sellerLastReadAt, buyerLastReadAt)
+  [x] Domain: MESSAGE_SENT + lead-message validators
+  [x] Server: lead-messages.ts (create, append, query threads, mark read)
+  [x] Tests: auth boundaries, message creates activity, closed lead rejects send
+
+Phase B — Buy page wiring
+  [x] submitListingEnquiryAction (server action)
+  [x] Wire AircraftEnquiryPanel (auth gate, sonner, thread link)
+  [x] Pass listingId from /dashboard/buy/[listingSlug] page
+
+Phase C — Seller Messages inbox
+  [x] Replace /dashboard/seller/messages placeholder
+  [x] LeadThreadList + LeadThreadView + LeadMessageComposer
+  [x] /dashboard/seller/messages/[leadId] deep link
+  [x] Unread badge on Messages nav (optional, high value)
+
+Phase D — Buyer Messages
+  [x] /dashboard/messages + /dashboard/messages/[leadId]
+  [x] Buyer nav entry in navigation.ts
+  [x] Role-aware thread header and links
+
+Phase E — CRM integration
+  [x] Messages tab/card in LeadWorkspace
+  [x] Lead table: last message preview + unread indicator
+  [x] Listing workspace Leads & Offers tab links to thread
+
+Phase F — Notifications & polish (defer)
+  [ ] NotificationEvent on new message (seller + buyer)
+  [ ] Seller dashboard action-required for stale unreplied threads
+  [ ] PostHog: MessageSent (after persistence stable)
+  [ ] Viewing / document request message templates
+```
+
+When the user says **"build lead messaging"**, **"start messaging Phase A"**, or **"wire enquiry panel to CRM"**, begin at the first unchecked phase unless they specify otherwise.
+
+**Smallest vertical slice**: Phase A + B + C — enquiry → DB → seller reply.
+
+## Definition of done
+
+1. Buyer sends message from `/dashboard/buy/[listingSlug]` → persisted `Lead` + `LeadMessage`
+2. Seller sees and replies in `/dashboard/seller/messages`
+3. Buyer sees reply in `/dashboard/messages`
+4. Lead workspace shows same thread; timeline includes `MESSAGE_SENT`
+5. Unauthorized users cannot read or post to another party's thread
+6. Closed leads: thread visible, composer disabled
+
+## Tests to add (when implementing)
+
+- `appendLeadMessage` rejects closed lead
+- Message creates `LeadMessage` + `MESSAGE_SENT` activity
+- Seller cannot access another seller's thread
+- Buyer cannot access another buyer's thread
+- Reuse open lead instead of duplicate for same buyer + listing

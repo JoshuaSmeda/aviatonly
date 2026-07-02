@@ -7,7 +7,10 @@ import { countLeadsInDatabase, queryLeadTableRows } from "./leads";
 import type { LeadTableRow } from "@/lib/aviatonly/mock/types";
 
 export interface GetLeadTableRowsInput {
-  options?: BuildLeadTableRowsOptions;
+  options?: BuildLeadTableRowsOptions & {
+    messagingViewerId?: string;
+    messagesBasePath?: string;
+  };
   scope?: SellerListingScope;
 }
 

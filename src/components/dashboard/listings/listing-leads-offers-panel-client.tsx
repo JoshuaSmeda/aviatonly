@@ -20,7 +20,9 @@ const ListingLeadsOffersPanelClient = ({
         <LeadsDataTable
           rows={leadRows}
           showListingColumns={false}
+          showInitialEnquiryColumn={false}
           showActions
+          detailBasePath="/dashboard/seller/leads"
         />
       </div>
 

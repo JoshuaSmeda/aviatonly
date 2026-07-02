@@ -9,6 +9,7 @@ import {
   canManageLead,
 } from "@/lib/aviatonly/server/authorization";
 import { getLeadWorkspace } from "@/lib/aviatonly/server/lead-workspace";
+import { loadLeadWorkspaceMessageContext } from "@/lib/aviatonly/server/lead-workspace-messages";
 import { requireAnyRole } from "@/lib/auth/session";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 
@@ -53,6 +54,13 @@ const AdminLeadDetailPage = async ({ params }: AdminLeadDetailPageProps) => {
     session,
   );
 
+  const messageContext = await loadLeadWorkspaceMessageContext({
+    leadId,
+    viewerId: session.user.id,
+    canManage: false,
+    isAdmin: true,
+  });
+
   return (
     <>
       <BreadcrumbComp title={`Admin · ${lead.listing.registration}`} />
@@ -64,6 +72,7 @@ const AdminLeadDetailPage = async ({ params }: AdminLeadDetailPageProps) => {
           lead={lead}
           canManage={canManage}
           backHref="/dashboard/admin/leads"
+          messageContext={messageContext}
         />
       </TitleCard>
       <p className="mt-4 text-center text-xs text-muted-foreground">

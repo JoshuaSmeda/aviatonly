@@ -347,6 +347,10 @@ export interface LeadTableRow {
   message: string;
   createdAt: MockTimestamp;
   listingHref: string;
+  lastMessagePreview?: string | null;
+  lastMessageAt?: MockTimestamp | null;
+  unread?: boolean;
+  messagesHref?: string;
 }
 
 export interface OfferTableRow {

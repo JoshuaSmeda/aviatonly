@@ -58,6 +58,34 @@ export function assertCanTransitionLeadStatus(from: LeadStatus, to: LeadStatus):
   }
 }
 
+export class LeadClosedReasonRequiredError extends Error {
+  constructor() {
+    super("A closed reason is required when closing a lead.");
+    this.name = "LeadClosedReasonRequiredError";
+  }
+}
+
+export interface ValidateLeadStatusTransitionInput {
+  fromStatus: LeadStatus;
+  toStatus: LeadStatus;
+  closedReason?: string | null;
+}
+
+/** Server-side validation before persisting a lead status change. */
+export function validateLeadStatusTransition(input: ValidateLeadStatusTransitionInput): void {
+  if (
+    input.toStatus === LeadStatus.CLOSED &&
+    input.fromStatus !== LeadStatus.CLOSED &&
+    !input.closedReason?.trim()
+  ) {
+    throw new LeadClosedReasonRequiredError();
+  }
+
+  if (input.fromStatus !== input.toStatus) {
+    assertCanTransitionLeadStatus(input.fromStatus, input.toStatus);
+  }
+}
+
 export function isTerminalLeadStatus(status: LeadStatus): boolean {
   return TERMINAL_STATUSES.includes(status);
 }

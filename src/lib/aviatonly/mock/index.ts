@@ -71,10 +71,11 @@ export {
   buildRecentActivityFeed,
   buildReviewQueueRows,
   buildLeadTableRows,
+  buildLeadPipelineBoardFromMock,
   buildOfferTableRows,
   countOpenSellerTasks,
 } from "./selectors";
-export type { BuildLeadTableRowsOptions, BuildOfferTableRowsOptions } from "./selectors";
+export type { BuildLeadTableRowsOptions, BuildOfferTableRowsOptions, BuildLeadPipelineBoardOptions } from "./selectors";
 
 export {
   getIntakePrefillFromListing,

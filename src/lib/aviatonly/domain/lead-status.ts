@@ -80,11 +80,28 @@ export const LEAD_TYPE_META: Record<LeadType, { label: string; description: stri
   },
 };
 
+/** Active pipeline columns (seller Kanban board, left → right). */
+export const PIPELINE_LEAD_STATUSES: readonly LeadStatus[] = [
+  LeadStatus.NEW,
+  LeadStatus.CONTACTED,
+  LeadStatus.QUALIFIED,
+  LeadStatus.VIEWING_REQUESTED,
+  LeadStatus.OFFER_MADE,
+];
+
+/** Statuses that can still receive buyer/seller messages. */
 export const OPEN_LEAD_STATUSES: readonly LeadStatus[] = [
   LeadStatus.NEW,
   LeadStatus.CONTACTED,
   LeadStatus.QUALIFIED,
   LeadStatus.VIEWING_REQUESTED,
+  LeadStatus.OFFER_MADE,
+];
+
+/** Terminal / side-path statuses excluded from the active pipeline board. */
+export const ARCHIVED_LEAD_STATUSES: readonly LeadStatus[] = [
+  LeadStatus.UNQUALIFIED,
+  LeadStatus.CLOSED,
 ];
 
 export function getLeadStatusMeta(status: LeadStatus): StatusMeta {
@@ -97,4 +114,12 @@ export function getLeadTypeMeta(type: LeadType) {
 
 export function isOpenLeadStatus(status: LeadStatus): boolean {
   return OPEN_LEAD_STATUSES.includes(status);
+}
+
+export function isPipelineLeadStatus(status: LeadStatus): boolean {
+  return PIPELINE_LEAD_STATUSES.includes(status);
+}
+
+export function isArchivedLeadStatus(status: LeadStatus): boolean {
+  return ARCHIVED_LEAD_STATUSES.includes(status);
 }

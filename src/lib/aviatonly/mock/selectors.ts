@@ -1,13 +1,17 @@
 import {
   BuyerActivityType,
+  buildLeadPipelineBoard,
   deriveSellerListingNextStep,
   DocumentStatus,
+  LeadPriority,
   LeadStatus,
   LeadType,
   ListingStatus,
   OfferStatus,
+  PIPELINE_LEAD_STATUSES,
   ReviewTaskStatus,
 } from "@/lib/aviatonly/domain";
+import type { LeadPipelineCard } from "@/lib/aviatonly/server/leads";
 import { getListingEventLabel } from "./activity";
 import { countMissingDocumentsForListing } from "./documents";
 import { getMockDealsForSeller } from "./deals";
@@ -397,6 +401,53 @@ export function buildLeadTableRows(options: BuildLeadTableRowsOptions = {}): Lea
   return leads
     .map(mapLeadToTableRow)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export interface BuildLeadPipelineBoardOptions {
+  sellerId?: string;
+  listingId?: string;
+  messagesBasePath?: string;
+  detailBasePath?: string;
+}
+
+function mapLeadToPipelineCard(
+  lead: (typeof MOCK_LEADS)[number],
+  options: Pick<BuildLeadPipelineBoardOptions, "messagesBasePath" | "detailBasePath">,
+): LeadPipelineCard {
+  const row = mapLeadToTableRow(lead);
+  const messagesBasePath = options.messagesBasePath ?? "/dashboard/seller/messages";
+  const detailBasePath = options.detailBasePath ?? "/dashboard/seller/leads";
+
+  return {
+    ...row,
+    lastMessagePreview: row.message,
+    messagesHref: `${messagesBasePath}/${lead.id}`,
+    priority: LeadPriority.NORMAL,
+    nextFollowUpAt: null,
+    lastContactedAt: null,
+    assignedToName: null,
+    followUpOverdue: false,
+    detailHref: `${detailBasePath}/${lead.id}`,
+  };
+}
+
+export function buildLeadPipelineBoardFromMock(
+  options: BuildLeadPipelineBoardOptions = {},
+) {
+  const { sellerId, listingId, messagesBasePath, detailBasePath } = options;
+  let leads = sellerId ? getMockLeadsForSeller(sellerId) : [...MOCK_LEADS];
+
+  if (listingId) {
+    leads = leads.filter((lead) => lead.listingId === listingId);
+  }
+
+  leads = leads.filter((lead) => PIPELINE_LEAD_STATUSES.includes(lead.status));
+
+  const cards = leads
+    .map((lead) => mapLeadToPipelineCard(lead, { messagesBasePath, detailBasePath }))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  return buildLeadPipelineBoard(cards);
 }
 
 export interface BuildOfferTableRowsOptions {

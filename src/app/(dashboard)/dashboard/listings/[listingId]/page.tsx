@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { assertCanAccessListing } from "@/lib/aviatonly/server/authorization";
 import { getListingWorkspaceData } from "@/lib/aviatonly/server/listing-workspace";
+import { loadListingLeadsOffersData } from "@/components/dashboard/listings/listing-leads-offers-panel";
 import { ADMIN_ROLES, hasAnyRole, SELLER_ROLES } from "@/lib/auth/roles";
 import { requireAnyRole } from "@/lib/auth/session";
 
@@ -48,6 +49,8 @@ const ListingWorkspacePage = async ({ params }: PageProps) => {
 
   assertCanAccessListing({ sellerId: workspace.listing.sellerId }, session);
 
+  const leadsOffers = await loadListingLeadsOffersData(listingId, session.user.id);
+
   const canManageReview = hasAnyRole(session.user.roles, ADMIN_ROLES);
   const { listing } = workspace;
   const aircraftTitle = `${listing.year} ${listing.make} ${listing.model}`;
@@ -60,7 +63,11 @@ const ListingWorkspacePage = async ({ params }: PageProps) => {
         eyebrow={canManageReview ? "Admin · Listing review" : "Listing workspace"}
         title={`${listing.registration} · ${aircraftTitle}`}
       />
-      <ListingWorkspace workspace={workspace} canManageReview={canManageReview} />
+      <ListingWorkspace
+        workspace={workspace}
+        canManageReview={canManageReview}
+        leadsOffers={leadsOffers}
+      />
     </>
   );
 };

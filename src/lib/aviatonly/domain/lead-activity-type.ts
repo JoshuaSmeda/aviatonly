@@ -13,6 +13,7 @@ export enum LeadActivityType {
   OFFER_REJECTED = "OFFER_REJECTED",
   FOLLOW_UP_SET = "FOLLOW_UP_SET",
   LEAD_CREATED = "LEAD_CREATED",
+  MESSAGE_SENT = "MESSAGE_SENT",
 }
 
 export const LEAD_ACTIVITY_TYPE_LABELS: Record<LeadActivityType, string> = {
@@ -29,4 +30,5 @@ export const LEAD_ACTIVITY_TYPE_LABELS: Record<LeadActivityType, string> = {
   [LeadActivityType.OFFER_REJECTED]: "Offer rejected",
   [LeadActivityType.FOLLOW_UP_SET]: "Follow-up set",
   [LeadActivityType.LEAD_CREATED]: "Lead created",
+  [LeadActivityType.MESSAGE_SENT]: "Message sent",
 };

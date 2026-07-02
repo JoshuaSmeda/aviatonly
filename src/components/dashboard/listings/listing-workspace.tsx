@@ -5,12 +5,14 @@ import CardBox from "@/components/dashboard/shared/CardBox";
 import ListingStatusProgress from "@/components/dashboard/shared/listing-status-progress";
 import { Spinner } from "@/components/ui/spinner";
 import type { ListingWorkspaceData } from "@/lib/aviatonly/server/listing-workspace";
+import type { ListingLeadsOffersData } from "./listing-leads-offers-panel";
 import ListingWorkspaceHeader from "./listing-workspace-header";
 import ListingWorkspaceTabs from "./listing-workspace-tabs";
 
 interface ListingWorkspaceProps {
   workspace: ListingWorkspaceData;
   canManageReview?: boolean;
+  leadsOffers?: ListingLeadsOffersData;
 }
 
 const ListingWorkspaceTabsFallback = () => (
@@ -19,7 +21,11 @@ const ListingWorkspaceTabsFallback = () => (
   </div>
 );
 
-const ListingWorkspace = ({ workspace, canManageReview = false }: ListingWorkspaceProps) => {
+const ListingWorkspace = ({
+  workspace,
+  canManageReview = false,
+  leadsOffers,
+}: ListingWorkspaceProps) => {
   const { listing } = workspace;
 
   return (
@@ -35,7 +41,11 @@ const ListingWorkspace = ({ workspace, canManageReview = false }: ListingWorkspa
 
       <CardBox className="p-6">
         <Suspense fallback={<ListingWorkspaceTabsFallback />}>
-          <ListingWorkspaceTabs workspace={workspace} canManageReview={canManageReview} />
+          <ListingWorkspaceTabs
+            workspace={workspace}
+            canManageReview={canManageReview}
+            leadsOffers={leadsOffers}
+          />
         </Suspense>
       </CardBox>
     </>

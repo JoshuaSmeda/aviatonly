@@ -7,6 +7,8 @@ import {
   LeadSource,
   LeadPriority,
   BuyerVerificationStatus,
+  LeadTransitionError,
+  LeadClosedReasonRequiredError,
 } from "@/lib/aviatonly/domain";
 import {
   assertCanManageLead,
@@ -33,6 +35,12 @@ export type LeadActionResult =
 
 function toErrorResult(error: unknown): LeadActionResult {
   if (error instanceof AuthorizationError) {
+    return { ok: false, error: error.message };
+  }
+  if (error instanceof LeadTransitionError) {
+    return { ok: false, error: error.message };
+  }
+  if (error instanceof LeadClosedReasonRequiredError) {
     return { ok: false, error: error.message };
   }
   if (error instanceof Error) {

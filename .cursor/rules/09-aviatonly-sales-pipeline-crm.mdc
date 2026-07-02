@@ -1,0 +1,227 @@
+---
+description: "Use when building seller/admin sales pipelines, lead Kanban boards, pipeline stages, deal-style lead cards, view toggles (board vs table), or transforming /dashboard/seller/leads from a flat table into HubSpot-style CRM."
+alwaysApply: false
+globs:
+  - "src/app/**/dashboard/**/leads/**"
+  - "src/app/**/dashboard/**/offers/**"
+  - "src/components/**/leads/**"
+  - "src/components/**/pipeline/**"
+  - "src/lib/aviatonly/domain/lead-*.ts"
+  - "src/lib/aviatonly/server/lead*.ts"
+  - "src/lib/auth/navigation.ts"
+  - "prisma/**"
+---
+
+# AVIATONLY Sales Pipeline CRM
+
+Transform leads from a **flat data table** into a **workflow pipeline** — the primary seller CRM surface.
+
+Related rules: `05-aviatonly-leads-offers-crm.mdc`, `08-aviatonly-lead-messaging-crm.mdc`, `01-aviatonly-listing-workflow.mdc`, `04-aviatonly-ui-rules.mdc`, `AGENTS.md`.
+
+## How real CRMs work (HubSpot mental model)
+
+AVIATONLY should follow **deal-centric** CRM, not contact-centric:
+
+| HubSpot concept | AVIATONLY equivalent |
+|-----------------|----------------------|
+| Contact | Buyer (`User`) — profile, FICA, verification |
+| Deal / Opportunity | **Lead** — buyer interest on **one listing** |
+| Pipeline | Lead sales stages (`LeadStatus` columns) |
+| Pipeline board | Kanban on `/dashboard/seller/leads` |
+| Deal record page | `/dashboard/seller/leads/[leadId]` — drill-down, not the home screen |
+| Inbox / sequences | `/dashboard/seller/messages` — conversation layer |
+
+**Yes, per-record detail pages exist in the wild** — HubSpot opens a deal drawer/page when you click a card. You do **not** navigate CRM by picking a person first. You work the **pipeline**, then drill into a **lead (deal)** for actions, timeline, and messages.
+
+A buyer with three aircraft enquiries = **three leads** (three cards), not one "CRM page per person".
+
+## Current problem
+
+- `/dashboard/seller/leads` is only `LeadsTable` — ops queue, not a sales workflow
+- No visual pipeline; status is a table column
+- Seller must hunt rows instead of seeing stage distribution and bottlenecks
+- Lead detail workspace (`LeadWorkspace`) is correct but disconnected from how sellers should work day-to-day
+
+**Messages** (`/dashboard/seller/messages`) stays the **inbox** for fast reply. **Pipeline** is for **stage management**. Both link to the same lead record.
+
+## Product principles
+
+- **Pipeline-first**: default view on seller leads is Kanban grouped by `LeadStatus`
+- **Table is secondary**: keep `LeadsDataTable` as "List view" toggle for power users / export mindset
+- **One card = one lead (deal)**: registration, buyer name, type, priority, last message preview, follow-up due, unread badge
+- **Drag = server transition**: every column move calls a server action; `assertCanTransitionLeadStatus` in `lead-transitions.ts` is authoritative
+- **Activity on every move**: `LeadActivity` `STATUS_CHANGED` row; never silent updates
+- **Closed / unqualified off the board**: terminal stages in a "Closed" archive tab or collapsed column — not mixed with active pipeline
+- **Aviation context on cards**: aircraft registration prominent; buyer verification badge; listing status chip when relevant
+
+## Lead sales pipeline (Kanban columns)
+
+Map existing `LeadStatus` to seller-facing columns (left → right):
+
+```text
+New          → NEW
+Contacted    → CONTACTED
+Qualified    → QUALIFIED
+Viewing      → VIEWING_REQUESTED
+Offer made   → OFFER_MADE
+```
+
+Side paths (not main columns):
+
+- **Unqualified** → `UNQUALIFIED` (filter tab or single "Lost" bucket)
+- **Closed** → `CLOSED` (archive view; requires `closedReason`)
+
+Do **not** invent new statuses for Kanban without updating `lead-status.ts`, Prisma enum, `lead-transitions.ts`, and tests.
+
+Optional auto-transitions (already partially implemented via messaging):
+
+- First seller reply → `NEW` → `CONTACTED`
+- Offer created → → `OFFER_MADE`
+
+## Separate pipelines (do not merge into lead board)
+
+Each workflow gets its own board or tab — same UX pattern, different domain:
+
+| Pipeline | Stages (high level) | Primary route |
+|----------|---------------------|---------------|
+| **Lead / sales** | New → Contacted → Qualified → Viewing → Offer → Closed | `/dashboard/seller/leads` |
+| **Listing onboarding** | Draft → Docs required → Under review → Approved → Live → Sold | `/dashboard/listings/[id]` workspace (or seller "My aircraft" pipeline later) |
+| **Offers** | Received → Under review → Countered → Accepted / Rejected | `/dashboard/seller/offers` |
+| **Auctions** | Scheduled → Live → Payment pending → Completed | auction admin/seller surfaces |
+
+Build **lead pipeline first**. Reuse board primitives (`PipelineBoard`, `PipelineColumn`, `PipelineCard`) for offers second.
+
+## Routes & navigation
+
+```text
+/dashboard/seller/leads                 → Sales pipeline (Kanban default + list toggle)
+/dashboard/seller/leads/[leadId]        → Lead record (workspace) — opens from card click
+/dashboard/seller/leads?view=list       → Explicit list view (optional URL state)
+/dashboard/seller/leads?tab=closed      → Closed / archive
+/dashboard/seller/messages              → Inbox (reply-first; link to pipeline card)
+/dashboard/seller/offers                → Offer pipeline (Phase 2 of this rule)
+```
+
+Consider nav label **"Sales pipeline"** (subtitle: leads & enquiries) while keeping URL `/seller/leads` for stability.
+
+## UI components (new — domain-specific)
+
+Location: `src/components/dashboard/leads/pipeline/` (or `src/components/dashboard/pipeline/` if shared with offers)
+
+| Component | Responsibility |
+|-----------|----------------|
+| `LeadPipelineBoard` | Columns from `OPEN_LEAD_STATUSES` + stage meta; horizontal scroll on mobile |
+| `LeadPipelineColumn` | Header with count, drop zone, empty state |
+| `LeadPipelineCard` | Compact deal card; click → detail page or `Sheet` drawer |
+| `LeadPipelineToolbar` | View toggle (Board / List), filters (listing, priority, assignee), search |
+| `LeadPipelineArchive` | Closed + unqualified leads table |
+
+**DnD**: reuse `@hello-pangea/dnd` patterns from `dashboard/apps/kanban` — **not** `KanbanDataContext`, mock categories, or template task modals.
+
+**Layout**: shadcn `Card`, `Badge`, `ScrollArea`, `Sheet` for mobile card detail; `gap-*` not `space-y-*`; no `section` tags in dashboard pages.
+
+### Card content (minimum)
+
+- Registration + aircraft title
+- Buyer name + verification badge
+- Lead type + priority
+- Last message snippet + time (`lastMessageAt`)
+- Unread indicator (seller read watermark)
+- Follow-up overdue styling when `nextFollowUpAt` < now
+- Quick actions: Open messages, Mark contacted (if allowed)
+
+### Illegal drag handling
+
+If `canTransitionLeadStatus(from, to)` is false: snap card back, `toast.error` with domain message. Optional confirm dialog when moving to `CLOSED` or `UNQUALIFIED` (require reason).
+
+## Server layer
+
+Add or extend in `src/lib/aviatonly/server/`:
+
+| Function | Responsibility |
+|----------|----------------|
+| `queryLeadPipelineForSeller(scope)` | Group open leads by `status` for board payload |
+| `transitionLeadStatusAction(leadId, toStatus, { reason? })` | Auth, transition assert, update lead, `LeadActivity`, revalidate |
+
+Reuse `getLeadTableRows` for list view — do not duplicate query logic; share a base `querySellerLeads(scope, filters)`.
+
+Drag-and-drop is **UI on top of the same server action** as `LeadWorkspaceActions` status buttons — one code path.
+
+## Lead record page (keep, refine)
+
+`/dashboard/seller/leads/[leadId]` remains the **deal record**:
+
+- Header: stage badge (editable via actions), assignee, priority
+- Tabs or sections: **Overview** | **Messages** (embed or link to inbox) | **Activity** | **Buyer** | **Aircraft**
+- Actions sidebar: qualify, schedule viewing, convert to offer, set follow-up, close
+
+Do **not** remove this page. Demote it from "how you browse CRM" to "what opens when you click a card".
+
+## Admin pipeline
+
+Mirror seller board at `/dashboard/admin/leads` with extra columns/filters:
+
+- Unassigned queue
+- Assign from card menu
+- Cross-seller visibility
+
+Admin uses same components with `showSeller` and broader scope.
+
+## Anti-patterns (do not build)
+
+- Flat table as the only seller CRM surface
+- Contact-first CRM (`/dashboard/contacts/[userId]`) disconnected from listings
+- Client-only Kanban with optimistic status and no server validation
+- Wiring `dashboard/apps/kanban` context or mock task data into production routes
+- One Kanban mixing leads, listings, and auctions
+- Drag to `CLOSED` without `closedReason`
+- Replacing lead detail workspace with only a message thread
+
+## Recommended build order
+
+```text
+Phase 1 — Pipeline data & actions
+  [ ] queryLeadPipelineForSeller (grouped by status)
+  [ ] transitionLeadStatusAction (shared with workspace actions)
+  [ ] Tests: illegal drag rejected; activity logged on move
+
+Phase 2 — Seller board UI
+  [ ] LeadPipelineBoard + Column + Card
+  [ ] Replace seller leads page default with board + toolbar
+  [ ] List view toggle reusing LeadsDataTable
+  [ ] Card click → existing LeadWorkspace page
+
+Phase 3 — Polish & ops
+  [ ] Closed / unqualified archive tab
+  [ ] Follow-up overdue highlights on cards
+  [ ] Dashboard "Action required" pulls from pipeline (stale NEW, overdue follow-ups)
+  [ ] Admin pipeline + assign from card
+
+Phase 4 — Offer pipeline
+  [ ] Reuse board primitives on /dashboard/seller/offers
+  [ ] Offer status columns + link accepted offer → deal room
+
+Phase 5 — Other pipelines (defer)
+  [ ] Listing onboarding board on seller home or listings index
+  [ ] Auction ops board
+```
+
+When the user says **"build sales pipeline"**, **"lead Kanban"**, or **"HubSpot-style CRM"**, start at Phase 1 unless they specify otherwise.
+
+**Smallest vertical slice**: Phase 1 + Phase 2 with static columns and drag only between `NEW` ↔ `CONTACTED` ↔ `QUALIFIED` — then expand columns.
+
+## Definition of done
+
+1. Seller opens `/dashboard/seller/leads` and sees **Kanban by stage**, not only a table
+2. Dragging a card updates status **server-side** with **audit trail**
+3. Clicking a card opens the **lead record** with actions and messages
+4. **List view** still available for search-heavy workflows
+5. **Messages inbox** and **pipeline** stay in sync (same lead, two entry points)
+6. Closed leads leave the active board
+
+## Tests to add
+
+- `transitionLeadStatusAction` rejects illegal transitions
+- Pipeline query respects seller scope (no cross-org leads)
+- Status change creates `LeadActivity` `STATUS_CHANGED`
+- Closed transition requires `closedReason`

@@ -181,15 +181,15 @@ Admin uses same components with `showSeller` and broader scope.
 
 ```text
 Phase 1 — Pipeline data & actions
-  [ ] queryLeadPipelineForSeller (grouped by status)
-  [ ] transitionLeadStatusAction (shared with workspace actions)
-  [ ] Tests: illegal drag rejected; activity logged on move
+  [x] queryLeadPipelineForSeller (grouped by status)
+  [x] transitionLeadStatusAction (shared with workspace actions)
+  [x] Tests: illegal drag rejected; activity logged on move
 
 Phase 2 — Seller board UI
-  [ ] LeadPipelineBoard + Column + Card
-  [ ] Replace seller leads page default with board + toolbar
-  [ ] List view toggle reusing LeadsDataTable
-  [ ] Card click → existing LeadWorkspace page
+  [x] LeadPipelineBoard + Column + Card
+  [x] Replace seller leads page default with board + toolbar
+  [x] List view toggle reusing LeadsDataTable
+  [x] Card click → existing LeadWorkspace page
 
 Phase 3 — Polish & ops
   [ ] Closed / unqualified archive tab

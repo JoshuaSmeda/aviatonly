@@ -72,7 +72,7 @@ export function MessagesInboxShell({
 
   const threadPanel =
     activeLeadId && threadHeader ? (
-      <Card className="flex h-full min-h-[28rem] flex-col overflow-hidden shadow-none">
+      <Card className="flex min-h-[32rem] flex-col overflow-hidden shadow-none lg:h-[calc(100dvh-10rem)]">
         <LeadThreadHeader thread={threadHeader} />
         <LeadThreadView
           leadId={activeLeadId}

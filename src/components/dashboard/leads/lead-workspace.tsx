@@ -19,11 +19,10 @@ import LeadWorkspaceMessages from "@/components/dashboard/leads/lead-workspace-m
 interface LeadWorkspaceProps {
   lead: LeadWorkspaceView;
   canManage: boolean;
-  backHref: string;
   messageContext?: LeadWorkspaceMessageContext | null;
 }
 
-const LeadWorkspace = ({ lead, canManage, backHref, messageContext }: LeadWorkspaceProps) => {
+const LeadWorkspace = ({ lead, canManage, messageContext }: LeadWorkspaceProps) => {
   const typeMeta = getLeadTypeMeta(lead.type);
   const verificationMeta = BUYER_VERIFICATION_META[lead.buyerVerification];
 
@@ -69,7 +68,7 @@ const LeadWorkspace = ({ lead, canManage, backHref, messageContext }: LeadWorksp
           <CardHeader className="border-b border-border pb-4">
             <CardTitle className="text-base">Activity timeline</CardTitle>
           </CardHeader>
-          <CardContent className="pt-4">
+          <CardContent className="p-0">
             <LeadActivityTimeline items={lead.activities} />
           </CardContent>
         </Card>
@@ -145,10 +144,6 @@ const LeadWorkspace = ({ lead, canManage, backHref, messageContext }: LeadWorksp
             </CardContent>
           </Card>
         ) : null}
-
-        <Link href={backHref} className="text-sm text-muted-foreground hover:text-foreground">
-          ← Back to leads queue
-        </Link>
       </div>
     </div>
   );

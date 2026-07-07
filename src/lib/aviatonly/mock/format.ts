@@ -1,3 +1,5 @@
+import { format } from "date-fns";
+
 export function formatZar(amount: number): string {
   return new Intl.NumberFormat("en-ZA", {
     style: "currency",
@@ -16,4 +18,10 @@ export function formatTimeAgo(from: string, reference = new Date()): string {
   if (hours < 48) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
+}
+
+/** Human-readable follow-up datetime for activity timeline and CRM copy. */
+export function formatLeadFollowUpAt(date: Date | string): string {
+  const value = typeof date === "string" ? new Date(date) : date;
+  return format(value, "EEE, d MMM yyyy 'at' HH:mm");
 }

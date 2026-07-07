@@ -8,7 +8,7 @@ const FullLogo = () => {
     <Link href={'/dashboard'} className="max-w-[40px] block lg:max-w-[147px] overflow-hidden">
       {/* Dark Logo   */}
       <Image
-        src={'/images/logos/darklogo.svg'}
+        src={'/images/logos/AVIATONLY-logo-light.svg'}
         alt='logo'
         width={147}
         height={40}
@@ -16,7 +16,7 @@ const FullLogo = () => {
       />
       {/* Light Logo  */}
       <Image
-        src={'/images/logos/whitelogo.svg'}
+        src={'/images/logos/AVIATONLY-logo-dark.svg'}
         alt='logo'
         width={147}
         height={40}

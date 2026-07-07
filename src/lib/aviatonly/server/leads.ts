@@ -10,6 +10,7 @@ import {
   validateLeadStatusTransition,
 } from "@/lib/aviatonly/domain";
 import { isLeadFollowUpOverdue } from "@/lib/aviatonly/domain/lead-pipeline-logic";
+import { formatLeadFollowUpAt } from "@/lib/aviatonly/mock/format";
 import { prisma } from "@/lib/prisma";
 import type { LeadTableRow } from "@/lib/aviatonly/mock/types";
 
@@ -330,7 +331,7 @@ export async function setLeadFollowUpRecord(
         actorId,
         type: LeadActivityType.FOLLOW_UP_SET,
         message: nextFollowUpAt
-          ? `Follow-up scheduled for ${nextFollowUpAt.toISOString()}.`
+          ? `Follow-up scheduled for ${formatLeadFollowUpAt(nextFollowUpAt)}.`
           : "Follow-up cleared.",
         metadata: { nextFollowUpAt: nextFollowUpAt?.toISOString() ?? null },
       },

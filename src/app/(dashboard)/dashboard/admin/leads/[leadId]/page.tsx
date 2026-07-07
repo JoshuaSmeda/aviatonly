@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import BreadcrumbComp from "@/app/(dashboard)/dashboard/layout/shared/breadcrumb/breadcrumb-comp";
 import LeadWorkspace from "@/components/dashboard/leads/lead-workspace";
-import TitleCard from "@/components/dashboard/shared/titleborder-card";
+import ListingWorkspacePageHeader from "@/components/dashboard/listings/listing-workspace-page-header";
 import {
   assertCanAccessLead,
   canManageLead,
@@ -63,23 +61,13 @@ const AdminLeadDetailPage = async ({ params }: AdminLeadDetailPageProps) => {
 
   return (
     <>
-      <BreadcrumbComp title={`Admin · ${lead.listing.registration}`} />
-      <TitleCard title={`${lead.seller.name} · ${lead.listing.registration}`}>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Cross-listing lead review for {lead.buyer.name} ({lead.buyer.email}).
-        </p>
-        <LeadWorkspace
-          lead={lead}
-          canManage={canManage}
-          backHref="/dashboard/admin/leads"
-          messageContext={messageContext}
-        />
-      </TitleCard>
-      <p className="mt-4 text-center text-xs text-muted-foreground">
-        <Link href="/dashboard/admin/leads" className="hover:underline">
-          Back to admin leads queue
-        </Link>
-      </p>
+      <ListingWorkspacePageHeader
+        backHref="/dashboard/admin/leads"
+        backLabel="Leads queue"
+        eyebrow="Admin · Lead review"
+        title={`${lead.buyer.name} · ${lead.listing.registration}`}
+      />
+      <LeadWorkspace lead={lead} canManage={canManage} messageContext={messageContext} />
     </>
   );
 };

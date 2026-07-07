@@ -58,7 +58,7 @@ const AsyncPhotoThumb = ({ src, alt, pending = false, className }: AsyncPhotoThu
           onLoad={() => setLoaded(true)}
           onError={() => setFailed(true)}
           className={cn(
-            "size-full object-cover transition-[opacity,filter,transform] duration-300",
+            "size-full object-fit transition-[opacity,filter,transform] duration-300",
             loaded ? "opacity-100 blur-0 scale-100" : "opacity-0 blur-md scale-105",
           )}
         />

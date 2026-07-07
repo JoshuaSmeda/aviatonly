@@ -8,7 +8,6 @@ import {
   closeLeadAction,
   denyLeadDocAccessAction,
   grantLeadDocAccessAction,
-  logLeadBuyerResponseAction,
   markLeadContactedAction,
   qualifyLeadAction,
   scheduleLeadViewingAction,
@@ -24,16 +23,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   canTransitionLeadStatus,
   getLeadTypeMeta,
@@ -50,8 +40,6 @@ interface LeadWorkspaceActionsProps {
 
 const LeadWorkspaceActions = ({ lead, canManage }: LeadWorkspaceActionsProps) => {
   const [isPending, startTransition] = useTransition();
-  const [responseChannel, setResponseChannel] = useState<"EMAIL" | "CALL">("EMAIL");
-  const [responseMessage, setResponseMessage] = useState("");
   const [note, setNote] = useState("");
   const [followUpDate, setFollowUpDate] = useState<Date | undefined>(
     lead.nextFollowUpAt ? new Date(lead.nextFollowUpAt) : undefined,
@@ -94,7 +82,6 @@ const LeadWorkspaceActions = ({ lead, canManage }: LeadWorkspaceActionsProps) =>
       }
       toast.success(success);
       setNote("");
-      setResponseMessage("");
       setCloseReason("");
       setUnqualifyReason("");
       setViewingNote("");
@@ -112,58 +99,6 @@ const LeadWorkspaceActions = ({ lead, canManage }: LeadWorkspaceActionsProps) =>
 
   return (
     <div className="flex flex-col gap-6">
-      <FieldGroup>
-        <Field>
-          <FieldLabel>Respond to buyer</FieldLabel>
-          <FieldDescription>
-            Log what you told the buyer by email or phone. This appears on the activity timeline.
-            In-app messaging is coming later — for now, record your response here after contacting
-            them outside the platform.
-          </FieldDescription>
-          <Select
-            value={responseChannel}
-            onValueChange={(value) => {
-              if (value === "EMAIL" || value === "CALL") setResponseChannel(value);
-            }}
-          >
-            <SelectTrigger className="w-full" aria-label="Response channel">
-              <SelectValue placeholder="How did you respond?" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="EMAIL">Email</SelectItem>
-                <SelectItem value="CALL">Phone call</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          <Textarea
-            rows={4}
-            value={responseMessage}
-            onChange={(e) => setResponseMessage(e.target.value)}
-            placeholder="Summarise your reply to the buyer's enquiry…"
-            aria-label="Buyer response summary"
-          />
-          <Button
-            disabled={isPending || !responseMessage.trim()}
-            onClick={() =>
-              run(
-                () =>
-                  logLeadBuyerResponseAction({
-                    leadId: lead.id,
-                    channel: responseChannel,
-                    message: responseMessage,
-                  }),
-                "Buyer response logged.",
-              )
-            }
-          >
-            Log response to buyer
-          </Button>
-        </Field>
-      </FieldGroup>
-
-      <Separator />
-
       <div className="flex flex-col gap-2">
         {canContact && lead.status !== LeadStatus.CONTACTED ? (
           <Button

@@ -9,7 +9,7 @@ import {
   LeadType,
   ListingStatus,
 } from "@/lib/aviatonly/domain";
-import { formatTimeAgo } from "@/lib/aviatonly/mock/format";
+import { formatTimeAgo, formatLeadFollowUpAt } from "@/lib/aviatonly/mock/format";
 import { prisma } from "@/lib/prisma";
 import { aircraftTitle, countLeadsInDatabase } from "./leads";
 import type { LeadWorkspaceView } from "./lead-workspace-types";
@@ -48,11 +48,29 @@ function mapActivity(
   }>,
 ): LeadWorkspaceView["activities"][number] {
   const type = activity.type as LeadActivityType;
+  const metadata = activity.metadata as { nextFollowUpAt?: string | null } | null;
+  let message = activity.message;
+
+  if (type === LeadActivityType.FOLLOW_UP_SET) {
+    if (metadata?.nextFollowUpAt) {
+      message = `Follow-up scheduled for ${formatLeadFollowUpAt(metadata.nextFollowUpAt)}.`;
+    } else if (message?.startsWith("Follow-up scheduled for ")) {
+      const isoMatch = message.match(
+        /Follow-up scheduled for (\d{4}-\d{2}-\d{2}T[\d:.]+Z?)\./,
+      );
+      if (isoMatch?.[1]) {
+        message = `Follow-up scheduled for ${formatLeadFollowUpAt(isoMatch[1])}.`;
+      }
+    } else if (message === null || message.toLowerCase().includes("cleared")) {
+      message = "Follow-up cleared.";
+    }
+  }
+
   return {
     id: activity.id,
     type,
     label: LEAD_ACTIVITY_TYPE_LABELS[type] ?? activity.type,
-    message: activity.message,
+    message,
     actorName: activity.actor?.name ?? activity.actor?.email ?? null,
     createdAt: activity.createdAt.toISOString(),
     timeAgo: formatTimeAgo(activity.createdAt.toISOString()),

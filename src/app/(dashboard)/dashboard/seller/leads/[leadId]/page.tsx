@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import BreadcrumbComp from "@/app/(dashboard)/dashboard/layout/shared/breadcrumb/breadcrumb-comp";
 import LeadWorkspace from "@/components/dashboard/leads/lead-workspace";
-import TitleCard from "@/components/dashboard/shared/titleborder-card";
+import ListingWorkspacePageHeader from "@/components/dashboard/listings/listing-workspace-page-header";
 import {
   assertCanAccessLead,
   canManageLead,
@@ -62,20 +60,18 @@ const SellerLeadDetailPage = async ({ params }: SellerLeadDetailPageProps) => {
 
   return (
     <>
-      <BreadcrumbComp title={`${lead.listing.registration} · Lead`} />
-      <TitleCard>
-        <LeadWorkspace
-          lead={lead}
-          canManage={canManage}
-          backHref="/dashboard/seller/leads"
-          messageContext={messageContext}
-        />
-      </TitleCard>
-      <p className="mt-4 text-center text-xs text-muted-foreground">
-        <Link href="/dashboard/seller/leads" className="hover:underline">
-          Back to all leads
-        </Link>
-      </p>
+      <ListingWorkspacePageHeader
+        backHref="/dashboard/seller/leads"
+        backLabel="Sales pipeline"
+        eyebrow="Lead workspace"
+        title={`${lead.buyer.name} · ${lead.listing.registration}`}
+      />
+      <LeadWorkspace
+        lead={lead}
+        canManage={canManage}
+        backHref="/dashboard/seller/leads"
+        messageContext={messageContext}
+      />
     </>
   );
 };

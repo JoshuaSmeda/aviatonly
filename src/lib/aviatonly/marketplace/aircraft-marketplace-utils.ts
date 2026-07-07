@@ -165,11 +165,7 @@ export function formatPriceDisplay(listing: AircraftMarketplaceListing): string 
       listing.auction.currentBid != null && listing.auction.currentBid > 0
         ? listing.auction.currentBid
         : listing.auction.openingBid;
-    const prefix =
-      listing.auction.currentBid != null && listing.auction.currentBid > 0
-        ? "Current bid"
-        : "Opening bid";
-    return `${prefix} ${formatCurrency(amount, listing.currency)}`;
+    return formatCurrency(amount, listing.currency);
   }
   if (listing.price != null) {
     return formatCurrency(listing.price, listing.currency);

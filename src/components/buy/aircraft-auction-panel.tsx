@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
-import { Clock, Gavel } from "lucide-react";
+import { Clock } from "lucide-react";
 import {
   placeBidAction,
   registerForAuctionAction,
@@ -12,6 +12,7 @@ import { submitListingEnquiryAction } from "@/app/(dashboard)/dashboard/buy/enqu
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Marker, MarkerContent, MarkerIcon } from "@/components/ui/marker";
 import {
   Dialog,
   DialogContent,
@@ -45,6 +46,7 @@ import {
 import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Alert } from "../ui/alert";
 
 interface AircraftAuctionPanelProps {
   listing: AircraftMarketplaceDetail;
@@ -82,6 +84,15 @@ function StatBlock({ label, value }: { label: string; value: string }) {
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="text-lg font-semibold text-foreground">{value}</span>
     </div>
+  );
+}
+
+function LivePulseIndicator() {
+  return (
+    <span className="relative flex size-2 shrink-0" aria-hidden>
+      <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" />
+      <span className="relative inline-flex size-2 rounded-full bg-primary" />
+    </span>
   );
 }
 
@@ -293,7 +304,7 @@ export function AircraftAuctionPanel({ listing, auctionDetail }: AircraftAuction
             Minimum next bid: {formatCurrency(auctionState.minimumNextBid, listing.currency)}
           </p>
           <Button className="w-full" disabled={isBidding} onClick={handlePlaceBid}>
-            {isBidding ? <Spinner data-icon="inline-start" /> : <Gavel data-icon="inline-start" />}
+            {isBidding ? <Spinner data-icon="inline-start" /> : null}
             Place bid
           </Button>
         </div>
@@ -340,10 +351,22 @@ export function AircraftAuctionPanel({ listing, auctionDetail }: AircraftAuction
       <div className={cn(detailCardClass)}>
         <div className="flex flex-col gap-4 border-b border-border p-5 lg:p-6">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className="gap-1">
-              <Gavel className="size-3" />
-              {isLive ? "Auction live" : isScheduled ? "Auction scheduled" : "Auction ended"}
-            </Badge>
+            {isLive ? (
+              <Alert>
+              <Marker role="status" className="w-auto text-foreground">
+                <MarkerIcon>
+                  <Spinner className="text-current" />
+                </MarkerIcon>
+                <MarkerContent className="shimmer shimmer-duration-3000 text-xl font-bold">
+                  Bidding is now open
+                </MarkerContent>
+              </Marker>
+              </Alert>
+            ) : (
+              <Badge variant="secondary">
+                {isScheduled ? "Auction scheduled" : "Auction ended"}
+              </Badge>
+            )}
             {auctionState.noReserve ? (
               <Badge variant="secondary">No reserve</Badge>
             ) : null}
@@ -363,7 +386,7 @@ export function AircraftAuctionPanel({ listing, auctionDetail }: AircraftAuction
                 auctionState.bidCount === 0
                   ? "Opening bid"
                   : auctionState.currentHighBidAmount != null &&
-                      auctionState.currentHighBidAmount > 0
+                    auctionState.currentHighBidAmount > 0
                     ? "Current bid"
                     : "Opening bid"
               }
@@ -379,7 +402,7 @@ export function AircraftAuctionPanel({ listing, auctionDetail }: AircraftAuction
             <span>{formatAuctionBidCount(auctionState.bidCount)}</span>
             {isLive && countdown ? (
               <span className="inline-flex items-center gap-1 font-medium text-foreground">
-                <Clock className="size-3.5" />
+                <Clock />
                 {countdown}
               </span>
             ) : null}

@@ -20,6 +20,12 @@ import {
   buildIntakeFixContext,
   type IntakeFixContext,
 } from "@/lib/aviatonly/domain/intake-fix-mode";
+import {
+  formatAvionicsOtherSummary,
+  hasAvionicsOtherContent,
+  parseAvionicsOtherFromSummary,
+} from "@/lib/aviatonly/domain/avionics-other";
+import { resolveLastMpiDate } from "@/lib/aviatonly/domain/maintenance-status";
 
 export interface UploadMeta {
   slot: string;
@@ -41,7 +47,7 @@ function buildChildFlags(v: AircraftFormValues) {
   return {
     hasEngine: Boolean(v.engineMakeModel) || v.engineHours != null || v.tso != null,
     hasPropeller: Boolean(v.propellerMakeModel) || v.propellerHours != null,
-    hasAvionics: Boolean(v.avionicsEquipment?.length) || Boolean(v.avionics?.trim()),
+    hasAvionics: Boolean(v.avionicsEquipment?.length) || hasAvionicsOtherContent(v.avionicsOther),
     hasMaintenance: Boolean(v.maintenanceStatus) || v.lastMpiDate != null,
   };
 }
@@ -122,11 +128,11 @@ async function syncListingChildren(
       create: {
         listingId,
         equipment: v.avionicsEquipment ?? [],
-        summary: v.avionics || null,
+        summary: formatAvionicsOtherSummary(v.avionicsOther),
       },
       update: {
         equipment: v.avionicsEquipment ?? [],
-        summary: v.avionics || null,
+        summary: formatAvionicsOtherSummary(v.avionicsOther),
       },
     });
   } else {
@@ -139,11 +145,11 @@ async function syncListingChildren(
       create: {
         listingId,
         status: v.maintenanceStatus || null,
-        lastMpiDate: v.lastMpiDate ?? null,
+        lastMpiDate: resolveLastMpiDate(v.maintenanceStatus, v.lastMpiDate),
       },
       update: {
         status: v.maintenanceStatus || null,
-        lastMpiDate: v.lastMpiDate ?? null,
+        lastMpiDate: resolveLastMpiDate(v.maintenanceStatus, v.lastMpiDate),
       },
     });
   } else {
@@ -267,7 +273,7 @@ export async function getListingIntakePrefill(
     propellerMakeModel: propeller?.model ?? undefined,
     propellerHours: propeller?.propellerHours ?? undefined,
     avionicsEquipment: listing.avionics?.equipment ?? [],
-    avionics: listing.avionics?.summary ?? "",
+    avionicsOther: parseAvionicsOtherFromSummary(listing.avionics?.summary),
     maintenanceStatus: listing.maintenance?.status ?? undefined,
     lastMpiDate: listing.maintenance?.lastMpiDate ?? undefined,
     knownDefects: listing.maintenance?.notes ?? listing.airframe?.damageHistory ?? "",
@@ -514,7 +520,7 @@ export async function submitAircraftListing(
 
   const hasEngine = Boolean(v.engineMakeModel) || v.engineHours != null || v.tso != null;
   const hasPropeller = Boolean(v.propellerMakeModel) || v.propellerHours != null;
-  const hasAvionics = Boolean(v.avionicsEquipment?.length) || Boolean(v.avionics?.trim());
+  const hasAvionics = Boolean(v.avionicsEquipment?.length) || hasAvionicsOtherContent(v.avionicsOther);
   const hasMaintenance = Boolean(v.maintenanceStatus) || v.lastMpiDate != null;
 
   try {
@@ -628,7 +634,7 @@ export async function submitAircraftListing(
           ? {
               create: {
                 equipment: v.avionicsEquipment ?? [],
-                summary: v.avionics || null,
+                summary: formatAvionicsOtherSummary(v.avionicsOther),
               },
             }
           : undefined,
@@ -636,7 +642,7 @@ export async function submitAircraftListing(
           ? {
               create: {
                 status: v.maintenanceStatus || null,
-                lastMpiDate: v.lastMpiDate ?? null,
+                lastMpiDate: resolveLastMpiDate(v.maintenanceStatus, v.lastMpiDate),
               },
             }
           : undefined,

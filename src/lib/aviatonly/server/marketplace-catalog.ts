@@ -254,8 +254,10 @@ function mapLiveListingRecord(record: MarketplaceCatalogRecord): AircraftMarketp
           }
         : undefined,
       avionics: {
-        otherEquipment: record.avionics?.equipment?.join(", ") ?? undefined,
-        primarySuite: record.avionics?.summary ?? undefined,
+        primarySuite: record.avionics?.equipment?.length
+          ? record.avionics.equipment.join(" · ")
+          : undefined,
+        otherEquipment: record.avionics?.summary ?? undefined,
       },
       maintenance: {
         lastMpiDate: record.maintenance?.lastMpiDate?.toISOString() ?? undefined,

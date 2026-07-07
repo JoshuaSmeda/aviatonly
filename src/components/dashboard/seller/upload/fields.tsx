@@ -161,9 +161,15 @@ export function RHFSelect({
   );
 }
 
-export function RHFDate({ name, label, description, placeholder = "Pick a date" }: BaseProps) {
+export function RHFDate({
+  name,
+  label,
+  description,
+  placeholder = "Pick a date",
+  disabled: disabledProp,
+}: BaseProps & { disabled?: boolean }) {
   const { control } = useFormContext<AircraftFormValues>();
-  const disabled = useIntakeFieldDisabled(name);
+  const disabled = useIntakeFieldDisabled(name) || disabledProp;
   return (
     <Controller
       control={control}

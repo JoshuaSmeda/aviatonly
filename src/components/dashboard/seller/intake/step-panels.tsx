@@ -13,12 +13,12 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import {
-  RHFDate,
   RHFNumber,
   RHFSelect,
   RHFText,
   RHFTextarea,
 } from "@/components/dashboard/seller/upload/fields";
+import { MaintenanceMpiDateField } from "@/components/dashboard/seller/upload/maintenance-mpi-date-field";
 import {
   AIRCRAFT_CATEGORIES,
   AVIONICS_OPTIONS,
@@ -280,12 +280,7 @@ export const StepAvionics = () => {
           );
         }}
       />
-      <RHFTextarea
-        name="avionics"
-        label="Anything else?"
-        placeholder="List any other avionics or equipment not covered above — e.g. specific Garmin units, weather radar, oxygen system…"
-        rows={3}
-      />
+      <AvionicsOtherItems />
     </div>
   );
 };
@@ -299,7 +294,7 @@ export const StepMaintenance = () => (
         placeholder="Select status"
         options={MAINTENANCE_STATUSES}
       />
-      <RHFDate name="lastMpiDate" label="Last MPI date" />
+      <MaintenanceMpiDateField />
     </div>
   </div>
 );
@@ -324,16 +319,10 @@ export const StepSale = () => {
               label="Reserve price (optional)"
               placeholder="800000"
               suffix="ZAR"
+              description="The minimum price you'll accept."
             />
           </>
         )}
-        <RHFNumber
-          name="valuationEstimate"
-          label="Your valuation estimate (optional)"
-          placeholder="900000"
-          suffix="ZAR"
-          description="Helps our team prepare an internal valuation."
-        />
       </div>
 
       <Separator />

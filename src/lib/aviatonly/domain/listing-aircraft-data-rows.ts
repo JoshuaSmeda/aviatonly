@@ -1,4 +1,5 @@
 import { listingLocation } from "@/lib/aviatonly/mock/listing-display";
+import { formatAvionicsDisplay } from "@/lib/aviatonly/domain/avionics-other";
 import type { ListingWorkspaceData } from "@/lib/aviatonly/server/listing-workspace";
 
 export const AIRCRAFT_DATA_FIELD_KEYS = [
@@ -99,8 +100,8 @@ export function buildAircraftDataReviewRows(
     {
       fieldKey: "avionics",
       label: "Avionics",
-      value: avionics?.equipment?.length
-        ? avionics.equipment.join(", ")
+      value: avionics
+        ? formatAvionicsDisplay(avionics.equipment, avionics.summary) || "Not provided"
         : "Not provided",
     },
     {

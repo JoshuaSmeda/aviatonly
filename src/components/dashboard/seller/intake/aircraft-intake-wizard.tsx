@@ -919,7 +919,7 @@ const AircraftIntakeWizardForm = ({
                     {isLast ? (
                       <Button type="submit" disabled={!confirmed || form.formState.isSubmitting || closing}>
                         {form.formState.isSubmitting && <Spinner />}
-                        <Send data-icon="inline-start" />
+                        {/* <Send data-icon="inline-start" /> */}
                         Submit for review
                       </Button>
                     ) : (

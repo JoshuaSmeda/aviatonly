@@ -1,5 +1,6 @@
 import * as z from "zod";
 import { SELLER_ROLES } from "@/lib/aviatonly/domain";
+import type { AvionicsOtherItem } from "@/lib/aviatonly/domain/avionics-other";
 
 export { SELLER_ROLES };
 
@@ -74,7 +75,14 @@ export const aircraftSchema = z
       .min(0, "Propeller hours can't be negative.")
       .optional(),
     avionicsEquipment: z.array(z.string()).optional(),
-    avionics: z.string().trim().optional(),
+    avionicsOther: z
+      .array(
+        z.object({
+          enabled: z.boolean(),
+          name: z.string().trim(),
+        }),
+      )
+      .optional(),
     maintenanceStatus: z.string().optional(),
     lastMpiDate: z.date().optional(),
     knownDefects: z.string().trim().optional(),
@@ -117,6 +125,8 @@ export const aircraftSchema = z
 
 export type AircraftFormValues = z.infer<typeof aircraftSchema>;
 
+export type { AvionicsOtherItem };
+
 export const aircraftDefaultValues: Partial<AircraftFormValues> = {
   registration: "",
   registrationType: undefined,
@@ -136,7 +146,7 @@ export const aircraftDefaultValues: Partial<AircraftFormValues> = {
   propellerMakeModel: "",
   propellerHours: undefined,
   avionicsEquipment: [],
-  avionics: "",
+  avionicsOther: [{ enabled: false, name: "" }],
   maintenanceStatus: undefined,
   lastMpiDate: undefined,
   knownDefects: "",
@@ -157,7 +167,7 @@ export const STEP_FIELDS: (keyof AircraftFormValues)[][] = [
   ["ttaf", "engineMakeModel", "engineHours", "tso", "propellerHours"],
   [],
   [],
-  ["saleType", "askingPrice", "startingBid", "bidIncrement", "reservePrice", "valuationEstimate"],
+  ["saleType", "askingPrice", "startingBid", "bidIncrement", "reservePrice"],
   [],
 ];
 
@@ -176,6 +186,6 @@ export const INTAKE_STEP_FIELDS: (keyof AircraftFormValues)[][] = [
   [], // 8. Maintenance
   [], // 9. Photos
   [], // 10. Documents
-  ["askingPrice", "startingBid", "bidIncrement", "reservePrice", "valuationEstimate"], // 11. Sale
+  ["askingPrice", "startingBid", "bidIncrement", "reservePrice"], // 11. Sale
   [], // 12. Review
 ];

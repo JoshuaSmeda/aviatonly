@@ -55,8 +55,8 @@ function ValuationWaitingState() {
         </EmptyMedia>
         <EmptyTitle>Indicative estimate in progress</EmptyTitle>
         <EmptyDescription>
-          AVIATONLY is preparing a market benchmark from your reviewed aircraft data. You will see
-          the indicative estimate here once operations completes valuation.
+          We will prepare a market benchmark from your reviewed aircraft data. You will see
+          the indicative estimate here once we have completed the valuation.
         </EmptyDescription>
       </EmptyHeader>
     </Empty>

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAnyRole } from "@/lib/auth/session";
 import { ADMIN_ROLES, hasAnyRole, SELLER_ROLES } from "@/lib/auth/roles";
 import { computeCompleteness } from "@/lib/completeness";
+import { parseAvionicsOtherFromSummary } from "@/lib/aviatonly/domain/avionics-other";
 import {
   type AircraftFormValues,
 } from "@/components/dashboard/seller/upload/schema";
@@ -343,7 +344,7 @@ export async function refreshListingCompleteness(listingId: string) {
     tso: listing.engines[0]?.timeSinceOverhaul ?? undefined,
     propellerMakeModel: listing.propellers[0]?.model ?? undefined,
     propellerHours: listing.propellers[0]?.propellerHours ?? undefined,
-    avionics: listing.avionics?.summary ?? undefined,
+    avionicsOther: parseAvionicsOtherFromSummary(listing.avionics?.summary),
     maintenanceStatus: listing.maintenance?.status ?? undefined,
     lastMpiDate: listing.maintenance?.lastMpiDate ?? undefined,
   } as AircraftFormValues;

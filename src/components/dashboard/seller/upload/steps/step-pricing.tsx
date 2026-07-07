@@ -69,16 +69,10 @@ const StepPricing = () => {
               label="Reserve price (optional)"
               placeholder="800000"
               suffix="ZAR"
+              description="The minimum price you'll accept. The auction only completes if the highest bid meets or exceeds this amount. AVIATONLY confirms the reserve with you before going live."
             />
           </>
         )}
-        <RHFNumber
-          name="valuationEstimate"
-          label="Expected sale price (optional)"
-          placeholder="900000"
-          suffix="ZAR"
-          description="What you hope to achieve. AVIATONLY prepares a separate indicative estimate after review."
-        />
       </div>
 
       {estimate && (

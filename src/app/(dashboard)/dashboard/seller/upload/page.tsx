@@ -35,8 +35,8 @@ const SellAircraftPage = async ({ searchParams }: SellAircraftPageProps) => {
       <TitleCard
         title={
           fixContext
-            ? "Fix requested item — intake wizard"
-            : "Aircraft intake — submit for AVIATONLY review"
+            ? "Fix particulars of the aircraft you want to sell"
+            : "Fill in the particulars of the aircraft you want to sell"
         }
       >
         {!fixContext ? <IntakeResumeBanner /> : null}

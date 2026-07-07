@@ -39,25 +39,19 @@ const SellerLeadsPage = async ({ searchParams }: SellerLeadsPageProps) => {
     <>
       <BreadcrumbComp title="Sales pipeline" />
       <TitleCard>
-        <p className="mb-4 text-sm text-muted-foreground">
+        <div className="flex flex-col gap-4">
           {board.totalActive > 0 ? (
-            <>
+            <p className="text-sm text-muted-foreground">
               Work buyer enquiries by stage across your aircraft listings. Drag cards to update
               pipeline stage, or switch to list view for search-heavy workflows.
-            </>
-          ) : (
-            <>
-              No active buyer enquiries on your listings yet. Leads appear here when buyers enquire
-              on aircraft you sell through your organisation.
-            </>
-          )}
-        </p>
-        <SellerLeadsWorkspace
-          board={board}
-          rows={rows}
-          initialView={initialView}
-          emptyDescription="No leads on your listings. When buyers enquire on your live aircraft, they will appear here."
-        />
+            </p>
+          ) : null}
+          <SellerLeadsWorkspace
+            board={board}
+            rows={rows}
+            initialView={initialView}
+          />
+        </div>
       </TitleCard>
     </>
   );

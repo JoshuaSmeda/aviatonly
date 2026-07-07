@@ -49,7 +49,7 @@ export const AIRCRAFT_CATEGORIES = [
   "Other",
 ] as const;
 
-/** Common avionics & equipment shown as checkboxes; anything else goes in a free-text box. */
+/** Common avionics & equipment shown as checkboxes; custom items use structured rows in step 7. */
 export const AVIONICS_OPTIONS = [
   "IFR certified",
   "Autopilot",

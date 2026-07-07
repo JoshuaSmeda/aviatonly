@@ -21,10 +21,25 @@ import { listingLocation } from "@/lib/aviatonly/mock";
 import type { MockListingFieldReview } from "@/lib/aviatonly/mock/types";
 import type { ListingWorkspaceData } from "@/lib/aviatonly/server/listing-workspace";
 import { cn } from "@/lib/utils";
+import { AvionicsEquipmentPills } from "./avionics-equipment-pills";
 import ListingIntakeReviewProgress from "./listing-intake-review-progress";
 import ListingStartIntakeReviewPanel from "./listing-start-intake-review-panel";
 
 const WIDE_FIELDS = new Set(["damage-history", "avionics", "maintenance-notes"]);
+
+function renderAircraftDataValue(
+  fieldKey: string,
+  value: string,
+  avionics: ListingWorkspaceData["avionics"],
+) {
+  if (fieldKey === "avionics") {
+    return (
+      <AvionicsEquipmentPills equipment={avionics?.equipment} summary={avionics?.summary} />
+    );
+  }
+
+  return value;
+}
 
 type FieldReviewOptimisticAction =
   | {
@@ -159,7 +174,7 @@ const ListingAircraftDataReviewTab = ({
                 >
                   <div className="min-w-0">
                     <dt className="text-muted-foreground">{row.label}</dt>
-                    <dd className="font-medium">{row.value}</dd>
+                    <dd className="font-medium">{renderAircraftDataValue(row.fieldKey, row.value, avionics)}</dd>
                   </div>
                   <AdminReviewTicks
                     label={row.label}
@@ -230,7 +245,9 @@ const ListingAircraftDataReviewTab = ({
                             <Badge variant={rejectedMeta.badgeVariant}>{rejectedMeta.label}</Badge>
                           ) : null}
                         </dt>
-                        <dd className="font-medium">{row.value}</dd>
+                        <dd className="font-medium">
+                          {renderAircraftDataValue(row.fieldKey, row.value, avionics)}
+                        </dd>
                         {isRejected && review?.rejectionReason ? (
                           <p className="mt-1 text-sm text-muted-foreground">{review.rejectionReason}</p>
                         ) : null}
@@ -314,7 +331,12 @@ const ListingAircraftDataReviewTab = ({
               {avionics && (
                 <div className="md:col-span-2">
                   <dt className="text-muted-foreground">Avionics</dt>
-                  <dd className="font-medium">{avionics.equipment.join(", ")}</dd>
+                  <dd>
+                    <AvionicsEquipmentPills
+                      equipment={avionics.equipment}
+                      summary={avionics.summary}
+                    />
+                  </dd>
                 </div>
               )}
               {maintenance && (

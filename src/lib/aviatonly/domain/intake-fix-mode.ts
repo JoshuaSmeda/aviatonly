@@ -1,4 +1,5 @@
 import type { AircraftFormValues } from "@/components/dashboard/seller/upload/schema";
+import { formatAvionicsDisplay, formatAvionicsOtherSummary } from "@/lib/aviatonly/domain/avionics-other";
 
 /** Intake wizard step index (matches `INTAKE_STEPS`). */
 export const FIELD_KEY_TO_INTAKE_STEP: Record<string, number> = {
@@ -32,7 +33,7 @@ export const FIELD_KEY_TO_FORM_FIELDS: Record<string, (keyof AircraftFormValues)
   "damage-history": ["knownDefects"],
   engine: ["engineMakeModel", "engineHours", "tso"],
   propeller: ["propellerMakeModel", "propellerHours"],
-  avionics: ["avionicsEquipment", "avionics"],
+  avionics: ["avionicsEquipment", "avionicsOther"],
   "maintenance-status": ["maintenanceStatus"],
   "last-mpi": ["lastMpiDate"],
   "maintenance-notes": ["knownDefects"],
@@ -129,7 +130,7 @@ export function formatFieldFixValue(
     case "category":
       return values.category;
     case "avionics":
-      return values.avionicsEquipment?.join(", ") ?? values.avionics ?? "";
+      return formatAvionicsDisplay(values.avionicsEquipment, formatAvionicsOtherSummary(values.avionicsOther));
     case "engine":
       return `${values.engineMakeModel ?? ""}|${values.engineHours ?? ""}|${values.tso ?? ""}`;
     case "propeller":

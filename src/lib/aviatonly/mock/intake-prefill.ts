@@ -1,5 +1,6 @@
 import type { AircraftFormValues } from "@/components/dashboard/seller/upload/schema";
 import { SaleType } from "@/lib/aviatonly/domain";
+import { parseAvionicsOtherFromSummary } from "@/lib/aviatonly/domain/avionics-other";
 import {
   getMockAirframe,
   getMockAvionics,
@@ -58,7 +59,7 @@ export function getIntakePrefillFromListing(listingId: string): Partial<Aircraft
     propellerMakeModel,
     propellerHours: propeller?.propellerHours ?? undefined,
     avionicsEquipment: avionics?.equipment ?? [],
-    avionics: avionics?.summary ?? "",
+    avionicsOther: parseAvionicsOtherFromSummary(avionics?.summary),
     maintenanceStatus: maintenance?.status ?? undefined,
     lastMpiDate: maintenance?.lastMpiDate ? new Date(maintenance.lastMpiDate) : undefined,
     knownDefects: maintenance?.notes ?? airframe?.damageHistory ?? "",

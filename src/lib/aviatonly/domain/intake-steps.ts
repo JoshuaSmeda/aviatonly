@@ -104,7 +104,7 @@ export const INTAKE_STEPS: IntakeStep[] = [
     title: "Sale setup",
     description: "Pricing, reserve, and sale type configuration.",
     icon: Tag,
-    hint: "Asking price, reserve, valuation estimate, and sale type.",
+    hint: "Asking price, reserve, starting bid, and bid increment.",
   },
   {
     id: "review",

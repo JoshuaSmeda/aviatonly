@@ -1,7 +1,9 @@
 "use client";
 
 import { Separator } from "@/components/ui/separator";
-import { RHFDate, RHFNumber, RHFSelect, RHFText, RHFTextarea } from "../fields";
+import { RHFNumber, RHFSelect, RHFText, RHFTextarea } from "../fields";
+import { AvionicsOtherItems } from "../avionics-other-items";
+import { MaintenanceMpiDateField } from "../maintenance-mpi-date-field";
 import { MAINTENANCE_STATUSES } from "../constants";
 
 const SectionHeading = ({ title }: { title: string }) => (
@@ -58,13 +60,8 @@ const StepTechnical = () => {
 
       <div className="grid grid-cols-1 gap-6">
         <SectionHeading title="Avionics & condition" />
-        <RHFTextarea
-          name="avionics"
-          label="Avionics suite"
-          placeholder="Garmin GNS 430W, GTX 345 transponder, KAP 140 autopilot…"
-          rows={3}
-        />
-        <RHFDate name="lastMpiDate" label="Last MPI date" />
+        <AvionicsOtherItems />
+        <MaintenanceMpiDateField />
         <RHFTextarea
           name="knownDefects"
           label="Known defects or damage history"

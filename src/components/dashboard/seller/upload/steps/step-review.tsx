@@ -69,10 +69,6 @@ const StepReview = ({ photoCount, documentCount }: StepReviewProps) => {
               <Row label="Reserve" value={v.reservePrice != null ? ZAR.format(v.reservePrice) : undefined} />
             </>
           )}
-          <Row
-            label="Your estimate"
-            value={v.valuationEstimate != null ? ZAR.format(v.valuationEstimate) : undefined}
-          />
         </SummaryCard>
 
         <SummaryCard title="Media & documents">

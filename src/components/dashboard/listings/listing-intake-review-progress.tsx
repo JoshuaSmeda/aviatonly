@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import type { MockAircraftDocument, MockAircraftPhoto, MockListingFieldReview } from "@/lib/aviatonly/mock/types";
 import type { ListingWorkspaceData } from "@/lib/aviatonly/server/listing-workspace";
+import ListingIntakeAdvancePanel from "./listing-intake-advance-panel";
 
 interface ListingIntakeReviewProgressProps {
   workspace: ListingWorkspaceData;
@@ -79,12 +80,18 @@ const ListingIntakeReviewProgress = ({
         </Alert>
       ) : null}
 
-      {progress.isComplete && !workspace.intakeReviewFinalizedAt ? (
+      <ListingIntakeAdvancePanel
+        listing={workspace.listing}
+        intakeReviewFinalizedAt={workspace.intakeReviewFinalizedAt}
+        readyToAdvance={progress.readyToAdvance}
+      />
+
+      {progress.isComplete && progress.rejected > 0 && !workspace.intakeReviewFinalizedAt ? (
         <Alert>
-          <AlertTitle>All rows checked</AlertTitle>
+          <AlertTitle>Review complete — issues flagged</AlertTitle>
           <AlertDescription>
-            Saving your last review will generate draft tasks or advance the listing if everything
-            is approved.
+            Saving your last review will generate draft tasks for the seller. Open the Review Tasks
+            tab to preview before sending.
           </AlertDescription>
         </Alert>
       ) : null}

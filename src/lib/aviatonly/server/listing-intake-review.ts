@@ -51,7 +51,7 @@ export interface IntakeReviewProgress {
 }
 
 export type IntakeFinalizeResult =
-  | { finalized: false; progress: IntakeReviewProgress }
+  | { finalized: false; progress: IntakeReviewProgress; readyToAdvance?: boolean }
   | { finalized: true; allApproved: true; progress: IntakeReviewProgress }
   | { finalized: true; allApproved: false; draftTaskCount: number; progress: IntakeReviewProgress };
 
@@ -542,31 +542,9 @@ export async function tryFinalizeIntakeReview(
   const rejections = await collectRejections(listingId);
 
   if (rejections.length === 0) {
-    await prisma.aircraftListing.update({
-      where: { id: listingId },
-      data: { intakeReviewFinalizedAt: new Date() },
-    });
-
-    const listing = await prisma.aircraftListing.findUnique({
-      where: { id: listingId },
-      select: { status: true },
-    });
-
-    if (listing?.status === ListingStatus.UNDER_REVIEW) {
-      await completeActiveIntakeReviewerAssignment(listingId, actorId);
-      await transitionListingForwardRecord({
-        listingId,
-        toStatus: ListingStatus.VALUATION_READY,
-        actorId,
-        reason: "All intake data approved.",
-        eventType: "VALUATION_ADDED",
-        eventMessage: "All intake rows approved — valuation step unlocked.",
-      });
-    }
-
     return {
-      finalized: true,
-      allApproved: true,
+      finalized: false,
+      readyToAdvance: true,
       progress: await getIntakeReviewProgress(listingId),
     };
   }
@@ -601,6 +579,47 @@ export async function tryFinalizeIntakeReview(
     draftTaskCount: rejections.length,
     progress: await getIntakeReviewProgress(listingId),
   };
+}
+
+export async function advanceIntakeToValuationRecord(listingId: string, actorId: string) {
+  const progress = await getIntakeReviewProgress(listingId);
+
+  if (!progress.isComplete) {
+    throw new Error("Review every intake row before advancing to valuation.");
+  }
+  if (progress.rejected > 0) {
+    throw new Error("Resolve rejected rows or send review tasks to the seller first.");
+  }
+  if (progress.isFinalized) {
+    throw new Error("Intake review is already finalized.");
+  }
+  if (progress.tasksReleased) {
+    throw new Error("Review tasks were already sent to the seller.");
+  }
+
+  await assertIntakeReviewEditable(listingId, actorId);
+
+  await prisma.aircraftListing.update({
+    where: { id: listingId },
+    data: { intakeReviewFinalizedAt: new Date() },
+  });
+
+  const listing = await prisma.aircraftListing.findUnique({
+    where: { id: listingId },
+    select: { status: true },
+  });
+
+  if (listing?.status === ListingStatus.UNDER_REVIEW) {
+    await completeActiveIntakeReviewerAssignment(listingId, actorId);
+    await transitionListingForwardRecord({
+      listingId,
+      toStatus: ListingStatus.VALUATION_READY,
+      actorId,
+      reason: "All intake data approved.",
+      eventType: "VALUATION_ADDED",
+      eventMessage: "All intake rows approved — valuation step unlocked.",
+    });
+  }
 }
 
 export async function releaseIntakeReviewTasksRecord(listingId: string, actorId: string) {

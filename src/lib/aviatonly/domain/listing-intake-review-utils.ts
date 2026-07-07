@@ -37,19 +37,24 @@ export function computeIntakeReviewProgressFromWorkspace(input: {
 }) {
   const fieldReviewMap = new Map(input.fieldReviews.map((f) => [f.fieldKey, f.status]));
   let reviewed = 0;
+  let rejected = 0;
 
   for (const key of input.fieldKeys) {
-    if (fieldReviewState(fieldReviewMap.get(key) ?? FieldReviewStatus.PENDING) !== "pending") {
-      reviewed += 1;
-    }
+    const state = fieldReviewState(fieldReviewMap.get(key) ?? FieldReviewStatus.PENDING);
+    if (state !== "pending") reviewed += 1;
+    if (state === "rejected") rejected += 1;
   }
 
   for (const photo of input.photos) {
-    if (photoReviewState(photo.status) !== "pending") reviewed += 1;
+    const state = photoReviewState(photo.status);
+    if (state !== "pending") reviewed += 1;
+    if (state === "rejected") rejected += 1;
   }
 
   for (const doc of input.documents) {
-    if (documentReviewState(doc.reviewStatus) !== "pending") reviewed += 1;
+    const state = documentReviewState(doc.reviewStatus);
+    if (state !== "pending") reviewed += 1;
+    if (state === "rejected") rejected += 1;
   }
 
   const total = input.fieldKeys.length + input.photos.length + input.documents.length;
@@ -57,7 +62,9 @@ export function computeIntakeReviewProgressFromWorkspace(input: {
   return {
     total,
     reviewed,
+    rejected,
     pending: total - reviewed,
     isComplete: total > 0 && reviewed === total,
+    readyToAdvance: total > 0 && reviewed === total && rejected === 0,
   };
 }

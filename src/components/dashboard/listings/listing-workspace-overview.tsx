@@ -16,14 +16,19 @@ import {
 } from "@/lib/aviatonly/domain";
 import type { ListingWorkspaceOverview } from "@/lib/aviatonly/mock/types";
 import type { MockAircraftListing } from "@/lib/aviatonly/mock/types";
+import type { ListingWorkspaceData } from "@/lib/aviatonly/server/listing-workspace";
 import ListingWorkspaceActivityTimeline from "./listing-workspace-activity-timeline";
 import ListingPublishPanel from "./listing-publish-panel";
+import ListingIntakeAdvancePanel from "./listing-intake-advance-panel";
+import { buildAircraftDataReviewRows } from "@/lib/aviatonly/domain";
+import { computeIntakeReviewProgressFromWorkspace } from "@/lib/aviatonly/domain/listing-intake-review-utils";
 
 interface ListingWorkspaceOverviewProps {
   listing: MockAircraftListing;
   overview: ListingWorkspaceOverview;
   canManageReview?: boolean;
   approvedPhotoCount?: number;
+  workspace?: ListingWorkspaceData;
 }
 
 const ListingWorkspaceOverviewTab = ({
@@ -31,6 +36,7 @@ const ListingWorkspaceOverviewTab = ({
   overview,
   canManageReview = false,
   approvedPhotoCount = 0,
+  workspace,
 }: ListingWorkspaceOverviewProps) => {
   const statusMeta = getListingStatusMeta(listing.status);
   const blockingTasksForView = canManageReview
@@ -42,8 +48,29 @@ const ListingWorkspaceOverviewTab = ({
     ? deriveAdminListingNextStep(listing.id, listing.status)
     : overview.nextStep;
 
+  const intakeAdvance =
+    canManageReview && workspace
+      ? (() => {
+          const fieldRows = buildAircraftDataReviewRows(workspace);
+          return computeIntakeReviewProgressFromWorkspace({
+            fieldRowCount: fieldRows.length,
+            fieldReviews: workspace.fieldReviews,
+            fieldKeys: fieldRows.map((r) => r.fieldKey),
+            photos: workspace.photos,
+            documents: workspace.documents,
+          });
+        })()
+      : null;
+
   return (
     <div className="flex flex-col gap-6">
+      {canManageReview && workspace && intakeAdvance?.readyToAdvance ? (
+        <ListingIntakeAdvancePanel
+          listing={listing}
+          intakeReviewFinalizedAt={workspace.intakeReviewFinalizedAt}
+          readyToAdvance={intakeAdvance.readyToAdvance}
+        />
+      ) : null}
       {nextStep.actionRequired ? (
         <div className="rounded-lg border border-primary/20 bg-primary/5 p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

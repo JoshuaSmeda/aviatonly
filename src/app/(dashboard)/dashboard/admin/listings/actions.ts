@@ -7,6 +7,7 @@ import {
   NotFoundError,
 } from "@/lib/aviatonly/server/authorization";
 import {
+  advanceIntakeToValuationRecord,
   getIntakeReviewProgress,
   releaseIntakeReviewTasksRecord,
   reviewListingDocumentRecord,
@@ -29,7 +30,7 @@ import { requireAnyRole } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 export type ListingReviewActionResult =
-  | { ok: true; listingId: string; finalized?: boolean }
+  | { ok: true; listingId: string; finalized?: boolean; readyToAdvance?: boolean }
   | { ok: false; error: string };
 
 function toErrorResult(error: unknown): ListingReviewActionResult {
@@ -98,6 +99,18 @@ async function requireAdminListingReadAccess(listingId: string) {
   return { session, listing };
 }
 
+function toReviewActionSuccess(
+  listingId: string,
+  result: Awaited<ReturnType<typeof reviewListingFieldRecord>>,
+): ListingReviewActionResult {
+  return {
+    ok: true,
+    listingId,
+    finalized: result.finalized,
+    readyToAdvance: "readyToAdvance" in result ? result.readyToAdvance : undefined,
+  };
+}
+
 export async function adminReviewListingFieldAction(input: {
   listingId: string;
   fieldKey: string;
@@ -110,7 +123,7 @@ export async function adminReviewListingFieldAction(input: {
     const { session } = await requireAdminListingAccess(input.listingId);
     const result = await reviewListingFieldRecord({ ...input, actorId: session.user.id });
     revalidateListingPaths(input.listingId, { full: result.finalized });
-    return { ok: true, listingId: input.listingId, finalized: result.finalized };
+    return toReviewActionSuccess(input.listingId, result);
   } catch (error) {
     return toErrorResult(error);
   }
@@ -127,7 +140,7 @@ export async function adminReviewListingPhotoAction(input: {
     const { session } = await requireAdminListingAccess(input.listingId);
     const result = await reviewListingPhotoRecord({ ...input, actorId: session.user.id });
     revalidateListingPaths(input.listingId, { full: result.finalized });
-    return { ok: true, listingId: input.listingId, finalized: result.finalized };
+    return toReviewActionSuccess(input.listingId, result);
   } catch (error) {
     return toErrorResult(error);
   }
@@ -144,7 +157,20 @@ export async function adminReviewListingDocumentAction(input: {
     const { session } = await requireAdminListingAccess(input.listingId);
     const result = await reviewListingDocumentRecord({ ...input, actorId: session.user.id });
     revalidateListingPaths(input.listingId, { full: result.finalized });
-    return { ok: true, listingId: input.listingId, finalized: result.finalized };
+    return toReviewActionSuccess(input.listingId, result);
+  } catch (error) {
+    return toErrorResult(error);
+  }
+}
+
+export async function adminAdvanceIntakeToValuationAction(
+  listingId: string,
+): Promise<ListingReviewActionResult> {
+  try {
+    const { session } = await requireAdminListingAccess(listingId);
+    await advanceIntakeToValuationRecord(listingId, session.user.id);
+    revalidateListingPaths(listingId, { full: true });
+    return { ok: true, listingId, finalized: true };
   } catch (error) {
     return toErrorResult(error);
   }

@@ -43,8 +43,8 @@ const ListingMediaReviewTab = ({ workspace, canManageReview }: ListingMediaRevie
   });
   const uploadedCount = photos.length;
 
-  const afterReview = (result: { ok: boolean; finalized?: boolean }) => {
-    if (!result.ok || result.finalized) {
+  const afterReview = (result: { ok: boolean; finalized?: boolean; readyToAdvance?: boolean }) => {
+    if (!result.ok || result.finalized || result.readyToAdvance) {
       startTransition(() => router.refresh());
     }
   };

@@ -68,7 +68,7 @@ export const LISTING_STATUS_META: Record<ListingStatus, StatusMeta> = {
   },
   [ListingStatus.APPROVED_FOR_LISTING]: {
     label: "Approved for Listing",
-    description: "Cleared by AVIATONLY and ready to be published as fixed-price or auction.",
+    description: "Cleared and pending publication.",
     badgeVariant: "default",
   },
   [ListingStatus.LIVE_FIXED_PRICE]: {

@@ -125,8 +125,8 @@ const ListingAircraftDataReviewTab = ({
       workspace.fieldReviews.some((review) => review.status === FieldReviewStatus.REJECTED));
   const sellerFieldMap = new Map(workspace.fieldReviews.map((review) => [review.fieldKey, review]));
 
-  const afterReview = (result: { ok: boolean; finalized?: boolean }) => {
-    if (!result.ok || result.finalized) {
+  const afterReview = (result: { ok: boolean; finalized?: boolean; readyToAdvance?: boolean }) => {
+    if (!result.ok || result.finalized || result.readyToAdvance) {
       startTransition(() => router.refresh());
     }
   };

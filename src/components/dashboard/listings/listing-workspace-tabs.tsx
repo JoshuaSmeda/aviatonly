@@ -119,6 +119,7 @@ const ListingWorkspaceTabs = ({
           listing={listing}
           overview={overview}
           canManageReview={canManageReview}
+          workspace={workspace}
           approvedPhotoCount={
             workspace.photos.filter((photo) => photo.status === PhotoStatus.APPROVED).length
           }

@@ -761,7 +761,7 @@ const AircraftIntakeWizardForm = ({
                                 "border-border bg-background text-muted-foreground",
                             )}
                           >
-                            {isComplete ? <Check /> : index + 1}
+                            {isComplete ? <Check className="size-3.5" /> : index + 1}
                           </span>
                           <span
                             className={cn(

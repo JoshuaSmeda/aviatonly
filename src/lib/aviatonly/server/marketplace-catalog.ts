@@ -12,6 +12,7 @@ import type {
   RegistrationType,
 } from "@/lib/aviatonly/marketplace/aircraft-marketplace-types";
 import { buildListingSlug } from "@/lib/aviatonly/marketplace/aircraft-marketplace-utils";
+import { buildDocumentChecklistFromRecords } from "@/lib/aviatonly/marketplace/document-checklist";
 import { MOCK_AIRCRAFT_LISTINGS } from "@/lib/aviatonly/marketplace/mock-aircraft-listings";
 import { prisma } from "@/lib/prisma";
 
@@ -24,6 +25,12 @@ const marketplaceCatalogInclude = {
   photos: {
     where: { isPublicGalleryImage: true },
     orderBy: { sortOrder: "asc" as const },
+  },
+  documents: {
+    select: {
+      documentType: true,
+      reviewStatus: true,
+    },
   },
   seller: { select: { name: true, email: true } },
   auctions: {
@@ -257,9 +264,7 @@ function mapLiveListingRecord(record: MarketplaceCatalogRecord): AircraftMarketp
         knownDefects: record.maintenance?.notes ?? undefined,
       },
     },
-    documents: [
-      { label: "Logbooks & legal documents", status: "Available after enquiry" },
-    ],
+    documents: buildDocumentChecklistFromRecords(record.documents),
     verification: {
       documentsReviewed: true,
       photosVerified: record.photos.length > 0,

@@ -1,18 +1,13 @@
-"use client";
-
 import { Clock, Gauge, MapPin, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { AircraftDetailFacts } from "@/components/buy/aircraft-detail-facts";
 import type { AircraftMarketplaceDetail } from "@/lib/aviatonly/marketplace/aircraft-marketplace-types";
 import {
   formatAircraftTitle,
-  formatCurrency,
   formatLocation,
   formatPriceDisplay,
 } from "@/lib/aviatonly/marketplace/aircraft-marketplace-utils";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
 interface AircraftDetailSummaryProps {
   listing: AircraftMarketplaceDetail;
@@ -52,11 +47,6 @@ function QuickStat({
 }
 
 export function AircraftDetailSummary({ listing }: AircraftDetailSummaryProps) {
-  const financeEstimate =
-    listing.price && listing.saleType === "FIXED_PRICE"
-      ? Math.round(listing.price * 0.007)
-      : null;
-
   const stats = [
     {
       icon: Gauge,
@@ -95,17 +85,6 @@ export function AircraftDetailSummary({ listing }: AircraftDetailSummaryProps) {
           <p className="text-sm text-muted-foreground">
             {listing.registration} — {formatAircraftTitle(listing)}
           </p>
-
-          {financeEstimate ? (
-            <div className="flex flex-wrap items-center gap-3 text-sm">
-              <span className="text-muted-foreground">
-                Est. {formatCurrency(financeEstimate, listing.currency)}/mo
-              </span>
-              <Button size="sm" onClick={() => toast.message("Finance quote request recorded")}>
-                Request finance quote
-              </Button>
-            </div>
-          ) : null}
         </div>
 
         <div className="flex flex-wrap gap-2">

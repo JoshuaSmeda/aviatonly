@@ -158,8 +158,10 @@ export type AircraftTechnicalSpec = {
 };
 
 export type AircraftDocumentSummary = {
+  slotKey: string;
   label: string;
-  status: string;
+  uploaded: boolean;
+  reviewed?: boolean;
 };
 
 export type AircraftVerificationSummary = {

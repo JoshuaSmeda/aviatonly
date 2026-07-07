@@ -17,13 +17,12 @@ function formatCompactCore(amount: number): string {
   return `${Math.round(amount / 1000)}k`;
 }
 
-function formatCompactRange(
-  min: number,
-  max: number,
+function formatCompactCurrency(
+  amount: number,
   currency: "ZAR" | "USD" | "EUR" = "ZAR",
 ): string {
   const symbol = currency === "ZAR" ? "R" : currency === "USD" ? "$" : "€";
-  return `${symbol}${formatCompactCore(min)}-${formatCompactCore(max)}`;
+  return `${symbol} ${formatCompactCore(amount)}`;
 }
 
 function EstimateCard({ label, value }: { label: string; value: string }) {
@@ -63,17 +62,13 @@ export function AircraftMarketEstimateCard({ estimate, listPrice }: AircraftMark
         Estimated market value
       </h2>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <EstimateCard
-          label="AVIATONLY estimate"
-          value={midpoint != null ? formatCurrency(midpoint, currency) : "—"}
+          label="Our estimate"
+          value={midpoint != null ? formatCompactCurrency(midpoint, currency) : "—"}
         />
         <EstimateCard
-          label="Sales range"
-          value={formatCompactRange(estimate.minValue, estimate.maxValue, currency)}
-        />
-        <EstimateCard
-          label="Finance est."
+          label="Finance estimate"
           value={
             financeEstimate != null ? `${formatCurrency(financeEstimate, currency)}/mo` : "—"
           }

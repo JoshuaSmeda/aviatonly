@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { AircraftDescription } from "@/components/buy/aircraft-description";
 import { AircraftDetailActions } from "@/components/buy/aircraft-detail-actions";
 import { AircraftDetailBreadcrumb } from "@/components/buy/aircraft-detail-breadcrumb";
 import { AircraftDetailSummary } from "@/components/buy/aircraft-detail-summary";
+import { AircraftDocumentChecklist } from "@/components/buy/aircraft-document-checklist";
 import { AircraftEnquiryPanel } from "@/components/buy/aircraft-enquiry-panel";
-import { AircraftHighlights } from "@/components/buy/aircraft-highlights";
 import { AircraftImageGallery } from "@/components/buy/aircraft-image-gallery";
 import { AircraftLocationMap } from "@/components/buy/aircraft-location-map";
 import { AircraftMarketEstimateCard } from "@/components/buy/aircraft-market-estimate";
@@ -54,18 +53,10 @@ export default async function DashboardBuyDetailPage({ params }: PageProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {listing.highlights.length > 0 ? (
-            <AircraftHighlights highlights={listing.highlights} className="lg:col-span-1" />
-          ) : null}
-          <AircraftDescription
-            description={listing.description}
-            className={listing.highlights.length > 0 ? "lg:col-span-2" : "lg:col-span-3"}
-          />
-        </div>
+        <AircraftTechnicalDetails listing={listing} />
+        <AircraftDocumentChecklist documents={listing.documents} />
 
         <AircraftMarketEstimateCard estimate={listing.marketEstimate} listPrice={listing.price} />
-        <AircraftTechnicalDetails technicalSpec={listing.technicalSpec} />
         <AircraftLocationMap listing={listing} />
       </div>
     </div>

@@ -8,6 +8,7 @@ import type {
   RegistrationType,
   SortOption,
 } from "./aircraft-marketplace-types";
+import { resolveAirfieldMapTarget } from "./airfield-map";
 
 const CATEGORY_LABELS: Record<AircraftCategory, string> = {
   SINGLE_ENGINE_PISTON: "Single Engine Piston",
@@ -67,14 +68,25 @@ export function formatLocation(listing: Pick<AircraftMarketplaceListing, "locati
 export function getListingMapQuery(
   listing: Pick<AircraftMarketplaceListing, "location">,
 ): string {
+  return getListingMapTarget(listing).query;
+}
+
+export function getListingMapTarget(
+  listing: Pick<AircraftMarketplaceListing, "location">,
+): { query: string; zoom: number } {
   const airfield = listing.location.airfield?.trim();
   if (airfield) {
-    return [airfield, listing.location.province, listing.location.country]
-      .filter(Boolean)
-      .join(", ");
+    return resolveAirfieldMapTarget(
+      airfield,
+      listing.location.province,
+      listing.location.country,
+    );
   }
 
-  return formatLocation(listing);
+  return {
+    query: formatLocation(listing),
+    zoom: 10,
+  };
 }
 
 export function getGoogleMapsSearchUrl(query: string): string {
@@ -85,14 +97,14 @@ export function getGoogleMapsSearchUrl(query: string): string {
  * Embeddable map URL. Works without an API key via Google's query embed.
  * Set NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY for the official Maps Embed API in production.
  */
-export function getGoogleMapsEmbedUrl(query: string): string {
+export function getGoogleMapsEmbedUrl(query: string, zoom = 10): string {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY;
 
   if (apiKey) {
-    return `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${encodeURIComponent(query)}`;
+    return `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${encodeURIComponent(query)}&zoom=${zoom}`;
   }
 
-  return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&z=12&output=embed`;
+  return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&z=${zoom}&output=embed`;
 }
 
 export function formatCurrency(
@@ -104,6 +116,41 @@ export function formatCurrency(
     currency,
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+/** Day, month, and year for listing maintenance and expiry dates. */
+export function formatListingDate(value?: string | null): string | undefined {
+  if (!value) return undefined;
+
+  const trimmed = value.trim();
+  const yearMonthMatch = /^(\d{4})-(\d{2})$/.exec(trimmed);
+  if (yearMonthMatch) {
+    const date = new Date(Number(yearMonthMatch[1]), Number(yearMonthMatch[2]) - 1, 1);
+    return date.toLocaleDateString("en-ZA", { month: "long", year: "numeric" });
+  }
+
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed);
+  if (dateOnlyMatch) {
+    const date = new Date(
+      Number(dateOnlyMatch[1]),
+      Number(dateOnlyMatch[2]) - 1,
+      Number(dateOnlyMatch[3]),
+    );
+    return date.toLocaleDateString("en-ZA", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  }
+
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) return trimmed;
+
+  return parsed.toLocaleDateString("en-ZA", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 export function formatPriceDisplay(listing: AircraftMarketplaceListing): string {
@@ -130,9 +177,45 @@ export function formatPriceDisplay(listing: AircraftMarketplaceListing): string 
   return listing.priceLabel ?? "Contact for price";
 }
 
-export function formatHours(hours?: number): string {
-  if (hours == null) return "—";
+export function formatHours(hours?: number | null): string | undefined {
+  if (hours == null) return undefined;
   return `${hours.toLocaleString("en-ZA")} hrs`;
+}
+
+/** Engine or propeller make/model — intake often stores the full string in `model` only. */
+export function formatPowerplant(
+  unit?: { manufacturer?: string | null; model?: string | null } | null,
+): string | undefined {
+  if (!unit) return undefined;
+
+  const manufacturer = unit.manufacturer?.trim();
+  const model = unit.model?.trim();
+
+  if (manufacturer && model) {
+    if (model.toLowerCase().startsWith(manufacturer.toLowerCase())) {
+      return model;
+    }
+    return `${manufacturer} ${model}`;
+  }
+
+  return manufacturer || model || undefined;
+}
+
+export function formatPowerplantList(
+  units: Array<{ manufacturer?: string | null; model?: string | null; position?: string }>,
+): string | undefined {
+  const formatted = units
+    .map((unit) => {
+      const label = formatPowerplant(unit);
+      if (!label) return undefined;
+      if (units.length > 1 && unit.position) {
+        return `${unit.position}: ${label}`;
+      }
+      return label;
+    })
+    .filter((value): value is string => Boolean(value));
+
+  return formatted.length > 0 ? formatted.join(" · ") : undefined;
 }
 
 export function formatCompactHours(hours?: number, label = "TTAF"): string {

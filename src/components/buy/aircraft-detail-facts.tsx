@@ -1,6 +1,7 @@
 import type { AircraftMarketplaceDetail } from "@/lib/aviatonly/marketplace/aircraft-marketplace-types";
 import {
   formatLocation,
+  formatPowerplantList,
   getCategoryLabel,
 } from "@/lib/aviatonly/marketplace/aircraft-marketplace-utils";
 
@@ -9,8 +10,6 @@ interface AircraftDetailFactsProps {
 }
 
 export function AircraftDetailFacts({ listing }: AircraftDetailFactsProps) {
-  const engine = listing.technicalSpec.engines[0];
-
   const facts = [
     { label: "Aircraft category", value: getCategoryLabel(listing.category) },
     { label: "Registration type", value: listing.registrationType ?? "—" },
@@ -27,10 +26,7 @@ export function AircraftDetailFacts({ listing }: AircraftDetailFactsProps) {
     },
     {
       label: "Powerplant",
-      value:
-        engine?.manufacturer && engine?.model
-          ? `${engine.manufacturer} ${engine.model}`
-          : "—",
+      value: formatPowerplantList(listing.technicalSpec.engines) ?? "—",
     },
     {
       label: "Based at",

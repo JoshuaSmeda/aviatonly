@@ -2,7 +2,7 @@ import type { AircraftMarketplaceListing } from "@/lib/aviatonly/marketplace/air
 import {
   formatLocation,
   getGoogleMapsEmbedUrl,
-  getListingMapQuery,
+  getListingMapTarget,
 } from "@/lib/aviatonly/marketplace/aircraft-marketplace-utils";
 import { cn } from "@/lib/utils";
 
@@ -15,10 +15,10 @@ const detailCardClass =
   "overflow-hidden rounded-xl border border-border bg-card shadow-none";
 
 export function AircraftLocationMap({ listing, className }: AircraftLocationMapProps) {
-  const mapQuery = getListingMapQuery(listing);
-  if (!mapQuery) return null;
+  const mapTarget = getListingMapTarget(listing);
+  if (!mapTarget.query) return null;
 
-  const embedUrl = getGoogleMapsEmbedUrl(mapQuery);
+  const embedUrl = getGoogleMapsEmbedUrl(mapTarget.query, mapTarget.zoom);
   const locationLabel = formatLocation(listing);
 
   return (

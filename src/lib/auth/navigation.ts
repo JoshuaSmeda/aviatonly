@@ -1,5 +1,5 @@
 import type { ChildItem, MenuItem } from "@/app/(dashboard)/dashboard/layout/vertical/sidebar/sidebaritems"
-import { type AppRole, hasAnyRole } from "@/lib/auth/roles"
+import { type AppRole, ALL_AUTHENTICATED_ROLES, hasAnyRole } from "@/lib/auth/roles"
 
 export type NavMenuItem = ChildItem & {
   roles: AppRole[]
@@ -11,23 +11,13 @@ export type NavSection = {
   items: NavMenuItem[]
 }
 
-const ALL_AUTHENTICATED: AppRole[] = [
-  "BUYER",
-  "SELLER",
-  "BROKER",
-  "INSPECTOR",
-  "ADMIN",
-  "SUPER_ADMIN",
-]
-
-const SELLER_ACCESS: AppRole[] = ["SELLER", "BROKER", "ADMIN", "SUPER_ADMIN"]
 const ADMIN_ACCESS: AppRole[] = ["ADMIN", "SUPER_ADMIN"]
 
 const MARKETPLACE_NAV_ITEM: NavMenuItem = {
-  name: "Browse Aircraft",
+  name: "Browse aircraft",
   icon: "solar:magnifer-line-duotone",
   url: "/buy",
-  roles: ALL_AUTHENTICATED,
+  roles: ALL_AUTHENTICATED_ROLES,
 }
 
 /** Dashboard paths that do not require authentication. */
@@ -41,68 +31,93 @@ export function isPublicDashboardPath(pathname: string): boolean {
 
 export const AVIATONLY_NAV_SECTIONS: NavSection[] = [
   {
-    heading: "Seller",
-    roles: SELLER_ACCESS,
+    heading: "Overview",
+    roles: ALL_AUTHENTICATED_ROLES,
     items: [
       {
         name: "Dashboard",
         icon: "solar:widget-5-line-duotone",
         url: "/",
-        roles: SELLER_ACCESS,
+        roles: ALL_AUTHENTICATED_ROLES,
       },
+    ],
+  },
+  {
+    heading: "Selling",
+    roles: ALL_AUTHENTICATED_ROLES,
+    items: [
       {
         name: "My Aircraft",
         icon: "solar:clipboard-list-line-duotone",
         url: "/listings",
-        roles: SELLER_ACCESS,
+        roles: ALL_AUTHENTICATED_ROLES,
       },
       {
         name: "Sales pipeline",
         icon: "solar:users-group-rounded-line-duotone",
         url: "/seller/leads",
-        roles: SELLER_ACCESS,
+        roles: ALL_AUTHENTICATED_ROLES,
       },
       {
         name: "Offers",
         icon: "solar:hand-money-line-duotone",
         url: "/seller/offers",
-        roles: SELLER_ACCESS,
+        roles: ALL_AUTHENTICATED_ROLES,
       },
       {
         name: "Deals",
         icon: "solar:wallet-money-line-duotone",
         url: "/escrow-tracker",
-        roles: SELLER_ACCESS,
+        roles: ALL_AUTHENTICATED_ROLES,
       },
       {
         name: "Document Vault",
         icon: "solar:folder-with-files-line-duotone",
         url: "/seller/documents",
-        roles: SELLER_ACCESS,
+        roles: ALL_AUTHENTICATED_ROLES,
       },
       {
-        name: "Messages",
+        name: "Enquiries",
         icon: "solar:chat-round-line-line-duotone",
         url: "/seller/messages",
-        roles: SELLER_ACCESS,
+        roles: ALL_AUTHENTICATED_ROLES,
       },
+    ],
+  },
+  {
+    heading: "Buying",
+    roles: ALL_AUTHENTICATED_ROLES,
+    items: [
+      {
+        name: "My enquiries",
+        icon: "solar:chat-round-dots-line-duotone",
+        url: "/messages",
+        roles: ALL_AUTHENTICATED_ROLES,
+      },
+      MARKETPLACE_NAV_ITEM,
+    ],
+  },
+  {
+    heading: "Account",
+    roles: ALL_AUTHENTICATED_ROLES,
+    items: [
       {
         name: "Billing",
         icon: "solar:card-line-duotone",
         url: "/seller/billing",
-        roles: SELLER_ACCESS,
+        roles: ALL_AUTHENTICATED_ROLES,
       },
       {
         name: "Settings",
         icon: "solar:settings-line-duotone",
         url: "/settings",
-        roles: SELLER_ACCESS,
+        roles: ALL_AUTHENTICATED_ROLES,
       },
       {
         name: "Organizations",
         icon: "solar:buildings-2-line-duotone",
         url: "/settings/organizations",
-        roles: SELLER_ACCESS,
+        roles: ALL_AUTHENTICATED_ROLES,
       },
     ],
   },
@@ -196,23 +211,6 @@ export const AVIATONLY_NAV_SECTIONS: NavSection[] = [
       },
     ],
   },
-  {
-    heading: "Buyer",
-    roles: ALL_AUTHENTICATED,
-    items: [
-      {
-        name: "Messages",
-        icon: "solar:chat-round-dots-line-duotone",
-        url: "/messages",
-        roles: ALL_AUTHENTICATED,
-      },
-    ],
-  },
-  {
-    heading: "Marketplace",
-    roles: ALL_AUTHENTICATED,
-    items: [MARKETPLACE_NAV_ITEM],
-  },
 ]
 
 export function buildPublicNavigation(): MenuItem[] {
@@ -304,8 +302,8 @@ export function canAccessDashboardPath(
     normalized === "/settings" ||
     normalized.startsWith("/settings/")
   ) {
-    return hasAnyRole(userRoles, ALL_AUTHENTICATED)
+    return hasAnyRole(userRoles, ALL_AUTHENTICATED_ROLES)
   }
 
-  return hasAnyRole(userRoles, ALL_AUTHENTICATED)
+  return hasAnyRole(userRoles, ALL_AUTHENTICATED_ROLES)
 }

@@ -2,7 +2,6 @@ import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import DashboardShell from "./dashboard-shell"
 import { getSession } from "@/lib/auth/session"
-import { hasAnyRole, SELLER_ROLES, ADMIN_ROLES } from "@/lib/auth/roles"
 import {
   buildNavigationForRoles,
   buildPublicNavigation,
@@ -27,9 +26,7 @@ export default async function Layout({
   let buyerUnreadMessages: number | undefined
 
   if (session) {
-    if (hasAnyRole(session.user.roles, [...SELLER_ROLES, "BROKER", ...ADMIN_ROLES])) {
-      sellerUnreadMessages = await countUnreadLeadThreadsForUser(session.user.id, "seller")
-    }
+    sellerUnreadMessages = await countUnreadLeadThreadsForUser(session.user.id, "seller")
     buyerUnreadMessages = await countUnreadLeadThreadsForUser(session.user.id, "buyer")
   }
 

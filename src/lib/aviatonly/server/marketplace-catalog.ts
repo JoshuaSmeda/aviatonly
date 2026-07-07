@@ -13,7 +13,6 @@ import type {
 } from "@/lib/aviatonly/marketplace/aircraft-marketplace-types";
 import { buildListingSlug } from "@/lib/aviatonly/marketplace/aircraft-marketplace-utils";
 import { buildDocumentChecklistFromRecords } from "@/lib/aviatonly/marketplace/document-checklist";
-import { MOCK_AIRCRAFT_LISTINGS } from "@/lib/aviatonly/marketplace/mock-aircraft-listings";
 import { prisma } from "@/lib/prisma";
 
 const marketplaceCatalogInclude = {
@@ -326,25 +325,11 @@ export async function queryMarketplaceListingDetail(
 }
 
 export async function getBuyMarketplaceListings(): Promise<AircraftMarketplaceListing[]> {
-  const live = await queryLiveMarketplaceListings();
-  const liveRegistrations = new Set(live.map((listing) => listing.registration.toUpperCase()));
-  const mock = MOCK_AIRCRAFT_LISTINGS.filter(
-    (listing) => !liveRegistrations.has(listing.registration.toUpperCase()),
-  );
-
-  return [...live, ...mock];
+  return queryLiveMarketplaceListings();
 }
 
 export async function getBuyMarketplaceListingDetail(
   slug: string,
 ): Promise<AircraftMarketplaceDetail | null> {
-  const live = await queryMarketplaceListingDetail(slug);
-  if (live) {
-    return live;
-  }
-
-  const { getMockListingBySlug } = await import(
-    "@/lib/aviatonly/marketplace/mock-aircraft-listings"
-  );
-  return getMockListingBySlug(slug) ?? null;
+  return queryMarketplaceListingDetail(slug);
 }

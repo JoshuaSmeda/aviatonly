@@ -542,7 +542,7 @@ function ListingInspectionSellerPanel({ listing }: { listing: MockAircraftListin
     return <InspectionIdleState title="Inspection not scheduled yet" />;
   }
 
-  return <InspectionIdleState title="Inspection not required yet" />;
+  return <InspectionIdleState title="Inspection not required" />;
 }
 
 const ListingInspectionPanel = ({

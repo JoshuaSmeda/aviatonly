@@ -3,10 +3,8 @@ import {
   type PipelineBoard,
   type PipelineColumnGroup,
 } from "@/lib/aviatonly/domain/lead-pipeline-logic";
-import { buildLeadPipelineBoardFromMock } from "@/lib/aviatonly/mock";
 import type { SellerListingScope } from "./seller-scope";
 import {
-  countLeadsInDatabase,
   querySellerLeads,
   type LeadPipelineCard,
   type QuerySellerLeadsOptions,
@@ -45,37 +43,11 @@ export async function queryLeadPipelineForSeller(
   return buildLeadPipelineBoard(leads);
 }
 
-/** Reads pipeline data from the database when seeded; falls back to mock data in dev. */
+/** Reads pipeline data from the database. */
 export async function getLeadPipelineForSeller(input: {
   scope: SellerListingScope;
   options?: QueryLeadPipelineOptions;
 }): Promise<LeadPipelineBoard> {
   const { scope, options = {} } = input;
-  const {
-    listingId,
-    messagingViewerId,
-    messagesBasePath = "/dashboard/seller/messages",
-    detailBasePath = "/dashboard/seller/leads",
-  } = options;
-
-  try {
-    const count = await countLeadsInDatabase();
-    if (count === 0) {
-      return buildLeadPipelineBoardFromMock({
-        sellerId: scope.mockSellerId,
-        listingId,
-        messagesBasePath,
-        detailBasePath,
-      });
-    }
-
-    return queryLeadPipelineForSeller(scope, options);
-  } catch {
-    return buildLeadPipelineBoardFromMock({
-      sellerId: scope.mockSellerId,
-      listingId,
-      messagesBasePath,
-      detailBasePath,
-    });
-  }
+  return queryLeadPipelineForSeller(scope, options);
 }

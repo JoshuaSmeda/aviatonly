@@ -11,7 +11,7 @@ import {
 } from "@/lib/aviatonly/domain";
 import { formatTimeAgo, formatLeadFollowUpAt } from "@/lib/aviatonly/mock/format";
 import { prisma } from "@/lib/prisma";
-import { aircraftTitle, countLeadsInDatabase } from "./leads";
+import { aircraftTitle } from "./leads";
 import type { LeadWorkspaceView } from "./lead-workspace-types";
 
 const workspaceInclude = {
@@ -150,117 +150,9 @@ export async function queryLeadWorkspace(
   };
 }
 
-async function buildMockLeadWorkspace(
-  leadId: string,
-  detailBasePath: string,
-): Promise<LeadWorkspaceView | null> {
-  const { getMockLeadById, MOCK_LEADS } = await import("@/lib/aviatonly/mock/leads");
-  const { MOCK_LISTINGS, listingLocation: mockListingLocation, listingTitle } =
-    await import("@/lib/aviatonly/mock/listings");
-  const { getMockUserById } = await import("@/lib/aviatonly/mock/users");
-  const { LeadPriority, LeadSource } = await import("@/lib/aviatonly/domain");
-
-  const lead = getMockLeadById(leadId);
-  if (!lead) return null;
-
-  const listing = MOCK_LISTINGS.find((l) => l.id === lead.listingId);
-  const buyer = getMockUserById(lead.buyerId);
-  const seller = getMockUserById(lead.sellerId);
-  if (!listing || !buyer || !seller) return null;
-
-  const activities: LeadWorkspaceView["activities"] = [
-    {
-      id: `${lead.id}-created`,
-      type: LeadActivityType.LEAD_CREATED,
-      label: LEAD_ACTIVITY_TYPE_LABELS[LeadActivityType.LEAD_CREATED],
-      message: lead.message,
-      actorName: buyer.name ?? buyer.email,
-      createdAt: lead.createdAt,
-      timeAgo: formatTimeAgo(lead.createdAt),
-    },
-  ];
-
-  if (lead.status !== LeadStatus.NEW) {
-    activities.unshift({
-      id: `${lead.id}-status`,
-      type: LeadActivityType.STATUS_CHANGED,
-      label: LEAD_ACTIVITY_TYPE_LABELS[LeadActivityType.STATUS_CHANGED],
-      message: `Status updated to ${lead.status}.`,
-      actorName: seller.name ?? seller.email,
-      createdAt: lead.updatedAt,
-      timeAgo: formatTimeAgo(lead.updatedAt),
-    });
-  }
-
-  const priorEnquiries = MOCK_LEADS.filter(
-    (item) => item.buyerId === lead.buyerId && item.id !== lead.id,
-  )
-    .slice(0, 5)
-    .map((item) => {
-      const priorListing = MOCK_LISTINGS.find((l) => l.id === item.listingId);
-      return {
-        id: item.id,
-        registration: priorListing?.registration ?? "",
-        aircraftTitle: priorListing ? listingTitle(priorListing) : "",
-        status: item.status,
-        createdAt: item.createdAt,
-        detailHref: `${detailBasePath}/${item.id}`,
-      };
-    });
-
-  return {
-    id: lead.id,
-    listingId: lead.listingId,
-    status: lead.status,
-    type: lead.type,
-    priority: LeadPriority.NORMAL,
-    source: LeadSource.PUBLIC_LISTING,
-    message: lead.message,
-    buyerVerification: lead.verificationStatus as BuyerVerificationStatus,
-    internalNotes: null,
-    nextFollowUpAt: null,
-    lastContactedAt:
-      lead.status === LeadStatus.CONTACTED ? lead.updatedAt : null,
-    closedReason: lead.status === LeadStatus.CLOSED ? "Closed in demo data." : null,
-    createdAt: lead.createdAt,
-    updatedAt: lead.updatedAt,
-    buyer: {
-      id: buyer.id,
-      name: buyer.name ?? "Buyer",
-      email: buyer.email,
-    },
-    seller: {
-      id: seller.id,
-      name: seller.name ?? "Seller",
-      email: seller.email,
-    },
-    assignee: null,
-    listing: {
-      id: listing.id,
-      registration: listing.registration,
-      title: listingTitle(listing),
-      status: listing.status,
-      location: mockListingLocation(listing),
-      href: `/dashboard/listings/${listing.id}`,
-    },
-    priorEnquiries,
-    activities,
-  };
-}
-
 export async function getLeadWorkspace(
   leadId: string,
   detailBasePath: string,
 ): Promise<LeadWorkspaceView | null> {
-  try {
-    const count = await countLeadsInDatabase();
-    if (count > 0) {
-      const workspace = await queryLeadWorkspace(leadId, detailBasePath);
-      if (workspace) return workspace;
-    }
-  } catch {
-    // fall through to mock
-  }
-
-  return buildMockLeadWorkspace(leadId, detailBasePath);
+  return queryLeadWorkspace(leadId, detailBasePath);
 }

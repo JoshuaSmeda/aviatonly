@@ -284,7 +284,7 @@ model User {
   email         String    @unique
   emailVerified Boolean   @default(false)
   image         String?
-  roles         String[]  @default(["SELLER"])
+  roles         String[]  @default(["BUYER", "SELLER"])
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

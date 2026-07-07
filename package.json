@@ -11,6 +11,7 @@
     "db:push": "dotenv -e .env.local -- prisma db push",
     "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
     "db:seed": "dotenv -e .env.local -- npx tsx prisma/seed.ts",
+    "db:reset": "dotenv -e .env.local -- sh -c \"prisma db push --force-reset --accept-data-loss && npx tsx prisma/seed.ts\"",
     "db:studio": "dotenv -e .env.local -- prisma studio",
     "test": "npx tsx --test src/lib/aviatonly/domain/**/*.test.ts",
     "test:domain": "npx tsx --test src/lib/aviatonly/domain/auction-logic.test.ts"

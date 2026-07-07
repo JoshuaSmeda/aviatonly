@@ -13,11 +13,11 @@ export enum UserRole {
 export const USER_ROLE_META: Record<UserRole, { label: string; description: string }> = {
   [UserRole.BUYER]: {
     label: "Buyer",
-    description: "Browse listings, make offers, and progress purchases.",
+    description: "Browse listings, enquire, make offers, and track purchases.",
   },
   [UserRole.SELLER]: {
     label: "Seller",
-    description: "Submit aircraft, manage listings, and respond to buyer activity.",
+    description: "Submit aircraft, manage listings, and respond to enquiries.",
   },
   [UserRole.BROKER]: {
     label: "Broker",

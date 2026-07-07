@@ -1,9 +1,6 @@
-import {
-  buildLeadTableRows,
-  type BuildLeadTableRowsOptions,
-} from "@/lib/aviatonly/mock";
+import type { BuildLeadTableRowsOptions } from "@/lib/aviatonly/mock";
 import type { SellerListingScope } from "./seller-scope";
-import { countLeadsInDatabase, queryLeadTableRows } from "./leads";
+import { queryLeadTableRows } from "./leads";
 import type { LeadTableRow } from "@/lib/aviatonly/mock/types";
 
 export interface GetLeadTableRowsInput {
@@ -14,7 +11,7 @@ export interface GetLeadTableRowsInput {
   scope?: SellerListingScope;
 }
 
-/** Reads leads from the database when seeded; falls back to mock data in dev. */
+/** Reads leads from the database. */
 export async function getLeadTableRows(
   input: GetLeadTableRowsInput = {},
 ): Promise<LeadTableRow[]> {
@@ -23,19 +20,5 @@ export async function getLeadTableRows(
     ? { ...options, sellerId: scope.dbSellerId }
     : options;
 
-  try {
-    const count = await countLeadsInDatabase();
-    if (count === 0) {
-      const mockOptions = scope
-        ? { ...options, sellerId: scope.mockSellerId }
-        : options;
-      return buildLeadTableRows(mockOptions);
-    }
-    return queryLeadTableRows(sellerScoped);
-  } catch {
-    const mockOptions = scope
-      ? { ...options, sellerId: scope.mockSellerId }
-      : options;
-    return buildLeadTableRows(mockOptions);
-  }
+  return queryLeadTableRows(sellerScoped);
 }

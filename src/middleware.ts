@@ -28,7 +28,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isAuthRoute && sessionCookie) {
-    return NextResponse.redirect(new URL("/dashboard/buy", request.url))
+    return NextResponse.redirect(new URL("/dashboard", request.url))
   }
 
   if (isDashboardRoute || isAuthRoute) {

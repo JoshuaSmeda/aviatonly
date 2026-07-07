@@ -45,7 +45,7 @@ export const auth = betterAuth({
       roles: {
         type: "string[]",
         required: true,
-        defaultValue: ["BUYER"],
+        defaultValue: ["BUYER", "SELLER"],
         input: true,
       },
     },
@@ -53,16 +53,12 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async (user) => {
-          const requested = Array.isArray(user.roles) ? user.roles : []
-          const signupRole = requested.includes("SELLER") ? "SELLER" : "BUYER"
-          return {
-            data: {
-              ...user,
-              roles: [signupRole],
-            },
-          }
-        },
+        before: async (user) => ({
+          data: {
+            ...user,
+            roles: ["BUYER", "SELLER"],
+          },
+        }),
       },
     },
     session: {

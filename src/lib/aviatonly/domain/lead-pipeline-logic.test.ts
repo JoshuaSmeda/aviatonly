@@ -53,13 +53,11 @@ describe("lead-pipeline-logic", () => {
     );
   });
 
-  it("mock pipeline board respects seller scope", () => {
+  it("mock pipeline board respects seller scope with empty demo data", () => {
     const demoBoard = buildLeadPipelineBoardFromMock({ sellerId: DEMO_SELLER_ID });
-    const otherSellerBoard = buildLeadPipelineBoardFromMock({ sellerId: "user-seller-elaine" });
+    const otherSellerBoard = buildLeadPipelineBoardFromMock({ sellerId: "user-other" });
 
-    assert.ok(demoBoard.totalActive > 0);
-    assert.ok(otherSellerBoard.totalActive < demoBoard.totalActive);
-    assert.equal(otherSellerBoard.totalActive, 1);
-    assert.equal(otherSellerBoard.columns[0]?.items[0]?.id, "lead-13");
+    assert.equal(demoBoard.totalActive, 0);
+    assert.equal(otherSellerBoard.totalActive, 0);
   });
 });

@@ -73,14 +73,14 @@ function ValuationReadyState({ listing }: { listing: MockAircraftListing }) {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>AVIATONLY indicative estimate</CardTitle>
+            <CardTitle>Our indicative estimate</CardTitle>
             <CardDescription>
               Market benchmark from your reviewed aircraft data — indicative only, not a formal
               appraisal.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold tabular-nums">
+            <p className="text-3xl font-extrabold tabular-nums">
               {formatZar(listing.platformIndicativeValue!)}
             </p>
           </CardContent>
@@ -92,11 +92,11 @@ function ValuationReadyState({ listing }: { listing: MockAircraftListing }) {
               <CardTitle>Your listing price</CardTitle>
               <Badge variant="secondary">{saleLabel}</Badge>
             </div>
-            <CardDescription>As set during intake.</CardDescription>
+            <CardDescription>Set during listing intake.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             {sellerPrice ? (
-              <p className="text-lg font-medium tabular-nums">{sellerPrice}</p>
+              <p className="text-lg font-bold tabular-nums">{sellerPrice}</p>
             ) : (
               <p className="text-sm text-muted-foreground">
                 No asking price or auction reserve on file yet.
@@ -116,14 +116,6 @@ function ValuationReadyState({ listing }: { listing: MockAircraftListing }) {
           </CardContent>
         </Card>
       </div>
-
-      <Alert>
-        <AlertTitle>Next step</AlertTitle>
-        <AlertDescription>
-          Compare the indicative estimate with your listing price. AVIATONLY will move toward
-          inspection and publication approval when pricing is aligned.
-        </AlertDescription>
-      </Alert>
     </div>
   );
 }

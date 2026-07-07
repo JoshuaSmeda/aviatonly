@@ -1,5 +1,4 @@
-import { SELLER_ROLES } from "@/lib/auth/roles";
-import { requireAnyRole } from "@/lib/auth/session";
+import { requireAuth } from "@/lib/auth/session";
 import { getSellerDashboardData } from "@/lib/aviatonly/server/seller-dashboard";
 import SummaryStats from "./summary-stats";
 import ActionRequired from "./action-required";
@@ -8,8 +7,8 @@ import BuyerActivity from "./buyer-activity";
 import DealProgress from "./deal-progress";
 import RecentActivity from "./recent-activity";
 
-const SellerDashboardHome = async () => {
-  const session = await requireAnyRole(SELLER_ROLES);
+const DashboardHome = async () => {
+  const session = await requireAuth();
   const data = await getSellerDashboardData(session.user.id);
 
   return (
@@ -17,7 +16,7 @@ const SellerDashboardHome = async () => {
       <div className="flex flex-col gap-1">
         <h4 className="text-2xl font-semibold">Welcome back</h4>
         <p className="text-sm text-muted-foreground">
-          Here&apos;s what&apos;s happening with your aircraft and what AVIATONLY needs from you.
+          Your aircraft, enquiries, offers, and deals in one place.
         </p>
       </div>
 
@@ -33,4 +32,4 @@ const SellerDashboardHome = async () => {
   );
 };
 
-export default SellerDashboardHome;
+export default DashboardHome;

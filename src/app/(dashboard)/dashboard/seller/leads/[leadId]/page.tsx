@@ -62,7 +62,7 @@ const SellerLeadDetailPage = async ({ params }: SellerLeadDetailPageProps) => {
     <>
       <ListingWorkspacePageHeader
         backHref="/dashboard/seller/leads"
-        backLabel="Sales pipeline"
+        backLabel="My Leads"
         eyebrow="Lead workspace"
         title={`${lead.buyer.name} · ${lead.listing.registration}`}
       />

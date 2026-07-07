@@ -53,7 +53,7 @@ export const AVIATONLY_NAV_SECTIONS: NavSection[] = [
         roles: ALL_AUTHENTICATED_ROLES,
       },
       {
-        name: "Sales pipeline",
+        name: "My Leads",
         icon: "solar:users-group-rounded-line-duotone",
         url: "/seller/leads",
         roles: ALL_AUTHENTICATED_ROLES,

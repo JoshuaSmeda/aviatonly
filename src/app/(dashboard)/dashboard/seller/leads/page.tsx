@@ -8,7 +8,7 @@ import { resolveSellerListingScope } from "@/lib/aviatonly/server/seller-scope";
 import { requireAuth } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
-  title: "Sales pipeline | AVIATONLY",
+  title: "My Leads | AVIATONLY",
 };
 
 interface SellerLeadsPageProps {
@@ -37,7 +37,7 @@ const SellerLeadsPage = async ({ searchParams }: SellerLeadsPageProps) => {
 
   return (
     <>
-      <BreadcrumbComp title="Sales pipeline" />
+      <BreadcrumbComp title="My Leads" />
       <TitleCard>
         <div className="flex flex-col gap-4">
           {board.totalActive > 0 ? (

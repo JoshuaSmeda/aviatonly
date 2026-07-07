@@ -1,3 +1,8 @@
+import type { AuctionRegistrationStatus } from "@/lib/aviatonly/domain/auction-enums";
+import type { AuctionCloseOutcome, AuctionStatus } from "@/lib/aviatonly/domain/auction-status";
+import type { BuyerVerificationStatus } from "@/lib/aviatonly/domain/lead-enums";
+import type { PublicAuctionState } from "@/lib/aviatonly/domain/auction-types";
+
 export type AircraftSaleType =
   | "FIXED_PRICE"
   | "AUCTION"
@@ -56,6 +61,41 @@ export type MarketplaceAuctionSummary = {
   viewerIsRegistered?: boolean;
   viewerCanBid?: boolean;
 };
+
+export type AuctionViewerContext = {
+  isAuthenticated: boolean;
+  registrationStatus: AuctionRegistrationStatus | null;
+  isRegistered: boolean;
+  canRegister: boolean;
+  canBid: boolean;
+  isHighBidder: boolean;
+  registerBlockedReason?: string;
+  bidBlockedReason?: string;
+  verificationStatus?: BuyerVerificationStatus;
+  paddleNumber?: number | null;
+};
+
+/** Full auction projection for the buy detail panel (server-sourced). */
+export type MarketplaceAuctionDetail = {
+  state: PublicAuctionState;
+  viewer: AuctionViewerContext;
+  bidHistory: PublicAuctionBidHistoryEntry[];
+};
+
+export type PublicAuctionBidHistoryEntry = {
+  id: string;
+  sequence: number;
+  amount: number;
+  bidderLabel: string;
+  createdAt: string;
+  timeAgo: string;
+  status: string;
+  statusLabel: string;
+  isViewerBid: boolean;
+  isHighBid: boolean;
+};
+
+export type { AuctionCloseOutcome, AuctionStatus, PublicAuctionState };
 
 export type AircraftMarketplaceListing = {
   id: string;
@@ -195,6 +235,8 @@ export type AircraftMarketplaceDetail = AircraftMarketplaceListing & {
   verification: AircraftVerificationSummary;
   marketEstimate: AircraftMarketEstimate;
   contact: AircraftContactInfo;
+  /** Present on auction detail pages — includes viewer registration/bid eligibility. */
+  auctionDetail?: MarketplaceAuctionDetail;
 };
 
 export type SortOption =

@@ -163,7 +163,7 @@ export function getAuctionCardCta(
     return {
       kind: "PLACE_BID",
       label: CTA_LABELS.PLACE_BID,
-      href: `${detailHref}?action=bid`,
+      href: detailHref,
     };
   }
 
@@ -171,7 +171,7 @@ export function getAuctionCardCta(
     return {
       kind: "REGISTER_TO_BID",
       label: CTA_LABELS.REGISTER_TO_BID,
-      href: `${detailHref}?action=register`,
+      href: detailHref,
     };
   }
 

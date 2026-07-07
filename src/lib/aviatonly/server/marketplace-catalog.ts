@@ -12,7 +12,14 @@ import type {
   RegistrationType,
 } from "@/lib/aviatonly/marketplace/aircraft-marketplace-types";
 import { buildListingSlug } from "@/lib/aviatonly/marketplace/aircraft-marketplace-utils";
+import {
+  mapAuctionRecordToCardSummary,
+  mapAuctionRecordToPublicState,
+} from "@/lib/aviatonly/marketplace/auction-marketplace-mapper";
 import { buildDocumentChecklistFromRecords } from "@/lib/aviatonly/marketplace/document-checklist";
+import { buildAuctionViewerContext } from "@/lib/aviatonly/server/auction/viewer-context";
+import { getPublicAuctionBidHistoryRecord } from "@/lib/aviatonly/server/auction/public-bid-history";
+import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 const marketplaceCatalogInclude = {
@@ -116,32 +123,9 @@ function mapListingImages(
 
 function mapAuctionSummary(
   auction: MarketplaceCatalogRecord["auctions"][number],
+  sellerId: string,
 ): MarketplaceAuctionSummary {
-  let phase: MarketplaceAuctionSummary["phase"] = "SCHEDULED";
-  if (
-    auction.status === AuctionStatus.CLOSED ||
-    auction.status === AuctionStatus.CANCELLED ||
-    auction.closedAt
-  ) {
-    phase = "ENDED";
-  } else if (
-    auction.status === AuctionStatus.LIVE ||
-    auction.status === AuctionStatus.CLOSING
-  ) {
-    phase = "LIVE";
-  }
-
-  return {
-    auctionId: auction.id,
-    phase,
-    openingBid: auction.startingBid,
-    currentBid: auction.currentHighBidAmount,
-    bidCount: auction.bidCount,
-    startsAt: auction.startsAt.toISOString(),
-    effectiveEndsAt: auction.effectiveEndsAt.toISOString(),
-    showReserveStatus: auction.showReserveStatus,
-    reserveMet: auction.showReserveStatus ? auction.reserveMet : null,
-  };
+  return mapAuctionRecordToCardSummary(auction, sellerId);
 }
 
 function buildHighlights(record: MarketplaceCatalogRecord): string[] {
@@ -283,7 +267,7 @@ function mapLiveListingRecord(record: MarketplaceCatalogRecord): AircraftMarketp
   };
 
   if (saleType === "AUCTION" && record.auctions[0]) {
-    listing.auction = mapAuctionSummary(record.auctions[0]);
+    listing.auction = mapAuctionSummary(record.auctions[0], record.sellerId);
   }
 
   return listing;
@@ -333,5 +317,49 @@ export async function getBuyMarketplaceListings(): Promise<AircraftMarketplaceLi
 export async function getBuyMarketplaceListingDetail(
   slug: string,
 ): Promise<AircraftMarketplaceDetail | null> {
-  return queryMarketplaceListingDetail(slug);
+  const listing = await queryMarketplaceListingDetail(slug);
+  if (!listing || listing.saleType !== "AUCTION") {
+    return listing;
+  }
+
+  const auction = await prisma.auction.findFirst({
+    where: {
+      listingId: listing.id,
+      status: {
+        in: [
+          AuctionStatus.SCHEDULED,
+          AuctionStatus.LIVE,
+          AuctionStatus.CLOSING,
+          AuctionStatus.CLOSED,
+        ],
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    include: { listing: { select: { sellerId: true } } },
+  });
+
+  if (!auction) {
+    return listing;
+  }
+
+  const session = await getSession();
+  const viewer = await buildAuctionViewerContext(
+    auction.id,
+    session?.user.id ?? null,
+  );
+  const state = mapAuctionRecordToPublicState(auction, auction.listing.sellerId);
+  const bidHistory = await getPublicAuctionBidHistoryRecord(
+    auction.id,
+    session?.user.id ?? null,
+  );
+
+  listing.auction = mapAuctionRecordToCardSummary(auction, auction.listing.sellerId, {
+    viewer,
+  });
+  listing.auctionDetail = {
+    state,
+    viewer,
+    bidHistory,
+  };
+  return listing;
 }

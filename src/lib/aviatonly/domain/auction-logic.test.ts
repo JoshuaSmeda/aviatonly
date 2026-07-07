@@ -56,6 +56,7 @@ function baseAuction(overrides: Partial<AuctionDomainRecord> = {}): AuctionDomai
     noReserveConfirmed: false,
     currency: "ZAR",
     currentHighBidAmount: 1_100_000,
+    currentHighBidderId: "other-buyer",
     bidCount: 2,
     reserveMet: false,
     showReserveStatus: false,
@@ -99,8 +100,8 @@ function bid(overrides: Partial<BidForOutcome> & Pick<BidForOutcome, "id" | "amo
 }
 
 describe("calculateMinimumNextBid", () => {
-  it("returns starting bid when no high bid exists", () => {
-    assert.equal(calculateMinimumNextBid(1_000_000, 25_000, null), 1_000_000);
+  it("returns opening bid plus increment when no high bid exists", () => {
+    assert.equal(calculateMinimumNextBid(1_000_000, 25_000, null), 1_025_000);
   });
 
   it("returns high bid plus increment", () => {
@@ -284,6 +285,18 @@ describe("canPlaceBid", () => {
     assert.equal(result.allowed, false);
     assert.equal(result.code, BidRejectedReason.COMPLIANCE_HOLD);
   });
+
+  it("rejects the current high bidder", () => {
+    const result = canPlaceBid(
+      baseAuction({ currentHighBidderId: "buyer-1" }),
+      buyer(),
+      approvedRegistration(),
+      1_125_000,
+      clock(),
+    );
+    assert.equal(result.allowed, false);
+    assert.equal(result.reason, "You are already the highest bidder.");
+  });
 });
 
 describe("anti-sniping", () => {
@@ -418,14 +431,13 @@ describe("canRegisterForAuction", () => {
     assert.equal(result.code, "ADMIN_CANNOT_BID");
   });
 
-  it("denies unverified buyers", () => {
+  it("allows unverified buyers to register", () => {
     const result = canRegisterForAuction(
       baseAuction(),
       buyer({ verificationStatus: BuyerVerificationStatus.UNVERIFIED }),
       clock(),
     );
-    assert.equal(result.allowed, false);
-    assert.equal(result.code, "VERIFICATION_REQUIRED");
+    assert.equal(result.allowed, true);
   });
 });
 

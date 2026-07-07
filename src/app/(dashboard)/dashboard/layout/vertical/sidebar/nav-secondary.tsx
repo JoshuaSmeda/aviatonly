@@ -3,6 +3,7 @@ import * as React from "react"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { SignOutButton } from "@/components/dashboard/auth/sign-out-button"
 
 import type { AuthUser } from "@/lib/auth/session"
 
@@ -56,9 +57,15 @@ export function NavSecondary({ user }: NavSecondaryProps) {
                                 Signed in as {user.name ?? user.email}
                             </p>
                         </div>
-                        <Link href="/dashboard/settings" className="w-fit px-4 py-2 shadow-none cursor-pointer rounded-lg bg-gray-950 dark:bg-white hover:bg-gray-950/80 hover:dark:bg-white/80 font-medium hover:bg text-white dark:text-gray-950 h-9">
-                            Account settings
-                        </Link>
+                        <div className="flex w-full flex-col gap-2">
+                            <Button
+                                render={<Link href="/dashboard/settings" />}
+                                className="w-full"
+                            >
+                                Account settings
+                            </Button>
+                            <SignOutButton variant="outline" fullWidth />
+                        </div>
                     </div>
                 </CardContent>
             </Card>

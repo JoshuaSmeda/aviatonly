@@ -23,6 +23,7 @@ export type AuctionDomainRecord = {
   noReserveConfirmed: boolean;
   currency: string;
   currentHighBidAmount: number | null;
+  currentHighBidderId: string | null;
   bidCount: number;
   reserveMet: boolean;
   showReserveStatus: boolean;

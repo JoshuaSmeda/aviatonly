@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { AircraftAuctionBidHistory } from "@/components/buy/aircraft-auction-bid-history";
+import { AircraftAuctionPanel } from "@/components/buy/aircraft-auction-panel";
 import { AircraftDetailActions } from "@/components/buy/aircraft-detail-actions";
 import { AircraftDetailBreadcrumb } from "@/components/buy/aircraft-detail-breadcrumb";
 import { AircraftDetailSummary } from "@/components/buy/aircraft-detail-summary";
@@ -10,6 +12,7 @@ import { AircraftLocationMap } from "@/components/buy/aircraft-location-map";
 import { AircraftMarketEstimateCard } from "@/components/buy/aircraft-market-estimate";
 import { AircraftTechnicalDetails } from "@/components/buy/aircraft-technical-details";
 import { formatAircraftTitle } from "@/lib/aviatonly/marketplace/aircraft-marketplace-utils";
+import { mapAuctionStatusToCardPhase } from "@/lib/aviatonly/marketplace/auction-card-utils";
 import { getBuyMarketplaceListingDetail } from "@/lib/aviatonly/server/marketplace-catalog";
 
 interface PageProps {
@@ -49,9 +52,29 @@ export default async function DashboardBuyDetailPage({ params }: PageProps) {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]">
           <AircraftDetailSummary listing={listing} />
           <div className="lg:sticky lg:top-4 lg:self-start">
-            <AircraftEnquiryPanel listing={listing} />
+            {listing.auctionDetail ? (
+              <AircraftAuctionPanel listing={listing} auctionDetail={listing.auctionDetail} />
+            ) : (
+              <AircraftEnquiryPanel listing={listing} />
+            )}
           </div>
         </div>
+
+        {listing.auctionDetail ? (
+          <AircraftAuctionBidHistory
+            auctionId={listing.auctionDetail.state.auctionId}
+            currency={listing.currency}
+            showBidHistory={listing.auctionDetail.state.showBidHistory}
+            initialEntries={listing.auctionDetail.bidHistory}
+            isLive={
+              mapAuctionStatusToCardPhase(
+                listing.auctionDetail.state.status,
+                listing.auctionDetail.state.biddingOpen,
+                listing.auctionDetail.state.closedAt,
+              ) === "LIVE"
+            }
+          />
+        ) : null}
 
         <AircraftTechnicalDetails listing={listing} />
         <AircraftDocumentChecklist documents={listing.documents} />

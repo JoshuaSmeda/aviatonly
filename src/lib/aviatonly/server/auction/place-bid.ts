@@ -76,6 +76,12 @@ async function placeBidOnce(
       const domain = mapAuctionToDomain({
         ...row,
         listing: { sellerId: row.sellerId },
+        currentHighBid: row.currentHighBidId
+          ? await tx.bid.findUnique({
+              where: { id: row.currentHighBidId },
+              select: { bidderId: true },
+            })
+          : null,
       });
 
       const decision = canPlaceBid(

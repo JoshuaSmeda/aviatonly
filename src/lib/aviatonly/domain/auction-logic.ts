@@ -1,4 +1,3 @@
-import { BuyerVerificationStatus } from "./lead-enums";
 import { UserRole } from "./roles";
 import {
   AuctionRegistrationStatus,
@@ -119,7 +118,7 @@ export function calculateMinimumNextBid(
   }
 
   if (currentHighBidAmount === null) {
-    return startingBid;
+    return startingBid + bidIncrement;
   }
 
   return currentHighBidAmount + bidIncrement;
@@ -289,13 +288,6 @@ export function canRegisterForAuction(
     return deny("Buyer is blocked from auction participation.", "COMPLIANCE_HOLD");
   }
 
-  if (bidder.verificationStatus === BuyerVerificationStatus.UNVERIFIED) {
-    return deny(
-      "Complete buyer verification before registering to bid.",
-      "VERIFICATION_REQUIRED",
-    );
-  }
-
   return allow();
 }
 
@@ -344,6 +336,10 @@ export function canPlaceBid(
 
   if (registration.status !== AuctionRegistrationStatus.APPROVED) {
     return deny("Auction registration is not approved.", BidRejectedReason.NOT_REGISTERED);
+  }
+
+  if (auction.currentHighBidderId && auction.currentHighBidderId === bidder.userId) {
+    return deny("You are already the highest bidder.", BidRejectedReason.OTHER);
   }
 
   const minimumNextBid = calculateMinimumNextBid(

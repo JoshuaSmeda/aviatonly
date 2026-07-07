@@ -7,6 +7,7 @@ import type { AuctionDomainRecord } from "@/lib/aviatonly/domain/auction-types";
 
 export type AuctionWithListing = Auction & {
   listing: Pick<AircraftListing, "sellerId">;
+  currentHighBid?: { bidderId: string } | null;
 };
 
 export function mapAuctionToDomain(auction: AuctionWithListing): AuctionDomainRecord {
@@ -25,6 +26,7 @@ export function mapAuctionToDomain(auction: AuctionWithListing): AuctionDomainRe
     noReserveConfirmed: auction.noReserveConfirmed,
     currency: auction.currency,
     currentHighBidAmount: auction.currentHighBidAmount,
+    currentHighBidderId: auction.currentHighBid?.bidderId ?? null,
     bidCount: auction.bidCount,
     reserveMet: auction.reserveMet,
     showReserveStatus: auction.showReserveStatus,
@@ -44,4 +46,5 @@ export function mapAuctionToDomain(auction: AuctionWithListing): AuctionDomainRe
 
 export const auctionIncludeListing = {
   listing: { select: { sellerId: true, registration: true, status: true, saleType: true } },
+  currentHighBid: { select: { bidderId: true } },
 } as const;

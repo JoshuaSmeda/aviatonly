@@ -449,20 +449,20 @@ PostHog `StartBid`, `BidPlaced` — defer until persistence is stable.
 
 ```text
 Phase 1 — Foundation
-  [ ] Prisma: Auction, Bid, AuctionRegistration, AuctionEvent
-  [ ] Domain enums + transition validators + bid validation helpers
-  [ ] Extend Deal for acceptedBidId
-  [ ] Server actions with role checks + row locking
+  [x] Prisma: Auction, Bid, AuctionRegistration, AuctionEvent
+  [x] Domain enums + transition validators + bid validation helpers
+  [x] Extend Deal for acceptedBidId
+  [x] Server actions with role checks + row locking
 
 Phase 2 — Admin
-  [ ] Admin auction setup / schedule / cancel UI
-  [ ] Close job worker
-  [ ] Post-close disposition queue (reserve not met, no bids)
+  [x] Admin auction setup / schedule / cancel UI
+  [x] Close job worker
+  [x] Post-close disposition queue (reserve not met, no bids)
 
 Phase 3 — Public bidding
-  [ ] registerForAuction + placeBid
-  [ ] Buy page auction panel + bid button states
-  [ ] Marketplace mappers (strip reserve, server projections)
+  [x] registerForAuction + placeBid
+  [x] Buy page auction panel + bid button states
+  [x] Marketplace mappers (strip reserve, server projections)
 
 Phase 4 — Post-close ops
   [ ] Auto Lead for high bidder on reserve not met

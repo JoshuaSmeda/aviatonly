@@ -13,6 +13,7 @@ import {
   watchAuctionRecord,
 } from "@/lib/aviatonly/server/auction/watch";
 import { NotFoundError } from "@/lib/aviatonly/server/authorization";
+import { buildListingSlug } from "@/lib/aviatonly/marketplace/aircraft-marketplace-utils";
 import { requireAuth } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
@@ -33,14 +34,22 @@ function toErrorResult<T>(error: unknown): AuctionBuyerActionResult<T> {
 async function revalidateForAuction(auctionId: string) {
   const auction = await prisma.auction.findUnique({
     where: { id: auctionId },
-    select: { listing: { select: { registration: true, slug: true } } },
+    select: {
+      listing: { select: { registration: true, make: true, model: true } },
+    },
   });
-  if (auction?.listing.slug) {
-    revalidatePath(`/dashboard/buy/${auction.listing.slug}`);
-    revalidatePath("/dashboard/buy");
-    revalidatePath(`/buy/${auction.listing.registration}`);
-    revalidatePath("/buy");
+  if (!auction?.listing) {
+    return;
   }
+  const slug = buildListingSlug(
+    auction.listing.registration,
+    auction.listing.make,
+    auction.listing.model,
+  );
+  revalidatePath(`/dashboard/buy/${slug}`);
+  revalidatePath("/dashboard/buy");
+  revalidatePath(`/buy/${auction.listing.registration}`);
+  revalidatePath("/buy");
 }
 
 export async function registerForAuctionAction(
@@ -49,6 +58,7 @@ export async function registerForAuctionAction(
   try {
     const session = await requireAuth();
     const result = await registerForAuctionRecord(auctionId, session.user.id);
+    await revalidateForAuction(auctionId);
     return {
       ok: true,
       data: {
